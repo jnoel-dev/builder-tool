@@ -1,0 +1,9 @@
+node_modules/
+.firebase/
+.next/
+.github/workflows
+.firebaserc
+firebase.json
+firebase-debug.log
+.vscode/launch.json
+.vscode/settings.json
