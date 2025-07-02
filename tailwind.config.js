@@ -1,23 +1,31 @@
-// /** @type {import('tailwindcss').Config} */
+const { globalColors } = require('./colors.js');
+
 module.exports = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
-
-    // Or if using `src` directory:
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    colors: {
+      colors: {
       transparent: "transparent",
-      globalColor6: "#555555",
-      globalColor5: "#666666",
-      globalColor4: "#777777",
-      globalColor3: "#888888",
-      globalColor2: "#999999",
-      globalColor1: "#aaaaaa",
+      globalColor1: globalColors.globalColor1,
+      globalColor2: globalColors.globalColor2,
+      globalColor3: globalColors.globalColor3,
+      globalColor4: globalColors.globalColor4,
+      globalColor5: globalColors.globalColor5,
+      globalColor6: globalColors.globalColor6,
+      globalColor0: globalColors.globalColor0
     },
+    extend: {
+      fontFamily: {
+        roboto: ['Roboto'],
+      },
+
+    },
+
   },
-  plugins: [],
+    plugins: [
+  ],
 };

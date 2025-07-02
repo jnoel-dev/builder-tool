@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { Canvas, useFrame, useThree, extend , ThreeElements} from "@react-three/fiber";
 import * as THREE from "three";
 import { DitherMaterial } from "./ditherShader";
-import tailwindConfig from "../../../tailwind.config";
+import { globalColors } from '../../../colors.js';
 
 extend({ DitherMaterial });
 
@@ -57,12 +57,12 @@ function FullscreenPlane(): React.JSX.Element {
       ref.current.material.uniforms.time.value = clock.getElapsedTime() * 0.1;
       ref.current.material.uniforms.resolution.value.set(size.width, size.height);
       ref.current.material.uniforms.mousePosition.value.set(mousePos.x, mousePos.y);
-      ref.current.material.uniforms.globalColor1.value.set(tailwindConfig.theme.colors.globalColor1);
-      ref.current.material.uniforms.globalColor2.value.set(tailwindConfig.theme.colors.globalColor2);
-      ref.current.material.uniforms.globalColor3.value.set(tailwindConfig.theme.colors.globalColor3);
-      ref.current.material.uniforms.globalColor4.value.set(tailwindConfig.theme.colors.globalColor4);
-      ref.current.material.uniforms.globalColor5.value.set(tailwindConfig.theme.colors.globalColor5);
-      ref.current.material.uniforms.globalColor6.value.set(tailwindConfig.theme.colors.globalColor6);
+      ref.current.material.uniforms.globalColor1.value.set(globalColors.globalColor1);
+      ref.current.material.uniforms.globalColor2.value.set(globalColors.globalColor2);
+      ref.current.material.uniforms.globalColor3.value.set(globalColors.globalColor3);
+      ref.current.material.uniforms.globalColor4.value.set(globalColors.globalColor4);
+      ref.current.material.uniforms.globalColor5.value.set(globalColors.globalColor5);
+      ref.current.material.uniforms.globalColor6.value.set(globalColors.globalColor6);
     }
   });
 
