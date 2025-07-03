@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Canvas, useFrame, useThree, extend , ThreeElements} from "@react-three/fiber";
+import { Canvas, useFrame, useThree, extend, ThreeElements } from "@react-three/fiber";
 import * as THREE from "three";
 import { DitherMaterial } from "./ditherShader";
-import { globalColors } from '../../../colors.js';
+import { useThemeColors } from "../themeManager/ThemeManager";
 
 extend({ DitherMaterial });
 
-/* eslint-disable @typescript-eslint/no-namespace */
 declare global {
   namespace React.JSX {
     interface IntrinsicElements {
@@ -16,7 +15,6 @@ declare global {
     }
   }
 }
-/* eslint-enable @typescript-eslint/no-namespace */
 
 interface DitherMaterialUniforms extends Record<string, THREE.IUniform<unknown>> {
   time: { value: number };
@@ -39,6 +37,8 @@ function FullscreenPlane(): React.JSX.Element {
   const { viewport, size } = useThree();
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
 
+  const { colors } = useThemeColors(); 
+
   useEffect(() => {
     const updateMousePosition = (event: MouseEvent): void => {
       const aspectRatio = size.width / size.height;
@@ -52,19 +52,29 @@ function FullscreenPlane(): React.JSX.Element {
     return () => window.removeEventListener("mousemove", updateMousePosition);
   }, [size]);
 
+
+
+
   useFrame(({ clock }) => {
+  
     if (ref.current) {
-      ref.current.material.uniforms.time.value = clock.getElapsedTime() * 0.1;
-      ref.current.material.uniforms.resolution.value.set(size.width, size.height);
-      ref.current.material.uniforms.mousePosition.value.set(mousePos.x, mousePos.y);
-      ref.current.material.uniforms.globalColor1.value.set(globalColors.globalColor1);
-      ref.current.material.uniforms.globalColor2.value.set(globalColors.globalColor2);
-      ref.current.material.uniforms.globalColor3.value.set(globalColors.globalColor3);
-      ref.current.material.uniforms.globalColor4.value.set(globalColors.globalColor4);
-      ref.current.material.uniforms.globalColor5.value.set(globalColors.globalColor5);
-      ref.current.material.uniforms.globalColor6.value.set(globalColors.globalColor6);
+      const material = ref.current.material;
+      material.uniforms.time.value = clock.getElapsedTime() * 0.1;
+      material.uniforms.resolution.value.set(size.width, size.height);
+      material.uniforms.mousePosition.value.set(mousePos.x, mousePos.y);
+
+      const baseColor = new THREE.Color(colors[2]).multiplyScalar(6.0);
+      material.uniforms.globalColor1.value.copy(baseColor);
+
+      for (let i = 1; i <= 5; i++) {
+        const brighterColor = baseColor.clone();
+        brighterColor.multiplyScalar(1 + (5 - i) * 0.5);
+        (material.uniforms[`globalColor${i + 1}`].value as THREE.Color).copy(brighterColor);
+      }
     }
   });
+
+
 
   return (
     <mesh ref={ref} scale={[viewport.width, viewport.height, 1]}>
@@ -74,7 +84,7 @@ function FullscreenPlane(): React.JSX.Element {
   );
 }
 
-export default function Background(){
+export default function Background() {
   return (
     <Canvas
       orthographic

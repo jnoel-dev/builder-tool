@@ -1,33 +1,14 @@
 import { shaderMaterial } from "@react-three/drei";
 import * as THREE from "three";
-const globalColors = require('../../../colors.js');
-
-
-interface TailwindThemeColors {
-  globalColor1: string;
-  globalColor2: string;
-  globalColor3: string;
-  globalColor4: string;
-  globalColor5: string;
-  globalColor6: string;
-}
-
-interface TailwindConfigType {
-  theme: {
-    colors: TailwindThemeColors;
-  };
-}
-
-
 
 const DitherMaterial = shaderMaterial(
   {
-    globalColor1: new THREE.Color(globalColors.globalColor1),
-    globalColor2: new THREE.Color(globalColors.globalColor2),
-    globalColor3: new THREE.Color(globalColors.globalColor3),
-    globalColor4: new THREE.Color(globalColors.globalColor4),
-    globalColor5: new THREE.Color(globalColors.globalColor5),
-    globalColor6: new THREE.Color(globalColors.globalColor6),
+    globalColor1: new THREE.Color("#ffffff"),
+    globalColor2: new THREE.Color("#cccccc"),
+    globalColor3: new THREE.Color("#999999"),
+    globalColor4: new THREE.Color("#666666"),
+    globalColor5: new THREE.Color("#333333"),
+    globalColor6: new THREE.Color("#000000"),
     time: 0.0,
     mousePosition: new THREE.Vector2(0.5, 0.5),
     mouseIntensity: 0.1,

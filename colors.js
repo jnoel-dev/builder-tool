@@ -7,3 +7,4 @@ export const globalColors = {
   globalColor1: "#aaaaaa",
   globalColor0: "#ffffff",
 };
+['#eeeeee', '#bdbdbd', '#212121', '#424242', '#fafafa', '#eeeeee']
