@@ -1,100 +1,141 @@
 import * as React from "react";
 import Divider from "@mui/material/Divider";
 import AddElementButton from "@/components/sideMenu/elementsMenu/addElementButton/AddElementButton";
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import Box from '@mui/material/Box';
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Box from "@mui/material/Box";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import Select, { SelectChangeEvent } from "@mui/material/Select";
+import Typography from "@mui/material/Typography";
+import { useFrame } from "@/components/frameManager/FrameManager";
 
 interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+	children?: React.ReactNode;
+	index: number;
+	value: number;
 }
 
 function CustomTabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+	const { children, value, index, ...other } = props;
 
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box>{children}</Box>}
-    </div>
-  );
+	return (
+		<div
+			role="tabpanel"
+			hidden={value !== index}
+			id={`simple-tabpanel-${index}`}
+			aria-labelledby={`simple-tab-${index}`}
+			{...other}
+		>
+			{value === index && <Box>{children}</Box>}
+		</div>
+	);
 }
 
 function a11yProps(index: number) {
-  return {
-    id: `simple-tab-${index}`,
-    'aria-controls': `simple-tabpanel-${index}`,
-  };
+	return {
+		id: `simple-tab-${index}`,
+		"aria-controls": `simple-tabpanel-${index}`,
+	};
 }
 
 export default function ElementsMenu() {
+	
 
-  const [alignment, setAlignment] = React.useState<string | null>('vertical');
+	const [selectedTab, setTab] = React.useState(0);
 
-  const [value, setValue] = React.useState(0);
+  const { selectedFrame, setSelectedFrame, frames, selectedPosition, setSelectedPosition } = useFrame();
 
-  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
-    setValue(newValue);
+
+
+	const handleTabChange = (event: React.SyntheticEvent, tabIndex: number) => {
+		setTab(tabIndex);
+	};
+
+  const handlePositionChange = (event: SelectChangeEvent) => {
+    setSelectedPosition(event.target.value as string);
   };
 
-  const handleAlignment = (
-    event: React.MouseEvent<HTMLElement>,
-    newAlignment: string | null,
-  ) => {
-    setAlignment(newAlignment);
-  };
-  return (
-    <div>
-<ToggleButtonGroup
-  value={alignment}
-  exclusive
-  onChange={handleAlignment}
-  aria-label="Platform"
-  sx={{ width: '100%'}} 
->
-  <ToggleButton value="vertical" fullWidth sx={{ padding: '9px'}} >
-    Add Vertically
-  </ToggleButton>
-  <ToggleButton value="horizontal" fullWidth sx={{ padding: '9px'}} >
-    Add Horizontally
-  </ToggleButton>
-</ToggleButtonGroup>
 
-    <Box sx={{ width: '100%' }}>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={value} onChange={handleChange} aria-label="basic tabs example" textColor="secondary"
-  indicatorColor="secondary">
-          <Tab label="Item One" {...a11yProps(0)} />
-          <Tab label="Item Two" {...a11yProps(1)} />
-          <Tab label="Item Three" {...a11yProps(2)} />
-        </Tabs>
-      </Box>
-      <CustomTabPanel value={value} index={0}>
-             
-        <AddElementButton elementName="Panel" />
-         <Divider component="li" />
-      </CustomTabPanel>
-      <CustomTabPanel value={value} index={1}>
-        Item Two
-      </CustomTabPanel>
-      <CustomTabPanel value={value} index={2}>
-        Item Three
-      </CustomTabPanel>
-    </Box>
+	const handleFrameChange = (event: SelectChangeEvent) => {
+		setSelectedFrame(event.target.value as string);
+	};
+
+	return (
+		<div>
 
 
+			<Box display="flex" width="100%" alignItems="center">
+      <FormControl size="small" sx={{ flex: 1, paddingTop: "4px", minWidth: '250px'}}>
+        <Select
+          labelId="position-select-label"
+          id="position-select-label"
+          value={selectedPosition}
+          onChange={handlePositionChange}
+          sx={{
+            textAlign: "center",
+            
+          }}
+        >
+          <MenuItem value="horizontal">ADD HORIZONTALLY IN</MenuItem>
+          <MenuItem value="vertical">ADD VERTICALLY IN</MenuItem>
+        </Select>
+      </FormControl>
+				<FormControl size="small" sx={{ flex: 1, paddingTop: "4px" }}>
+					<Select
+						labelId="frame-select-label"
+						id="frame-select-label"
+						value={selectedFrame}
+						onChange={handleFrameChange}
+						sx={{
+							textAlign: "center",
+						}}
+					>
+          {frames.map((frame) => {
+            const displayName = frame
+              .replace(/([A-Z])/g, ' $1') 
+              .trim()           
+              .toUpperCase();         
 
+            return (
+              <MenuItem key={frame} value={frame}>
+                {displayName}
+              </MenuItem>
+            );
+          })}
+					</Select>
+				</FormControl>
+			</Box>
 
-    </div>
-    
-  );
+			<Box sx={{ width: "100%" }}>
+				<Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+					<Tabs
+						value={selectedTab}
+						onChange={handleTabChange}
+						aria-label="basic tabs example"
+						textColor="secondary"
+						indicatorColor="secondary"
+            centered
+					>
+						<Tab label="Panels" {...a11yProps(0)} />
+						<Tab label="Inputs" {...a11yProps(1)} />
+						<Tab label="Dialogs" {...a11yProps(2)} />
+						<Tab label="Frames" {...a11yProps(3)} />
+					</Tabs>
+				</Box>
+				<CustomTabPanel value={selectedTab} index={0}>
+					<AddElementButton elementName="Panel" />
+					<Divider component="li" />
+				</CustomTabPanel>
+				<CustomTabPanel value={selectedTab} index={1}>
+					Item Two
+				</CustomTabPanel>
+				<CustomTabPanel value={selectedTab} index={2}>
+					Item Three
+				</CustomTabPanel>
+			</Box>
+		</div>
+	);
 }
