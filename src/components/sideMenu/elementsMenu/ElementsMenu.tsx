@@ -1,15 +1,13 @@
 import * as React from "react";
 import Divider from "@mui/material/Divider";
 import AddElementButton from "@/components/sideMenu/elementsMenu/addElementButton/AddElementButton";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Box from "@mui/material/Box";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
-import Typography from "@mui/material/Typography";
+import Panel from "@/components/addableElements/Panel/Panel";
 import { useFrame } from "@/components/frameManager/FrameManager";
 
 interface TabPanelProps {
@@ -46,7 +44,7 @@ export default function ElementsMenu() {
 
 	const [selectedTab, setTab] = React.useState(0);
 
-  const { selectedFrame, setSelectedFrame, frames, selectedPosition, setSelectedPosition } = useFrame();
+  const { selectedFrame, setSelectedFrame, frames} = useFrame();
 
 
 
@@ -54,9 +52,6 @@ export default function ElementsMenu() {
 		setTab(tabIndex);
 	};
 
-  const handlePositionChange = (event: SelectChangeEvent) => {
-    setSelectedPosition(event.target.value as string);
-  };
 
 
 	const handleFrameChange = (event: SelectChangeEvent) => {
@@ -68,21 +63,7 @@ export default function ElementsMenu() {
 
 
 			<Box display="flex" width="100%" alignItems="center">
-      <FormControl size="small" sx={{ flex: 1, paddingTop: "4px", minWidth: '250px'}}>
-        <Select
-          labelId="position-select-label"
-          id="position-select-label"
-          value={selectedPosition}
-          onChange={handlePositionChange}
-          sx={{
-            textAlign: "center",
-            
-          }}
-        >
-          <MenuItem value="horizontal">ADD HORIZONTALLY IN</MenuItem>
-          <MenuItem value="vertical">ADD VERTICALLY IN</MenuItem>
-        </Select>
-      </FormControl>
+
 				<FormControl size="small" sx={{ flex: 1, paddingTop: "4px" }}>
 					<Select
 						labelId="frame-select-label"
@@ -126,7 +107,7 @@ export default function ElementsMenu() {
 					</Tabs>
 				</Box>
 				<CustomTabPanel value={selectedTab} index={0}>
-					<AddElementButton elementName="Panel" />
+					<AddElementButton elementName="Panel" elementComponent={<Panel/>}/>
 					<Divider component="li" />
 				</CustomTabPanel>
 				<CustomTabPanel value={selectedTab} index={1}>
