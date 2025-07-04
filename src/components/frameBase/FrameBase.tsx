@@ -1,4 +1,5 @@
 'use client';
+
 import * as React from "react";
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -11,8 +12,8 @@ interface FrameBaseProps {
 
 export default function FrameBase({ frameName }: FrameBaseProps) {
   const theme = useTheme();
-  const { frameElements, frameRefs } = useFrame(); 
-  const elements = frameElements[frameName] || []; 
+  const { frameElements, frameRefs } = useFrame();
+  const elements = frameElements[frameName] || [];
 
   return (
     <div
@@ -53,10 +54,9 @@ export default function FrameBase({ frameName }: FrameBaseProps) {
             key={i}
             sx={{
               position: 'absolute',
-              left: el.x,
-              top: el.y,
-              transform: 'translate(-50%, -50%)',   
-              transformOrigin: 'center center',
+              left:  `${el.xPct}%`,
+              top:   `${el.yPct}%`,
+              transform: 'translate(-50%, -50%)',
             }}
           >
             {el.component}
