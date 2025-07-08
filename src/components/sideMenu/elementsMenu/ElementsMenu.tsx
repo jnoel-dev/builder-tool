@@ -44,7 +44,7 @@ export default function ElementsMenu() {
 
 	const [selectedTab, setTab] = React.useState(0);
 
-  const { selectedFrame, setSelectedFrame, frames} = useFrame();
+  const { selectedFrameName, setSelectedFrameName, frameNames} = useFrame();
 
 
 
@@ -55,7 +55,7 @@ export default function ElementsMenu() {
 
 
 	const handleFrameChange = (event: SelectChangeEvent) => {
-		setSelectedFrame(event.target.value as string);
+		setSelectedFrameName(event.target.value as string);
 	};
 
 	return (
@@ -68,13 +68,13 @@ export default function ElementsMenu() {
 					<Select
 						labelId="frame-select-label"
 						id="frame-select-label"
-						value={selectedFrame}
+						value={selectedFrameName}
 						onChange={handleFrameChange}
 						sx={{
 							textAlign: "center",
 						}}
 					>
-          {frames.map((frame) => {
+          {frameNames.map((frame) => {
             const displayName = frame
               .replace(/([A-Z])/g, ' $1') 
               .trim()           

@@ -12,8 +12,8 @@ interface FrameBaseProps {
 
 export default function FrameBase({ frameName }: FrameBaseProps) {
   const theme = useTheme();
-  const { frameElements, frameRefs } = useFrame();
-  const elements = frameElements[frameName] || [];
+  const { allFrameElements, frameContainerRefs } = useFrame();
+  const elements = allFrameElements[frameName] || [];
 
   return (
     <div
@@ -39,7 +39,7 @@ export default function FrameBase({ frameName }: FrameBaseProps) {
 
       <Box
         id={frameName}
-        ref={frameRefs[frameName]}
+        ref={frameContainerRefs[frameName]}
         sx={{
           position: 'relative',
           overflow: 'hidden',
@@ -49,19 +49,13 @@ export default function FrameBase({ frameName }: FrameBaseProps) {
           color: theme.palette.secondary.main,
         }}
       >
-        {elements.map((el, i) => (
-          <Box
-            key={i}
-            sx={{
-              position: 'absolute',
-              left:  `${el.xPct}%`,
-              top:   `${el.yPct}%`,
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            {el.component}
-          </Box>
-        ))}
+        {elements.map(el =>
+          React.cloneElement(
+            el.component as React.ReactElement<any>,
+            { key: el.id,
+            }
+          )
+        )}
       </Box>
     </div>
   );

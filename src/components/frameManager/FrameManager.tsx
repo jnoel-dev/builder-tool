@@ -1,107 +1,156 @@
 "use client";
 
 import React, { createContext, useState, useContext, useRef } from "react";
+import ElementController from "../addableElements/elementController/ElementController";
 
 type FrameElement = {
+  id: string;
   component: React.ReactNode;
-  xPct: number;
-  yPct: number;
+  xPercent: number;
+  yPercent: number;
 };
 
 type FrameContextType = {
-  selectedFrame: string;
-  setSelectedFrame: (frame: string) => void;
-  frames: string[];
-  addFrame: (frame: string) => void;
-  addElementToFrame: (component: React.ReactNode) => void;
-  updatePosition: (component: React.ReactNode, x: number, y: number) => void;
-  frameElements: { [frame: string]: FrameElement[] };
-  frameRefs: { [frame: string]: React.RefObject<HTMLDivElement | null> };
+  selectedFrameName: string;
+  setSelectedFrameName: (frameName: string) => void;
+  frameNames: string[];
+  addFrame: (frameName: string) => void;
+  addElementToFrame: (elementComponent: React.ReactNode) => string;
+  removeElementFromFrame: (elementId: string) => void;
+  updateElementPosition: (elementId: string, absoluteX: number, absoluteY: number) => void;
+  allFrameElements: { [frameName: string]: FrameElement[] };
+  frameContainerRefs: { [frameName: string]: React.RefObject<HTMLDivElement | null> };
 };
 
 const FrameContext = createContext<FrameContextType | undefined>(undefined);
 
-export const FrameProvider = ({ children }: { children: React.ReactNode }) => {
-  const [frames, setFrames] = useState<string[]>(["TopFrame"]);
-  const [selectedFrame, setSelectedFrame] = useState("TopFrame");
-  const [frameElements, setFrameElements] = useState<{ [frame: string]: FrameElement[] }>({});
+export function FrameProvider({ children }: { children: React.ReactNode }) {
+  const [frameNames, setFrameNames] = useState<string[]>(["TopFrame"]);
+  const [selectedFrameName, setSelectedFrameName] = useState<string>("TopFrame");
+  const [allFrameElements, setAllFrameElements] = useState<{ [frameName: string]: FrameElement[] }>({});
+  const nextElementIdCounterRef = useRef(0);
 
-  // build refs for every frame
-  const frameRefs: { [frame: string]: React.RefObject<HTMLDivElement | null> } = {};
-  frames.forEach((frame) => {
-    if (!frameRefs[frame]) {
-      frameRefs[frame] = useRef<HTMLDivElement | null>(null);
+  const frameContainerRefs: { [frameName: string]: React.RefObject<HTMLDivElement | null> } = {};
+  frameNames.forEach(function(frameName) {
+    if (!frameContainerRefs[frameName]) {
+      frameContainerRefs[frameName] = useRef<HTMLDivElement | null>(null);
     }
   });
 
-  const addFrame = (frame: string) => {
-    setFrames((prev) => (prev.includes(frame) ? prev : [...prev, frame]));
-  };
+  function addFrame(frameName: string) {
+    setFrameNames(function(previousFrameNames) {
+      if (previousFrameNames.includes(frameName)) {
+        return previousFrameNames;
+      }
+      return previousFrameNames.concat(frameName);
+    });
+  }
 
-  const addElementToFrame = (component: React.ReactNode) => {
-    const frameRef = frameRefs[selectedFrame];
-    let xPct = 50, yPct = 50;
+  function addElementToFrame(elementComponent: React.ReactNode): string {
+    const ElementWrapperController: any = ElementController;
+    let newlyCreatedElementId: string | undefined;
 
-    if (frameRef?.current) {
-      const { width, height } = frameRef.current.getBoundingClientRect();
-      xPct = (width / 2 / width) * 100;  
-      yPct = (height / 2 / height) * 100; 
+    function updateFrameElements(previousFrameElements: { [frameName: string]: FrameElement[] }) {
+      const updatedFrameElements = { ...previousFrameElements };
+      const currentFrameElementList = updatedFrameElements[selectedFrameName] || [];
+
+      const existingElement = currentFrameElementList.find(function(frameElement) {
+        const wrappedComponent = frameElement.component as React.ReactElement<any>;
+        return wrappedComponent.props.children === elementComponent;
+      });
+
+      if (existingElement) {
+        newlyCreatedElementId = existingElement.id;
+        return previousFrameElements;
+      }
+
+      const newElementId = `custom-${nextElementIdCounterRef.current++}`;
+      newlyCreatedElementId = newElementId;
+
+      const wrappedElementComponent = (
+        <ElementWrapperController elementId={newElementId}>
+          {elementComponent}
+        </ElementWrapperController>
+      );
+
+      const newFrameElement: FrameElement = {
+        id: newElementId,
+        component: wrappedElementComponent,
+        xPercent: 50,
+        yPercent: 50,
+      };
+
+      updatedFrameElements[selectedFrameName] = currentFrameElementList.concat(newFrameElement);
+      return updatedFrameElements;
     }
 
-    setFrameElements((prev) => {
-      const updated = { ...prev };
-      if (!updated[selectedFrame]) updated[selectedFrame] = [];
+    setAllFrameElements(updateFrameElements);
+    return newlyCreatedElementId!;
+  }
 
-      const exists = updated[selectedFrame].some((el) => el.component === component);
-      if (!exists) {
-        updated[selectedFrame] = [
-          ...updated[selectedFrame],
-          { component, xPct, yPct },
-        ];
-      }
-      return updated;
-    });
-  };
+  function removeElementFromFrame(elementId: string) {
+    function updateFrameElements(previousFrameElements: { [frameName: string]: FrameElement[] }) {
+      const updatedFrameElements = { ...previousFrameElements };
+      const currentFrameElementList = updatedFrameElements[selectedFrameName] || [];
+      updatedFrameElements[selectedFrameName] = currentFrameElementList.filter(function(frameElement) {
+        return frameElement.id !== elementId;
+      });
+      return updatedFrameElements;
+    }
 
-  const updatePosition = (component: React.ReactNode, x: number, y: number) => {
-    setFrameElements((prev) => {
-      const updated = { ...prev };
-      if (!updated[selectedFrame] || !frameRefs[selectedFrame]?.current) return prev;
+    setAllFrameElements(updateFrameElements);
+  }
 
-      const { width, height } = frameRefs[selectedFrame]!.current!.getBoundingClientRect();
-      updated[selectedFrame] = updated[selectedFrame].map((el) =>
-        el.component === component
-          ? { 
-              ...el, 
-              xPct: (x / width) * 100, 
-              yPct: (y / height) * 100 
-            }
-          : el
-      );
-      return updated;
-    });
-  };
+  function updateElementPosition(elementId: string, absoluteX: number, absoluteY: number) {
+    const currentFrameRef = frameContainerRefs[selectedFrameName];
+    if (!currentFrameRef.current) return;
+
+    const frameBoundingRect = currentFrameRef.current.getBoundingClientRect();
+    const relativeX = absoluteX - frameBoundingRect.left;
+    const relativeY = absoluteY - frameBoundingRect.top;
+    const xPercent = (relativeX / frameBoundingRect.width) * 100;
+    const yPercent = (relativeY / frameBoundingRect.height) * 100;
+
+    function updateFrameElements(previousFrameElements: { [frameName: string]: FrameElement[] }) {
+      const updatedFrameElements = { ...previousFrameElements };
+      const currentFrameElementList = updatedFrameElements[selectedFrameName] || [];
+
+      updatedFrameElements[selectedFrameName] = currentFrameElementList.map(function(frameElement) {
+        if (frameElement.id === elementId) {
+          return { ...frameElement, xPercent, yPercent };
+        }
+        return frameElement;
+      });
+
+      return updatedFrameElements;
+    }
+
+    setAllFrameElements(updateFrameElements);
+  }
 
   return (
     <FrameContext.Provider
       value={{
-        selectedFrame,
-        setSelectedFrame,
-        frames,
+        selectedFrameName,
+        setSelectedFrameName,
+        frameNames,
         addFrame,
         addElementToFrame,
-        updatePosition,
-        frameElements,
-        frameRefs,
+        removeElementFromFrame,
+        updateElementPosition,
+        allFrameElements,
+        frameContainerRefs,
       }}
     >
       {children}
     </FrameContext.Provider>
   );
-};
+}
 
-export const useFrame = () => {
-  const context = useContext(FrameContext);
-  if (!context) throw new Error("useFrame must be used within a FrameProvider");
-  return context;
-};
+export function useFrame() {
+  const frameContextValue = useContext(FrameContext);
+  if (!frameContextValue) {
+    throw new Error("useFrame must be used within a FrameProvider");
+  }
+  return frameContextValue;
+}
