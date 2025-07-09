@@ -5,6 +5,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import { useFrame } from '@/components/frameManager/FrameManager';
+import componentRegistry from "@/components/frameManager/componentRegistry";
+import ElementController from "../addableElements/elementController/ElementController";
 
 interface FrameBaseProps {
   frameName: string;
@@ -49,13 +51,19 @@ export default function FrameBase({ frameName }: FrameBaseProps) {
           color: theme.palette.secondary.main,
         }}
       >
-        {elements.map(el =>
-          React.cloneElement(
-            el.component as React.ReactElement<any>,
-            { key: el.id,
-            }
-          )
-        )}
+        {elements.map(element => {
+          const ComponentToRender = componentRegistry[element.componentName];
+          return (
+            <ElementController
+              key={element.id}
+              elementId={element.id}
+              xPercent={element.xPercent}
+              yPercent={element.yPercent}
+            >
+              {ComponentToRender ? <ComponentToRender /> : null}
+            </ElementController>
+          );
+        })}
       </Box>
     </div>
   );

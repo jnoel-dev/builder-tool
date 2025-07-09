@@ -17,7 +17,7 @@ export default function AddElementButton({ elementName, elementComponent }: AddE
 
 const handleAdd = () => {
 
-  addElementToFrame(elementComponent);
+  addElementToFrame(elementName, elementComponent);
 };
 
 
