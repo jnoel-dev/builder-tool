@@ -1,6 +1,6 @@
 
 import SideMenu from '@/components/sideMenu/SideMenu';
-import FrameBase from '@/components/frameBase/FrameBase';
+import TopFrame from '@/components/topFrame/TopFrame';
 
 
 export default function Home() {
@@ -21,7 +21,7 @@ export default function Home() {
       alignItems: "center",    
     }}
   >
-      <FrameBase frameName="TopFrame"/>
+      <TopFrame/>
       <SideMenu/>
     </div>
     

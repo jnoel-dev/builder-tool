@@ -1,195 +1,175 @@
-"use client";
+// src/components/frameManager/FrameManager.tsx
+'use client';
 
-import React, { createContext, useState, useContext, useRef, useEffect } from "react";
-import ElementController from "../addableElements/elementController/ElementController";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useRef,
+  useEffect,
+  useMemo,
+} from "react";
 import LZString from "lz-string";
-import componentRegistry from "./componentRegistry";
 
-type FrameElement = {
+export type FrameElement = {
   id: string;
   componentName: string;
   xPercent: number;
   yPercent: number;
 };
 
-type FrameContextType = {
+export type FrameContextType = {
   selectedFrameName: string;
   setSelectedFrameName: (frameName: string) => void;
   frameNames: string[];
   addFrame: (frameName: string) => void;
+  removeFrame: (frameName: string) => void;
   addElementToFrame: (componentName: string) => string;
   removeElementFromFrame: (elementId: string) => void;
-  updateElementPosition: (elementId: string, absoluteX: number, absoluteY: number) => void;
+  updateElementPosition: (
+    elementId: string,
+    xPercent: number,
+    yPercent: number
+  ) => void;
   allFrameElements: { [frameName: string]: FrameElement[] };
-  frameContainerRefs: { [frameName: string]: React.RefObject<HTMLDivElement | null> };
+  frameContainerRefs: {
+    [frameName: string]: React.RefObject<HTMLDivElement | null>;
+  };
 };
 
 const FrameContext = createContext<FrameContextType | undefined>(undefined);
 
-export function FrameProvider({ children }: { children: React.ReactNode }) {
-  const [frameNames, setFrameNames] = useState<string[]>(["TopFrame"]);
-  const [selectedFrameName, setSelectedFrameName] = useState<string>("TopFrame");
-  const [allFrameElements, setAllFrameElements] = useState<{ [frameName: string]: FrameElement[] }>({});
-  const [nextElementIdCounter, setNextElementIdCounter] = useState(0);
+export function FrameManager({ children }: { children: React.ReactNode }) {
+  const [frameNames, setFrameNames] = useState<string[]>([]);
+  const [selectedFrameName, setSelectedFrameName] = useState<string>("");
+  const [allFrameElements, setAllFrameElements] = useState<{
+    [frameName: string]: FrameElement[];
+  }>({});
+  const [nextElementId, setNextElementId] = useState(0);
 
-  const frameContainerRefs: { [frameName: string]: React.RefObject<HTMLDivElement | null> } = {};
-  frameNames.forEach(frameName => {
-    if (!frameContainerRefs[frameName]) {
-      frameContainerRefs[frameName] = useRef<HTMLDivElement | null>(null);
+  const frameContainerRefs = useMemo(() => {
+    const refs: {
+      [key: string]: React.RefObject<HTMLDivElement | null>;
+    } = {};
+    for (const name of frameNames) {
+      refs[name] = refs[name] ?? React.createRef<HTMLDivElement>();
     }
-  });
+    return refs;
+  }, [frameNames]);
 
-useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const compressed = urlParams.get("data");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const compressed = params.get("data");
+    if (!compressed) return;
 
-  if (compressed) {
     try {
-      const jsonString = LZString.decompressFromEncodedURIComponent(compressed);
-      if (!jsonString) return;
+      const json = LZString.decompressFromEncodedURIComponent(compressed);
+      if (!json) return;
+      const save = JSON.parse(json);
+      if (save.frameNames && save.allFrameElements) {
+        setFrameNames(save.frameNames);
+        setAllFrameElements(save.allFrameElements);
 
-      const saveData = JSON.parse(jsonString);
-
-      if (saveData.frameNames && saveData.allFrameElements) {
-        setFrameNames(saveData.frameNames);
-
-        const rebuiltElements: { [frameName: string]: FrameElement[] } = {};
-        let maxIdNumber = 0;
-
-        for (const frameName of saveData.frameNames) {
-          const elements = saveData.allFrameElements[frameName] || [];
-          rebuiltElements[frameName] = elements.map((element: any) => {
-            const [componentName, numericPart] = element.id.split("-");
-            const num = parseInt(numericPart, 10);
-            if (!isNaN(num) && num > maxIdNumber) {
-              maxIdNumber = num;
-            }
-
-            return {
-              id: element.id,
-              componentName,
-              xPercent: element.xPercent,
-              yPercent: element.yPercent,
-            };
-          });
+        let maxId = 0;
+        for (const arr of Object.values(save.allFrameElements)) {
+          for (const el of arr as any[]) {
+            const parts = el.id.split("-");
+            const num = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(num) && num > maxId) maxId = num;
+          }
         }
+        setNextElementId(maxId);
 
-        setAllFrameElements(rebuiltElements);
-        setNextElementIdCounter(maxIdNumber);
+        if (save.frameNames.length > 0) {
+          setSelectedFrameName(save.frameNames[0]);
+        }
       }
-    } catch (error) {
-      console.error("Failed to load data from URL:", error);
+    } catch {
+    
     }
-  }
-}, []);
+  }, []); 
 
 
-useEffect(() => {
-  const onlyDefaultFrame = frameNames.length === 1 && frameNames[0] === "TopFrame";
-  const hasNoElements = !allFrameElements["TopFrame"] || allFrameElements["TopFrame"].length === 0;
+  useEffect(() => {
+    if (frameNames.length === 0) {
 
-  if (onlyDefaultFrame && hasNoElements) {
-    // ✅ Remove data param from URL if site is back to default state
-    const cleanUrl = `${window.location.origin}${window.location.pathname}`;
-    window.history.replaceState(null, "", cleanUrl);
-    return;
-  }
-
-  function buildSaveDataObject() {
-    const saveObject: {
-      frameNames: string[];
-      allFrameElements: { [frameName: string]: { id: string; xPercent: number; yPercent: number }[] };
-    } = {
-      frameNames: frameNames,
-      allFrameElements: {},
-    };
-
-    for (const frameName of frameNames) {
-      const elements = allFrameElements[frameName] || [];
-      saveObject.allFrameElements[frameName] = elements.map(element => ({
-        id: element.id,
-        xPercent: element.xPercent,
-        yPercent: element.yPercent,
-      }));
+      window.history.replaceState(
+        null,
+        "",
+        window.location.origin + window.location.pathname
+      );
+      return;
     }
-
-    return saveObject;
-  }
-
-  const saveData = buildSaveDataObject();
-  const jsonString = JSON.stringify(saveData);
-  const compressed = LZString.compressToEncodedURIComponent(jsonString);
-
-  const newUrl = `${window.location.origin}${window.location.pathname}?data=${compressed}`;
-  window.history.replaceState(null, "", newUrl);
-
-}, [frameNames, allFrameElements]);
-
+    const payload = JSON.stringify({
+      frameNames,
+      allFrameElements,
+    });
+    const compressed = LZString.compressToEncodedURIComponent(payload);
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.origin}${window.location.pathname}?data=${compressed}`
+    );
+  }, [frameNames, allFrameElements]); 
 
   function addFrame(frameName: string) {
-    setFrameNames(previousFrameNames =>
-      previousFrameNames.includes(frameName)
-        ? previousFrameNames
-        : previousFrameNames.concat(frameName)
+    console.log("adding frame: ",frameName)
+    setFrameNames((prev) =>
+      prev.includes(frameName) ? prev : [...prev, frameName]
     );
+    
+    setSelectedFrameName((prev) => (prev === "" ? frameName : prev));
   }
-
-function addElementToFrame(componentName: string): string {
-  const newElementId = `${componentName}-${nextElementIdCounter + 1}`;
-
-  setNextElementIdCounter(prev => prev + 1);
-
-  setAllFrameElements(previousFrameElements => {
-    const updatedFrameElements = { ...previousFrameElements };
-    const currentFrameElementList = updatedFrameElements[selectedFrameName] || [];
-
-    const newFrameElement: FrameElement = {
-      id: newElementId,
-      componentName,
-      xPercent: 50,
-      yPercent: 50,
-    };
-
-    updatedFrameElements[selectedFrameName] = currentFrameElementList.concat(newFrameElement);
-    return updatedFrameElements;
+  function removeFrame(frameName: string) {
+  setFrameNames(prev => prev.filter(name => name !== frameName));
+  setAllFrameElements(prev => {
+    const clone = { ...prev };
+    delete clone[frameName];
+    return clone;
   });
-
-  return newElementId;
+ 
 }
 
+  function addElementToFrame(componentName: string) {
+    const newId = `${componentName}-${nextElementId + 1}`;
+    setNextElementId((n) => n + 1);
+
+    setAllFrameElements((prev) => {
+      const clone = { ...prev };
+      const list = clone[selectedFrameName] || [];
+      clone[selectedFrameName] = [
+        ...list,
+        { id: newId, componentName, xPercent: 50, yPercent: 50 },
+      ];
+      return clone;
+    });
+
+    return newId;
+  }
 
   function removeElementFromFrame(elementId: string) {
-    setAllFrameElements(previousFrameElements => {
-      const updatedFrameElements = { ...previousFrameElements };
-      const currentFrameElementList = updatedFrameElements[selectedFrameName] || [];
-
-      updatedFrameElements[selectedFrameName] = currentFrameElementList.filter(frameElement => frameElement.id !== elementId);
-
-      return updatedFrameElements;
+    setAllFrameElements((prev) => {
+      const clone = { ...prev };
+      clone[selectedFrameName] = (clone[selectedFrameName] || []).filter(
+        (e) => e.id !== elementId
+      );
+      return clone;
     });
   }
-function updateElementPosition(
-  elementId: string,
-  xPercent: number,
-  yPercent: number
-) {
-  setAllFrameElements((previousFrameElements: { [frameName: string]: FrameElement[] }) => {
-    const updatedFrameElements = { ...previousFrameElements };
-    const currentFrameElementList = updatedFrameElements[selectedFrameName] || [];
 
-    updatedFrameElements[selectedFrameName] = currentFrameElementList.map((frameElement: FrameElement) => {
-      if (frameElement.id === elementId) {
-        return { ...frameElement, xPercent, yPercent };
-      }
-      return frameElement;
+  function updateElementPosition(
+    elementId: string,
+    xPercent: number,
+    yPercent: number
+  ) {
+    setAllFrameElements((prev) => {
+      const clone = { ...prev };
+      clone[selectedFrameName] = (clone[selectedFrameName] || []).map((e) =>
+        e.id === elementId ? { ...e, xPercent, yPercent } : e
+      );
+      return clone;
     });
-
-    return updatedFrameElements;
-  });
-}
-
-
-
+  }
 
   return (
     <FrameContext.Provider
@@ -198,6 +178,7 @@ function updateElementPosition(
         setSelectedFrameName,
         frameNames,
         addFrame,
+        removeFrame,
         addElementToFrame,
         removeElementFromFrame,
         updateElementPosition,
@@ -211,9 +192,7 @@ function updateElementPosition(
 }
 
 export function useFrame() {
-  const frameContextValue = useContext(FrameContext);
-  if (!frameContextValue) {
-    throw new Error("useFrame must be used within a FrameProvider");
-  }
-  return frameContextValue;
+  const ctx = useContext(FrameContext);
+  if (!ctx) throw new Error("useFrame must be used within FrameManager");
+  return ctx;
 }

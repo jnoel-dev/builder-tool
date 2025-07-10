@@ -9,6 +9,7 @@ import FormControl from "@mui/material/FormControl";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import Panel from "@/components/addableElements/Panel/Panel";
 import { useFrame } from "@/components/frameManager/FrameManager";
+import Container from "@/components/addableElements/Container/Container";
 
 interface TabPanelProps {
 	children?: React.ReactNode;
@@ -75,6 +76,7 @@ export default function ElementsMenu() {
 						}}
 					>
           {frameNames.map((frame) => {
+			
             const displayName = frame
               .replace(/([A-Z])/g, ' $1') 
               .trim()           
@@ -107,8 +109,10 @@ export default function ElementsMenu() {
 					</Tabs>
 				</Box>
 				<CustomTabPanel value={selectedTab} index={0}>
-					<AddElementButton elementName="Panel" elementComponent={<Panel/>}/>
+					{/* //ELEMENT NAME MUST MATCH WHAT IS DEFINED IN COMPONENT REGISTRY */}
+					<AddElementButton elementName="Panel"/>
 					<Divider component="li" />
+					<AddElementButton elementName="ContainerVertical"/>
 				</CustomTabPanel>
 				<CustomTabPanel value={selectedTab} index={1}>
 					Item Two

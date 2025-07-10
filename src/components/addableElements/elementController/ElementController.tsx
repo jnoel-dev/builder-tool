@@ -2,11 +2,17 @@
 
 import { ReactNode, useRef, useEffect, useState } from "react";
 import { useFrame } from "@/components/frameManager/FrameManager";
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import CloseIcon from '@mui/icons-material/Close';
 
 interface ElementControllerProps {
   elementId: string;
   xPercent: number;
   yPercent: number;
+  showName: boolean;
+  connectedFrameOrContainerName:string;
   children: ReactNode;
 }
 
@@ -14,25 +20,24 @@ export default function ElementController({
   elementId,
   xPercent,
   yPercent,
+  showName,
+  connectedFrameOrContainerName,
   children,
 }: ElementControllerProps) {
   const {
     updateElementPosition,
     removeElementFromFrame,
     frameContainerRefs,
-    selectedFrameName,
   } = useFrame();
 
   const isDraggingRef = useRef(false);
   const dragOffsetPercentRef = useRef({ xOffsetPercent: 0, yOffsetPercent: 0 });
 
-  // ✅ Add local position state for smooth dragging
   const [elementPositionPercent, setElementPositionPercent] = useState({
     xPercent,
     yPercent,
   });
 
-  // ✅ Sync props to local state if they change externally
   useEffect(() => {
     setElementPositionPercent({ xPercent, yPercent });
   }, [xPercent, yPercent]);
@@ -44,7 +49,10 @@ export default function ElementController({
   function handleMouseDown(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
 
-    const currentFrameContainer = frameContainerRefs[selectedFrameName]?.current;
+    const currentFrameContainer = frameContainerRefs[connectedFrameOrContainerName]?.current;
+    console.log(frameContainerRefs)
+    console.log(elementId)
+    console.log(currentFrameContainer)
     if (!currentFrameContainer) return;
 
     const frameBoundingRect = currentFrameContainer.getBoundingClientRect();
@@ -62,7 +70,7 @@ export default function ElementController({
   function handleMouseMove(event: MouseEvent) {
     if (!isDraggingRef.current) return;
 
-    const currentFrameContainer = frameContainerRefs[selectedFrameName]?.current;
+    const currentFrameContainer = frameContainerRefs[connectedFrameOrContainerName]?.current;
     if (!currentFrameContainer) return;
 
     const frameBoundingRect = currentFrameContainer.getBoundingClientRect();
@@ -90,7 +98,6 @@ export default function ElementController({
     const clampedXPercent = clamp(unclampedXPercent, minXPercent, maxXPercent);
     const clampedYPercent = clamp(unclampedYPercent, minYPercent, maxYPercent);
 
-    // ✅ Update local state only
     setElementPositionPercent({
       xPercent: clampedXPercent,
       yPercent: clampedYPercent,
@@ -101,7 +108,6 @@ export default function ElementController({
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
 
-    // ✅ Commit final position to global FrameManager
     updateElementPosition(
       elementId,
       elementPositionPercent.xPercent,
@@ -132,20 +138,29 @@ export default function ElementController({
         transform: "translate(-50%, -50%)",
       }}
     >
-      <button
-        type="button"
-        onMouseDown={handleMouseDown}
-        className="p-1 bg-gray-200 rounded"
-      >
-        Drag
-      </button>
-      <button
-        type="button"
-        onClick={handleRemoveElement}
-        className="p-1 bg-gray-200 rounded ml-2"
-      >
-        Remove
-      </button>
+      <Stack direction="row-reverse">
+        <IconButton
+          size="small"
+          onClick={handleRemoveElement}
+          sx={{ padding: 0 }}
+        >
+          <CloseIcon />
+        </IconButton>
+        <IconButton
+          disableRipple
+          size="small"
+          onMouseDown={handleMouseDown}
+          sx={{
+            padding: 0,
+            cursor: "grab",
+            "&:hover": { cursor: "grab" },
+            "&:active": { cursor: "grabbing" },
+          }}
+        >
+          <DragIndicatorIcon />
+        </IconButton>
+        {showName && elementId}
+      </Stack>
       {children}
     </div>
   );

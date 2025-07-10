@@ -5,7 +5,7 @@ import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import Background from "@/components/background/Background";
 import ThemeManager from "@/components/themeManager/ThemeManager";
-import { FrameProvider } from "@/components/frameManager/FrameManager";
+import { FrameManager } from "@/components/frameManager/FrameManager";
 
 
 
@@ -19,9 +19,9 @@ export default function RootLayout({
       <body>
         <ThemeManager>
         <Background/>
-        <FrameProvider>
+        <FrameManager>
         {children}
-        </FrameProvider>
+        </FrameManager>
         </ThemeManager>
       </body>
     </html>

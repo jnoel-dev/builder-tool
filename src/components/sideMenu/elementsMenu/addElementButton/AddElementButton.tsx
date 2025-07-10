@@ -8,16 +8,15 @@ import { useFrame } from '@/components/frameManager/FrameManager';
 
 interface AddElementButtonProps {
   elementName: string;
-  elementComponent: ReactNode;
 }
 
-export default function AddElementButton({ elementName, elementComponent }: AddElementButtonProps) {
+export default function AddElementButton({ elementName }: AddElementButtonProps) {
   const { addElementToFrame} = useFrame();
 
 
 const handleAdd = () => {
 
-  addElementToFrame(elementName, elementComponent);
+  addElementToFrame(elementName);
 };
 
 
