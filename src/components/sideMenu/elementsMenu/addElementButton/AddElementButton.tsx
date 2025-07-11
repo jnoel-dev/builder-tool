@@ -8,15 +8,16 @@ import { useFrame } from '@/components/frameManager/FrameManager';
 
 interface AddElementButtonProps {
   elementName: string;
+  isFrameOrContainer?: boolean;
 }
 
-export default function AddElementButton({ elementName }: AddElementButtonProps) {
+export default function AddElementButton({ elementName, isFrameOrContainer=false}: AddElementButtonProps) {
   const { addElementToFrame} = useFrame();
 
 
 const handleAdd = () => {
 
-  addElementToFrame(elementName);
+  addElementToFrame(elementName,isFrameOrContainer);
 };
 
 

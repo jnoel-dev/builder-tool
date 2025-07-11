@@ -1,198 +1,264 @@
-// src/components/frameManager/FrameManager.tsx
-'use client';
+"use client";
 
 import React, {
-  createContext,
-  useState,
-  useContext,
-  useRef,
-  useEffect,
-  useMemo,
+	createContext,
+	useState,
+	useContext,
+	useRef,
+	useEffect,
+	ReactNode,
 } from "react";
 import LZString from "lz-string";
 
 export type FrameElement = {
-  id: string;
-  componentName: string;
-  xPercent: number;
-  yPercent: number;
+	id: string;
+	componentName: string;
+	xPercent: number;
+	yPercent: number;
+  isFrameOrContainer: boolean;
 };
 
 export type FrameContextType = {
-  selectedFrameName: string;
-  setSelectedFrameName: (frameName: string) => void;
-  frameNames: string[];
-  addFrame: (frameName: string) => void;
-  removeFrame: (frameName: string) => void;
-  addElementToFrame: (componentName: string) => string;
-  removeElementFromFrame: (elementId: string) => void;
-  updateElementPosition: (
-    elementId: string,
-    xPercent: number,
-    yPercent: number
-  ) => void;
-  allFrameElements: { [frameName: string]: FrameElement[] };
-  frameContainerRefs: {
-    [frameName: string]: React.RefObject<HTMLDivElement | null>;
-  };
+	selectedFrameName: string;
+	setSelectedFrameName: (frameName: string) => void;
+	frameNames: string[];
+	addFrame: (frameName: string) => void;
+	removeFrame: (frameElement: FrameElement) => void;
+	addElementToFrame: (componentName: string, isFrameOrContainer: boolean) => string;
+	removeElementFromFrame: (
+		elementId: string,
+		connectedFrameOrContainerName: string
+	) => void;
+	updateElementPosition: (
+		elementId: string,
+		xPercent: number,
+		yPercent: number,
+		connectedFrameOrContainerName: string
+	) => void;
+	allFrameElements: { [frameName: string]: FrameElement[] };
+	frameContainerRefs: {
+		[frameName: string]: React.RefObject<HTMLDivElement | null>;
+	};
 };
 
 const FrameContext = createContext<FrameContextType | undefined>(undefined);
 
-export function FrameManager({ children }: { children: React.ReactNode }) {
-  const [frameNames, setFrameNames] = useState<string[]>([]);
-  const [selectedFrameName, setSelectedFrameName] = useState<string>("");
-  const [allFrameElements, setAllFrameElements] = useState<{
-    [frameName: string]: FrameElement[];
-  }>({});
-  const [nextElementId, setNextElementId] = useState(0);
+export function FrameManager({ children }: { children: ReactNode }) {
+	const [frameNames, setFrameNames] = useState<string[]>([]);
+	const [selectedFrameName, setSelectedFrameName] = useState<string>("");
+	const [allFrameElements, setAllFrameElements] = useState<{
+		[frameName: string]: FrameElement[];
+	}>({});
+	const [nextElementId, setNextElementId] = useState(0);
 
-  const frameContainerRefs = useMemo(() => {
-    const refs: {
-      [key: string]: React.RefObject<HTMLDivElement | null>;
-    } = {};
-    for (const name of frameNames) {
-      refs[name] = refs[name] ?? React.createRef<HTMLDivElement>();
-    }
-    return refs;
-  }, [frameNames]);
+	const containerRefs = useRef<
+		Record<string, React.RefObject<HTMLDivElement | null>>
+	>({});
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const compressed = params.get("data");
-    if (!compressed) return;
+	const frameContainerRefs = containerRefs.current;
 
-    try {
-      const json = LZString.decompressFromEncodedURIComponent(compressed);
-      if (!json) return;
-      const save = JSON.parse(json);
-      if (save.frameNames && save.allFrameElements) {
-        setFrameNames(save.frameNames);
-        setAllFrameElements(save.allFrameElements);
 
-        let maxId = 0;
-        for (const arr of Object.values(save.allFrameElements)) {
-          for (const el of arr as any[]) {
-            const parts = el.id.split("-");
-            const num = parseInt(parts[parts.length - 1], 10);
-            if (!isNaN(num) && num > maxId) maxId = num;
-          }
-        }
-        setNextElementId(maxId);
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const framesParam = urlParams.get('frames');
+  const elementsParam = urlParams.get('elements');
+  if (!framesParam || !elementsParam) return;
 
-        if (save.frameNames.length > 0) {
-          setSelectedFrameName(save.frameNames[0]);
-        }
+  const frameNameList = framesParam.split(',');
+
+  const elementsByFrame: Record<string, FrameElement[]> = {};
+  for (const frameEntry of elementsParam.split(';')) {
+    const [frameName, elementListString] = frameEntry.split(':');
+    if (!frameName) continue;
+
+    const elementArray: FrameElement[] = [];
+    if (elementListString) {
+      for (const elementEntry of elementListString.split('|')) {
+        const [id, componentName, xInt, yInt, isFrameOrContainerStr] = elementEntry.split(',');
+        const xPercent = Number(xInt) / 100;
+        const yPercent = Number(yInt) / 100;
+        const isFrameOrContainer = isFrameOrContainerStr === 'false';
+        elementArray.push({ id, componentName, xPercent, yPercent, isFrameOrContainer });
       }
-    } catch {
-    
     }
-  }, []); 
+    elementsByFrame[frameName] = elementArray;
 
-
-  useEffect(() => {
-    if (frameNames.length === 0) {
-
-      window.history.replaceState(
-        null,
-        "",
-        window.location.origin + window.location.pathname
-      );
-      return;
-    }
-    const payload = JSON.stringify({
-      frameNames,
-      allFrameElements,
-    });
-    const compressed = LZString.compressToEncodedURIComponent(payload);
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.origin}${window.location.pathname}?data=${compressed}`
-    );
-  }, [frameNames, allFrameElements]); 
-
-  function addFrame(frameName: string) {
-    console.log("adding frame: ",frameName)
-    setFrameNames((prev) =>
-      prev.includes(frameName) ? prev : [...prev, frameName]
-    );
-    
-    setSelectedFrameName((prev) => (prev === "" ? frameName : prev));
   }
-  function removeFrame(frameName: string) {
-  setFrameNames(prev => prev.filter(name => name !== frameName));
-  setAllFrameElements(prev => {
-    const clone = { ...prev };
-    delete clone[frameName];
-    return clone;
-  });
- 
+
+  setFrameNames(frameNameList);
+  setAllFrameElements(elementsByFrame);
+
+  let highestIdNumber = 0;
+  for (const elementList of Object.values(elementsByFrame)) {
+    for (const element of elementList) {
+      const idParts = element.id.split('-');
+      const idNumber = parseInt(idParts[idParts.length - 1], 10);
+      if (!isNaN(idNumber) && idNumber > highestIdNumber) {
+        highestIdNumber = idNumber;
+      }
+    }
+  }
+  setNextElementId(highestIdNumber);
+
+  if (frameNameList.length > 0) {
+    setSelectedFrameName(frameNameList[0]);
+  }
+}, []);
+
+useEffect(() => {
+  const serializedFrames = frameNames.join(',');
+
+  const serializedElements = frameNames
+    .map(frame => {
+      const elementList = allFrameElements[frame] || [];
+      const serializedEntries = elementList
+        .map(element => {
+          const xInt = Math.round(element.xPercent * 100);
+          const yInt = Math.round(element.yPercent * 100);
+          return [
+            element.id,
+            element.componentName,
+            xInt,
+            yInt,
+            element.isFrameOrContainer
+          ].join(',');
+        })
+        .join('|');
+
+      return `${frame}:${serializedEntries}`;
+    })
+    .join(';');
+
+  const newSearchParams = new URLSearchParams();
+  newSearchParams.set('frames', serializedFrames);
+  newSearchParams.set('elements', serializedElements);
+
+  const newUrl =
+    `${window.location.origin}${window.location.pathname}?${newSearchParams.toString()}`;
+
+  window.history.replaceState(null, '', newUrl);
+}, [frameNames, allFrameElements]);
+
+
+
+
+
+
+	function addFrame(frameName: string) {
+		
+		setFrameNames((prev) =>
+			prev.includes(frameName) ? prev : [...prev, frameName]
+		);
+		setSelectedFrameName((prev) => (prev === "" ? frameName : prev));
+		if (!containerRefs.current[frameName]) {
+			containerRefs.current[frameName] =
+				React.createRef<HTMLDivElement | null>();
+		}
+	}
+
+function removeFrame(frameElement: FrameElement) {
+  if (!frameElement.isFrameOrContainer) return
+
+  const framesToRemove: string[] = []
+
+  function gatherFrames(frameId: string) {
+    framesToRemove.push(frameId)
+    const children = allFrameElements[frameId] || []
+    for (const child of children) {
+      if (child.isFrameOrContainer) {
+        gatherFrames(child.id)
+      }
+    }
+  }
+
+  gatherFrames(frameElement.id)
+
+  setFrameNames(current =>
+    current.filter(name => !framesToRemove.includes(name))
+  )
+
+  setAllFrameElements(current => {
+    const updated = { ...current }
+    for (const name of framesToRemove) {
+      delete updated[name]
+    }
+    return updated
+  })
+
+  for (const name of framesToRemove) {
+    delete containerRefs.current[name]
+  }
+  setSelectedFrameName("TopFrame")
 }
 
-  function addElementToFrame(componentName: string) {
-    const newId = `${componentName}-${nextElementId + 1}`;
-    setNextElementId((n) => n + 1);
+	function addElementToFrame(componentName: string, isFrameOrContainer: boolean) {
+    
+		const newId = `${componentName}-${nextElementId + 1}`;
+		setNextElementId((n) => n + 1);
+		setAllFrameElements((prev) => {
+			const clone = { ...prev };
+			const list = clone[selectedFrameName] || [];
+			clone[selectedFrameName] = [
+				...list,
+				{ id: newId, componentName, xPercent: 50, yPercent: 50, isFrameOrContainer },
+			];
+			return clone;
+		});
+		return newId;
+	}
 
-    setAllFrameElements((prev) => {
-      const clone = { ...prev };
-      const list = clone[selectedFrameName] || [];
-      clone[selectedFrameName] = [
-        ...list,
-        { id: newId, componentName, xPercent: 50, yPercent: 50 },
-      ];
-      return clone;
-    });
+	function removeElementFromFrame(
+		elementId: string,
+		connectedFrameOrContainerName: string
+	) {
+		setAllFrameElements((prev) => {
+			const clone = { ...prev };
+			clone[connectedFrameOrContainerName] = (
+				clone[connectedFrameOrContainerName] || []
+			).filter((e) => e.id !== elementId);
+			return clone;
+		});
+	}
 
-    return newId;
-  }
+	function updateElementPosition(
+		elementId: string,
+		xPercent: number,
+		yPercent: number,
+		connectedFrameOrContainerName: string
+	) {
+		setAllFrameElements((prev) => {
+			const clone = { ...prev };
+			clone[connectedFrameOrContainerName] = (
+				clone[connectedFrameOrContainerName] || []
+			).map((e) =>
+				e.id === elementId ? { ...e, xPercent, yPercent } : e
+			);
+			return clone;
+		});
+	}
 
-  function removeElementFromFrame(elementId: string) {
-    setAllFrameElements((prev) => {
-      const clone = { ...prev };
-      clone[selectedFrameName] = (clone[selectedFrameName] || []).filter(
-        (e) => e.id !== elementId
-      );
-      return clone;
-    });
-  }
-
-  function updateElementPosition(
-    elementId: string,
-    xPercent: number,
-    yPercent: number
-  ) {
-    setAllFrameElements((prev) => {
-      const clone = { ...prev };
-      clone[selectedFrameName] = (clone[selectedFrameName] || []).map((e) =>
-        e.id === elementId ? { ...e, xPercent, yPercent } : e
-      );
-      return clone;
-    });
-  }
-
-  return (
-    <FrameContext.Provider
-      value={{
-        selectedFrameName,
-        setSelectedFrameName,
-        frameNames,
-        addFrame,
-        removeFrame,
-        addElementToFrame,
-        removeElementFromFrame,
-        updateElementPosition,
-        allFrameElements,
-        frameContainerRefs,
-      }}
-    >
-      {children}
-    </FrameContext.Provider>
-  );
+	return (
+		<FrameContext.Provider
+			value={{
+				selectedFrameName,
+				setSelectedFrameName,
+				frameNames,
+				addFrame,
+				removeFrame,
+				addElementToFrame,
+				removeElementFromFrame,
+				updateElementPosition,
+				allFrameElements,
+				frameContainerRefs,
+			}}
+		>
+			{children}
+		</FrameContext.Provider>
+	);
 }
 
 export function useFrame() {
-  const ctx = useContext(FrameContext);
-  if (!ctx) throw new Error("useFrame must be used within FrameManager");
-  return ctx;
+	const ctx = useContext(FrameContext);
+	if (!ctx) throw new Error("useFrame must be used within FrameManager");
+	return ctx;
 }

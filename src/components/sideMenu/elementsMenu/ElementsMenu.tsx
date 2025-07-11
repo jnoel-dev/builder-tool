@@ -109,10 +109,10 @@ export default function ElementsMenu() {
 					</Tabs>
 				</Box>
 				<CustomTabPanel value={selectedTab} index={0}>
-					{/* //ELEMENT NAME MUST MATCH WHAT IS DEFINED IN COMPONENT REGISTRY */}
+					{/* //ELEMENT NAME MUST MATCH WHAT IS DEFINED IN COMPONENT REGISTRY - strings are used here for easy serialization in url*/}
 					<AddElementButton elementName="Panel"/>
 					<Divider component="li" />
-					<AddElementButton elementName="ContainerVertical"/>
+					<AddElementButton elementName="ContainerVertical" isFrameOrContainer={true}/>
 				</CustomTabPanel>
 				<CustomTabPanel value={selectedTab} index={1}>
 					Item Two

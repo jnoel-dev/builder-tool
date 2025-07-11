@@ -14,18 +14,18 @@ export default function Container({
 }: ContainerProps) {
   const { frameContainerRefs } = useFrame();
 
+
   return (
     <Box
       ref={frameContainerRefs[savedName]}
       sx={{
-        width: '500px',
-        height: '500px',
+
         border: '1px solid',
         display: 'inline-block', 
   
       }}
     >
-      <FrameBase frameName={savedName} />
+      <FrameBase frameName={savedName} disableElementControlsForChildren={true}/>
     </Box>
   );
 }

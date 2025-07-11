@@ -7,38 +7,39 @@ import ElementController from '../addableElements/elementController/ElementContr
 
 interface FrameBaseProps {
   frameName: string;
+  disableElementControlsForChildren?: boolean;
 }
 
-export default function FrameBase({ frameName }: FrameBaseProps) {
-  const { allFrameElements, addFrame, removeFrame } = useFrame();
+export default function FrameBase({ frameName, disableElementControlsForChildren=false }: FrameBaseProps) {
+  const { allFrameElements, addFrame, removeFrame, frameContainerRefs} = useFrame();
   const elements = allFrameElements[frameName] || [];
 
   useEffect(() => {
     addFrame(frameName);
-    return () => removeFrame(frameName);
-  }, []); 
+    
+  }, [frameName]);
+
+ 
+
 
   return (
     <>
       {elements.map(el => {
         const entry = componentRegistry[el.componentName];
         if (!entry) return null;
-
         const { component: Component, neededProps = {} } = entry;
-        //change later
-        const isFrameOrContainer =
-          el.id.includes('Frame') || el.id.includes('Container');
-        const extraProps = isFrameOrContainer
-          ? { savedName: el.id }
-          : {};
+        console.log("IS THIS A FRAME?: ", frameName)
+        
+        
+        const extraProps = el.isFrameOrContainer ? { savedName: el.id } : {};
 
         return (
           <ElementController
             key={el.id}
-            elementId={el.id}
-            xPercent={el.xPercent}
-            yPercent={el.yPercent}
-            showName={isFrameOrContainer}
+            elementToControl={el}
+            controlsDisabled={disableElementControlsForChildren}
+            shouldShowName={el.isFrameOrContainer}
+            containerRef={frameContainerRefs[frameName]}
             connectedFrameOrContainerName={frameName}
           >
             <Component {...neededProps} {...extraProps} />
