@@ -63,7 +63,6 @@ useEffect(() => {
   const framesParam = urlParams.get('frames');
   const elementsParam = urlParams.get('elements');
   if (!framesParam || !elementsParam) return;
-
   const frameNameList = framesParam.split(',');
 
   const elementsByFrame: Record<string, FrameElement[]> = {};
@@ -77,14 +76,13 @@ useEffect(() => {
         const [id, componentName, xInt, yInt, isFrameOrContainerStr] = elementEntry.split(',');
         const xPercent = Number(xInt) / 100;
         const yPercent = Number(yInt) / 100;
-        const isFrameOrContainer = isFrameOrContainerStr === 'false';
+        const isFrameOrContainer = isFrameOrContainerStr === 'true';
         elementArray.push({ id, componentName, xPercent, yPercent, isFrameOrContainer });
       }
     }
     elementsByFrame[frameName] = elementArray;
 
   }
-
   setFrameNames(frameNameList);
   setAllFrameElements(elementsByFrame);
 

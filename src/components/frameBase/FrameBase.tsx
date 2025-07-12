@@ -15,6 +15,7 @@ export default function FrameBase({ frameName, disableElementControlsForChildren
   const elements = allFrameElements[frameName] || [];
 
   useEffect(() => {
+    if (!frameName) return;
     addFrame(frameName);
     
   }, [frameName]);

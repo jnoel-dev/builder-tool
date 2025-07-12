@@ -130,6 +130,8 @@ export default function ElementController({
         transform: 'translate(-50%, -50%)',
       };
 
+      
+
   return (
     <div id={elementToControl.id} style={containerStyle}>
       <Stack direction="row-reverse">
