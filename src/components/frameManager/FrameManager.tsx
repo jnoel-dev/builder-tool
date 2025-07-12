@@ -191,34 +191,39 @@ function removeFrame(frameElement: FrameElement) {
   setSelectedFrameName("TopFrame")
 }
 
-	function addElementToFrame(componentName: string, isFrameOrContainer: boolean) {
-    
-		const newId = `${componentName}-${nextElementId + 1}`;
-		setNextElementId((n) => n + 1);
-		setAllFrameElements((prev) => {
-			const clone = { ...prev };
-			const list = clone[selectedFrameName] || [];
-			clone[selectedFrameName] = [
-				...list,
-				{ id: newId, componentName, xPercent: 50, yPercent: 50, isFrameOrContainer },
-			];
-			return clone;
-		});
-		return newId;
-	}
+  function addElementToFrame(componentName: string, isFrameOrContainer: boolean) {
+    const existing = Object.values(allFrameElements)
+      .flat()
+      .filter(e => e.componentName === componentName);
 
-	function removeElementFromFrame(
-		elementId: string,
-		connectedFrameOrContainerName: string
-	) {
-		setAllFrameElements((prev) => {
-			const clone = { ...prev };
-			clone[connectedFrameOrContainerName] = (
-				clone[connectedFrameOrContainerName] || []
-			).filter((e) => e.id !== elementId);
-			return clone;
-		});
-	}
+    const highest = existing
+      .map(e => parseInt(e.id.split("-").pop()!, 10))
+      .filter(n => !isNaN(n))
+      .reduce((max, n) => Math.max(max, n), 0);
+
+    const nextIndex = highest + 1;
+    const newId = `${componentName}-${nextIndex}`;
+
+    setAllFrameElements(prev => {
+      const clone = { ...prev };
+      const list = clone[selectedFrameName] || [];
+      clone[selectedFrameName] = [
+        ...list,
+        { id: newId, componentName, xPercent: 50, yPercent: 50, isFrameOrContainer },
+      ];
+      return clone;
+    });
+
+    return newId;
+  }
+
+  function removeElementFromFrame(elementId: string, frameName: string) {
+    setAllFrameElements(prev => {
+      const clone = { ...prev };
+      clone[frameName] = (clone[frameName] || []).filter(e => e.id !== elementId);
+      return clone;
+    });
+  }
 
 	function updateElementPosition(
 		elementId: string,

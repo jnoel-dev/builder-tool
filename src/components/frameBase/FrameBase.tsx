@@ -28,7 +28,7 @@ export default function FrameBase({ frameName, disableElementControlsForChildren
         const entry = componentRegistry[el.componentName];
         if (!entry) return null;
         const { component: Component, neededProps = {} } = entry;
-        console.log("IS THIS A FRAME?: ", frameName)
+     
         
         
         const extraProps = el.isFrameOrContainer ? { savedName: el.id } : {};
