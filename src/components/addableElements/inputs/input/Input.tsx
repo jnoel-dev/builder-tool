@@ -23,6 +23,7 @@ export default function Input() {
     >
       <Stack direction="row" spacing={2}>
         <input
+          name="input"
           ref={inputRef}
           placeholder="insert text here..."
           style={{

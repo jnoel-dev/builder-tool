@@ -5,14 +5,14 @@ import { useTheme } from '@mui/material/styles';
 
 export default function InputReact() {
   const theme = useTheme();
-  const [text, setText] = useState('');
   const [displayText, setDisplayText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleShowClick = () => {
-    setDisplayText(text);
+    if (inputRef.current) {
+      setDisplayText(inputRef.current.value);
+    }
   };
-
 
   return (
     <Box
@@ -22,20 +22,17 @@ export default function InputReact() {
       }}
     >
       <Stack direction="column" spacing={2}>
-        <Stack direction="row" spacing={2}>
-          <input
-            ref={inputRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="insert text here..."
-            style={{
-              backgroundColor: theme.palette.background.paper,
-              padding: '8px',
-              color: theme.palette.text.primary,
-              flex: 1,
-            }}
-          />
-        </Stack>
+        <input
+          name="inputReact"
+          ref={inputRef}
+          placeholder="insert text here..."
+          style={{
+            backgroundColor: theme.palette.background.paper,
+            padding: '8px',
+            color: theme.palette.text.primary,
+            flex: 1,
+          }}
+        />
 
         <Stack direction="row" spacing={2} alignItems="center">
           <Button
@@ -59,7 +56,6 @@ export default function InputReact() {
             </Box>
           )}
         </Stack>
-
       </Stack>
     </Box>
   );
