@@ -4,8 +4,8 @@ import FrameBase from "@/components/frameBase/FrameBase";
 import { useFrame } from "@/components/frameManager/FrameManager";
 
 interface ContainerProps {
-	containerType: string;
-	savedName: string;
+  containerType: string;
+  savedName: string;
 }
 
 export default function Container({
@@ -20,8 +20,9 @@ export default function Container({
       ref={frameContainerRefs[savedName]}
       sx={{
         border: '1px solid',
-        display: 'inline-block',
-        maxWidth: '100%' 
+        display: 'flex', 
+        flexDirection: containerType === "horizontal" ? "row" : "column",
+        maxWidth: '100%',
       }}
     >
       <FrameBase frameName={savedName} disableElementControlsForChildren={true} />
@@ -30,7 +31,7 @@ export default function Container({
           sx={{
             wordBreak: 'break-word',
             textAlign: 'center',
-            width: 200
+            width: 200,
           }}
         >
           Add elements here by selecting container in Elements menu
@@ -39,4 +40,3 @@ export default function Container({
     </Box>
   );
 }
-

@@ -189,39 +189,62 @@ function removeFrame(frameElement: FrameElement) {
   setSelectedFrameName("TopFrame")
 }
 
-  function addElementToFrame(componentName: string, isFrameOrContainer: boolean) {
-    const existing = Object.values(allFrameElements)
-      .flat()
-      .filter(e => e.componentName === componentName);
+function addElementToFrame(componentName: string, isFrameOrContainer: boolean) {
+  // Find all elements with the same component name across all frames
+  const allElements = Object.values(allFrameElements).flat();
 
-    const highest = existing
-      .map(e => parseInt(e.id.split("-").pop()!, 10))
-      .filter(n => !isNaN(n))
-      .reduce((max, n) => Math.max(max, n), 0);
+  const matchingElements = allElements.filter((element) => {
+    return element.componentName === componentName;
+  });
 
-    const nextIndex = highest + 1;
-    const newId = `${componentName}-${nextIndex}`;
+  const numericSuffixes = matchingElements
+    .map((element) => {
+      const idParts = element.id.split("-");
+      const suffix = parseInt(idParts[idParts.length - 1], 10);
+      return isNaN(suffix) ? null : suffix;
+    })
+    .filter((suffix): suffix is number => suffix !== null);
 
-    setAllFrameElements(prev => {
-      const clone = { ...prev };
-      const list = clone[selectedFrameName] || [];
-      clone[selectedFrameName] = [
-        ...list,
-        { id: newId, componentName, xPercent: 50, yPercent: 50, isFrameOrContainer },
-      ];
-      return clone;
+  const highestIndex = numericSuffixes.length > 0
+    ? Math.max(...numericSuffixes)
+    : 0;
+
+  const nextIndex = highestIndex + 1;
+  const newElementId = `${componentName}-${nextIndex}`;
+
+  setAllFrameElements((previousElements) => {
+    const updatedElements = { ...previousElements };
+    const currentFrameElements = updatedElements[selectedFrameName] || [];
+
+    const newElement = {
+      id: newElementId,
+      componentName,
+      xPercent: 50,
+      yPercent: 50,
+      isFrameOrContainer,
+    };
+
+    updatedElements[selectedFrameName] = [...currentFrameElements, newElement];
+    return updatedElements;
+  });
+
+  return newElementId;
+}
+
+function removeElementFromFrame(elementId: string, frameName: string) {
+  setAllFrameElements((previousElements) => {
+    const updatedElements = { ...previousElements };
+    const currentFrameElements = updatedElements[frameName] || [];
+
+    const filteredElements = currentFrameElements.filter((element) => {
+      return element.id !== elementId;
     });
 
-    return newId;
-  }
+    updatedElements[frameName] = filteredElements;
+    return updatedElements;
+  });
+}
 
-  function removeElementFromFrame(elementId: string, frameName: string) {
-    setAllFrameElements(prev => {
-      const clone = { ...prev };
-      clone[frameName] = (clone[frameName] || []).filter(e => e.id !== elementId);
-      return clone;
-    });
-  }
 
 	function updateElementPosition(
 		elementId: string,

@@ -41,19 +41,13 @@ function a11yProps(index: number) {
 }
 
 export default function ElementsMenu() {
-	
-
 	const [selectedTab, setTab] = React.useState(0);
 
-  const { selectedFrameName, setSelectedFrameName, frameNames} = useFrame();
-
-
+	const { selectedFrameName, setSelectedFrameName, frameNames } = useFrame();
 
 	const handleTabChange = (event: React.SyntheticEvent, tabIndex: number) => {
 		setTab(tabIndex);
 	};
-
-
 
 	const handleFrameChange = (event: SelectChangeEvent) => {
 		setSelectedFrameName(event.target.value as string);
@@ -61,10 +55,7 @@ export default function ElementsMenu() {
 
 	return (
 		<div>
-
-
 			<Box display="flex" width="100%" alignItems="center">
-
 				<FormControl size="small" sx={{ flex: 1, paddingTop: "4px" }}>
 					<Select
 						labelId="frame-select-label"
@@ -75,19 +66,18 @@ export default function ElementsMenu() {
 							textAlign: "center",
 						}}
 					>
-          {frameNames.map((frame) => {
-			
-            const displayName = frame
-              .replace(/([A-Z])/g, ' $1') 
-              .trim()           
-              .toUpperCase();         
+						{frameNames.map((frame) => {
+							const displayName = frame
+								.replace(/([A-Z])/g, " $1")
+								.trim()
+								.toUpperCase();
 
-            return (
-              <MenuItem key={frame} value={frame}>
-                {displayName}
-              </MenuItem>
-            );
-          })}
+							return (
+								<MenuItem key={frame} value={frame}>
+									{displayName}
+								</MenuItem>
+							);
+						})}
 					</Select>
 				</FormControl>
 			</Box>
@@ -100,7 +90,7 @@ export default function ElementsMenu() {
 						aria-label="basic tabs example"
 						textColor="secondary"
 						indicatorColor="secondary"
-            centered
+						centered
 					>
 						<Tab label="Panels" {...a11yProps(0)} />
 						<Tab label="Inputs" {...a11yProps(1)} />
@@ -110,15 +100,21 @@ export default function ElementsMenu() {
 				</Box>
 				<CustomTabPanel value={selectedTab} index={0}>
 					{/* //ELEMENT NAME MUST MATCH WHAT IS DEFINED IN COMPONENT REGISTRY - strings are used here for easy serialization in url*/}
-					<AddElementButton elementName="Panel"/>
+					<AddElementButton elementName="Panel" />
 					<Divider component="li" />
-					<AddElementButton elementName="ContainerVertical" isFrameOrContainer={true}/>
 				</CustomTabPanel>
-				<CustomTabPanel value={selectedTab} index={1}>
-					Item Two
-				</CustomTabPanel>
-				<CustomTabPanel value={selectedTab} index={2}>
-					Item Three
+				<CustomTabPanel value={selectedTab} index={1}></CustomTabPanel>
+				<CustomTabPanel value={selectedTab} index={2}></CustomTabPanel>
+				<CustomTabPanel value={selectedTab} index={3}>
+					<AddElementButton
+						elementName="ContainerVertical"
+						isFrameOrContainer={true}
+					/>
+					<Divider component="li" />
+					<AddElementButton
+						elementName="ContainerHorizontal"
+						isFrameOrContainer={true}
+					/>
 				</CustomTabPanel>
 			</Box>
 		</div>

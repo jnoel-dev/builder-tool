@@ -16,6 +16,11 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
     component: Container,
     neededProps: { containerType: "vertical" },
   },
+
+  ContainerHorizontal: {
+    component: Container,
+    neededProps: { containerType: "horizontal" },
+  },
 }
 
 export default componentRegistry
