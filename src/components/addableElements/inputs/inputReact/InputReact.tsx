@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { Stack, Button } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -6,20 +6,29 @@ import { useTheme } from '@mui/material/styles';
 export default function InputReact() {
   const theme = useTheme();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [text, setText] = useState('');
   const [displayText, setDisplayText] = useState('');
 
-  const handleShowClick = () => {
-    if (inputRef.current) {
-      setDisplayText(inputRef.current.value);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setText(e.target.value);
+  };
+
+  const handleBlur = () => {
+    const currentValue = inputRef.current?.value ?? '';
+    if (currentValue !== text) {
+
+      if (inputRef.current) {
+        inputRef.current.value = '';
+      }
+      setText('');
     }
   };
 
+  const handleShowClick = () => {
 
-  useLayoutEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.value = '';
-    }
-  });
+    setDisplayText(text);
+    
+  };
 
   return (
     <Box
@@ -32,6 +41,8 @@ export default function InputReact() {
         <input
           name="customInput"
           ref={inputRef}
+          onChange={handleChange}
+          onBlur={handleBlur}
           placeholder="insert text here..."
           style={{
             backgroundColor: theme.palette.background.paper,
