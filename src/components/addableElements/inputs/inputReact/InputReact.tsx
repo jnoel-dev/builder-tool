@@ -13,21 +13,8 @@ export default function InputReact() {
     setText(e.target.value);
   };
 
-  const handleBlur = () => {
-    const currentValue = inputRef.current?.value ?? '';
-    if (currentValue !== text) {
-
-      if (inputRef.current) {
-        inputRef.current.value = '';
-      }
-      setText('');
-    }
-  };
-
   const handleShowClick = () => {
-
     setDisplayText(text);
-    
   };
 
   return (
@@ -42,7 +29,6 @@ export default function InputReact() {
           name="customInput"
           ref={inputRef}
           onChange={handleChange}
-          onBlur={handleBlur}
           placeholder="insert text here..."
           style={{
             backgroundColor: theme.palette.background.paper,
