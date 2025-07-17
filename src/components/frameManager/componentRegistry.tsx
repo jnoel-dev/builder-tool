@@ -2,6 +2,8 @@ import React from "react"
 import Panel from "../addableElements/panels/panel/Panel"
 import Container from "../addableElements/frames/container/Container"
 import PanelSVG from "../addableElements/panels/panelSVG/PanelSVG"
+import Input from "../addableElements/elementController/inputs/input/Input"
+import InputReact from "../addableElements/elementController/inputs/inputReact/InputReact"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -15,6 +17,14 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
 
   PanelSVG: {
     component: PanelSVG,
+  },
+
+  Input: {
+    component: Input,
+  },
+
+  InputReact: {
+    component: InputReact,
   },
 
   ContainerVertical: {

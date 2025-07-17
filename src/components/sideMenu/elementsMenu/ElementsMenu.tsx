@@ -7,9 +7,14 @@ import Box from "@mui/material/Box";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
-import Panel from "@/components/addableElements/panels/panel/Panel";
 import { useFrame } from "@/components/frameManager/FrameManager";
-import Container from "@/components/addableElements/frames/container/Container";
+
+enum TabIndex {
+	Panels,
+	Inputs,
+	Dialogs,
+	Frames
+}
 
 interface TabPanelProps {
 	children?: React.ReactNode;
@@ -33,7 +38,7 @@ function CustomTabPanel(props: TabPanelProps) {
 	);
 }
 
-function a11yProps(index: number) {
+function getTabProps(index: number) {
 	return {
 		id: `simple-tab-${index}`,
 		"aria-controls": `simple-tabpanel-${index}`,
@@ -41,8 +46,7 @@ function a11yProps(index: number) {
 }
 
 export default function ElementsMenu() {
-	const [selectedTab, setTab] = React.useState(0);
-
+	const [selectedTab, setTab] = React.useState(TabIndex.Panels);
 	const { selectedFrameName, setSelectedFrameName, frameNames } = useFrame();
 
 	const handleTabChange = (event: React.SyntheticEvent, tabIndex: number) => {
@@ -62,9 +66,7 @@ export default function ElementsMenu() {
 						id="frame-select-label"
 						value={selectedFrameName}
 						onChange={handleFrameChange}
-						sx={{
-							textAlign: "center",
-						}}
+						sx={{ textAlign: "center" }}
 					>
 						{frameNames.map((frame) => {
 							const displayName = frame
@@ -87,27 +89,36 @@ export default function ElementsMenu() {
 					<Tabs
 						value={selectedTab}
 						onChange={handleTabChange}
-						aria-label="basic tabs example"
+						aria-label="element tabs"
 						textColor="secondary"
 						indicatorColor="secondary"
 						centered
 					>
-						<Tab label="Panels" {...a11yProps(0)} />
-						<Tab label="Inputs" {...a11yProps(1)} />
-						<Tab label="Dialogs" {...a11yProps(2)} />
-						<Tab label="Frames" {...a11yProps(3)} />
+						<Tab label="Panels" {...getTabProps(TabIndex.Panels)} />
+						<Tab label="Inputs" {...getTabProps(TabIndex.Inputs)} />
+						<Tab label="Dialogs" {...getTabProps(TabIndex.Dialogs)} />
+						<Tab label="Frames" {...getTabProps(TabIndex.Frames)} />
 					</Tabs>
 				</Box>
-				<CustomTabPanel value={selectedTab} index={0}>
-					{/* //ELEMENT NAME MUST MATCH WHAT IS DEFINED IN COMPONENT REGISTRY - strings are used here for easy serialization in url*/}
+
+				{/* //ELEMENT NAME MUST MATCH WHAT IS DEFINED IN COMPONENT REGISTRY - strings are used here cause we add elements to frame in the same way we deserialize from URL*/}
+				<CustomTabPanel value={selectedTab} index={TabIndex.Panels}>
 					<AddElementButton elementName="Panel" />
 					<Divider component="li" />
 					<AddElementButton elementName="PanelSVG" />
 					<Divider component="li" />
 				</CustomTabPanel>
-				<CustomTabPanel value={selectedTab} index={1}></CustomTabPanel>
-				<CustomTabPanel value={selectedTab} index={2}></CustomTabPanel>
-				<CustomTabPanel value={selectedTab} index={3}>
+
+				<CustomTabPanel value={selectedTab} index={TabIndex.Inputs}>
+					<AddElementButton elementName="Input" />
+					<Divider component="li" />
+					<AddElementButton elementName="InputReact" />
+					<Divider component="li" />
+				</CustomTabPanel>
+
+				<CustomTabPanel value={selectedTab} index={TabIndex.Dialogs}></CustomTabPanel>
+
+				<CustomTabPanel value={selectedTab} index={TabIndex.Frames}>
 					<AddElementButton
 						elementName="ContainerVertical"
 						isFrameOrContainer={true}
