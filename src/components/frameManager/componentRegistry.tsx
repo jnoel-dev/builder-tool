@@ -1,6 +1,7 @@
 import React from "react"
-import Panel from "../addableElements/Panel/Panel"
-import Container from "../addableElements/Container/Container"
+import Panel from "../addableElements/panels/panel/Panel"
+import Container from "../addableElements/frames/container/Container"
+import PanelSVG from "../addableElements/panels/panelSVG/PanelSVG"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -10,6 +11,10 @@ interface ComponentEntry {
 const componentRegistry: { [key: string]: ComponentEntry } = {
   Panel: {
     component: Panel,
+  },
+
+  PanelSVG: {
+    component: PanelSVG,
   },
 
   ContainerVertical: {

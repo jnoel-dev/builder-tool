@@ -155,7 +155,9 @@ export default function ElementController({
           </IconButton>
         )}
 
-        {shouldShowName && elementToControl.id}
+        {elementToControl.id}
+        {/* change later idk */}
+        {/* {shouldShowName && elementToControl.id} */}
       </Stack>
       {children}
     </div>

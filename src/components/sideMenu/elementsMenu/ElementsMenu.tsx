@@ -7,9 +7,9 @@ import Box from "@mui/material/Box";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
-import Panel from "@/components/addableElements/Panel/Panel";
+import Panel from "@/components/addableElements/panels/panel/Panel";
 import { useFrame } from "@/components/frameManager/FrameManager";
-import Container from "@/components/addableElements/Container/Container";
+import Container from "@/components/addableElements/frames/container/Container";
 
 interface TabPanelProps {
 	children?: React.ReactNode;
@@ -101,6 +101,8 @@ export default function ElementsMenu() {
 				<CustomTabPanel value={selectedTab} index={0}>
 					{/* //ELEMENT NAME MUST MATCH WHAT IS DEFINED IN COMPONENT REGISTRY - strings are used here for easy serialization in url*/}
 					<AddElementButton elementName="Panel" />
+					<Divider component="li" />
+					<AddElementButton elementName="PanelSVG" />
 					<Divider component="li" />
 				</CustomTabPanel>
 				<CustomTabPanel value={selectedTab} index={1}></CustomTabPanel>
