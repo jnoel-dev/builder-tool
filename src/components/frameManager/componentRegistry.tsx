@@ -2,8 +2,8 @@ import React from "react"
 import Panel from "../addableElements/panels/panel/Panel"
 import Container from "../addableElements/frames/container/Container"
 import PanelSVG from "../addableElements/panels/panelSVG/PanelSVG"
-import Input from "../addableElements/elementController/inputs/input/Input"
-import InputReact from "../addableElements/elementController/inputs/inputReact/InputReact"
+import Input from "../addableElements/inputs/input/Input"
+import InputReact from "../addableElements/inputs/inputReact/InputReact"
 
 interface ComponentEntry {
   component: React.ComponentType<any>

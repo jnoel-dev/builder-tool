@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Box from '@mui/material/Box';
 import { Stack, Button } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -7,10 +7,12 @@ export default function InputReact() {
   const theme = useTheme();
   const [text, setText] = useState('');
   const [displayText, setDisplayText] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleShowClick = () => {
     setDisplayText(text);
   };
+
 
   return (
     <Box
@@ -20,7 +22,9 @@ export default function InputReact() {
       }}
     >
       <Stack direction="column" spacing={2}>
+        <Stack direction="row" spacing={2}>
           <input
+            ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="insert text here..."
@@ -31,7 +35,7 @@ export default function InputReact() {
               flex: 1,
             }}
           />
-
+        </Stack>
 
         <Stack direction="row" spacing={2} alignItems="center">
           <Button
@@ -48,12 +52,14 @@ export default function InputReact() {
                 backgroundColor: theme.palette.background.paper,
                 color: theme.palette.text.primary,
                 padding: '8px',
+                borderRadius: '4px',
               }}
             >
               {displayText}
             </Box>
           )}
         </Stack>
+
       </Stack>
     </Box>
   );
