@@ -7,7 +7,7 @@ import Box from "@mui/material/Box";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
-import { useFrame } from "@/components/frameManager/FrameManager";
+import { useFrame } from "@/components/contexts/frameManager/FrameManager";
 import { FormHelperText } from "@mui/material";
 
 enum TabIndex {
@@ -134,6 +134,11 @@ export default function ElementsMenu() {
 						elementName="ContainerHorizontal"
 						isFrameOrContainer={true}
 					/>
+					<AddElementButton
+						elementName="IframeSameDomain"
+						isFrameOrContainer={true}
+					/>
+					<Divider component="li" />
 				</CustomTabPanel>
 			</Box>
 		</div>

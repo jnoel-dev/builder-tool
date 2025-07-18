@@ -1,7 +1,7 @@
 import React from "react";
 import Box from "@mui/material/Box";
-import FrameBase from "@/components/frameBase/FrameBase";
-import { useFrame } from "@/components/frameManager/FrameManager";
+import FrameBase from "@/components/contexts/frameManager/frameBase/FrameBase";
+import { useFrame } from "@/components/contexts/frameManager/FrameManager";
 
 interface ContainerProps {
   containerType: string;

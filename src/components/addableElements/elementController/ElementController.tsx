@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useRef, useEffect, useState, CSSProperties } from "react";
-import { FrameElement, useFrame } from "@/components/frameManager/FrameManager";
+import { FrameElement, useFrame } from "@/components/contexts/frameManager/FrameManager";
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';

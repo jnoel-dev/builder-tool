@@ -1,4 +1,3 @@
-
 import SideMenu from '@/components/sideMenu/SideMenu';
 import TopFrame from '@/components/topFrame/TopFrame';
 
@@ -7,6 +6,7 @@ export default function Home() {
 
   
   return (
+  
   <div
     style={{
       width: "100%",
@@ -23,7 +23,8 @@ export default function Home() {
   >
       <TopFrame/>
       <SideMenu/>
+
     </div>
-    
+  
   );
 }

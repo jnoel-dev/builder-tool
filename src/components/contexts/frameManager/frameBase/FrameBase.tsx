@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import Collapse from '@mui/material/Collapse';
-import { useFrame } from '@/components/frameManager/FrameManager';
-import componentRegistry from '@/components/frameManager/componentRegistry';
-import ElementController from '../addableElements/elementController/ElementController';
+import { useFrame } from '@/components/contexts/frameManager/FrameManager';
+import componentRegistry from '@/components/contexts/frameManager/componentRegistry';
+import ElementController from '../../../addableElements/elementController/ElementController';
 
 interface FrameBaseProps {
   frameName: string;

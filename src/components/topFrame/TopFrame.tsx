@@ -2,8 +2,8 @@
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
-import FrameBase from '../frameBase/FrameBase';
-import { useFrame } from '../frameManager/FrameManager';
+import FrameBase from '../contexts/frameManager/frameBase/FrameBase';
+import { useFrame } from '../contexts/frameManager/FrameManager';
 
 export default function TopFrame(){
   const theme = useTheme();

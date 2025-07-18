@@ -1,11 +1,12 @@
 import React from "react"
-import Panel from "../addableElements/panels/panel/Panel"
-import Container from "../addableElements/frames/container/Container"
-import PanelSVG from "../addableElements/panels/panelSVG/PanelSVG"
-import Input from "../addableElements/inputs/input/Input"
-import InputReact from "../addableElements/inputs/inputReact/InputReact"
-import InputComplex from "../addableElements/inputs/inputComplex/InputComplex"
-import InputRedraw from "../addableElements/inputs/inputRedraw/InputRedraw"
+import Panel from "../../addableElements/panels/panel/Panel"
+import Container from "../../addableElements/frames/container/Container"
+import PanelSVG from "../../addableElements/panels/panelSVG/PanelSVG"
+import Input from "../../addableElements/inputs/input/Input"
+import InputReact from "../../addableElements/inputs/inputReact/InputReact"
+import InputComplex from "../../addableElements/inputs/inputComplex/InputComplex"
+import InputRedraw from "../../addableElements/inputs/inputRedraw/InputRedraw"
+import IframeSameDomain from "../../addableElements/frames/iframeSameDomain/IframeSameDomain"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -46,6 +47,11 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
     component: Container,
     neededProps: { containerType: "horizontal" },
   },
+
+  IframeSameDomain: {
+    component: IframeSameDomain,
+  },
+
 }
 
 export default componentRegistry

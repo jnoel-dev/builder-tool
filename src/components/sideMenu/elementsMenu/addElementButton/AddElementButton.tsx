@@ -4,7 +4,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import AddIcon from '@mui/icons-material/Add';
 import IconButton from '@mui/material/IconButton';
-import { useFrame } from '@/components/frameManager/FrameManager';
+import { useFrame } from '@/components/contexts/frameManager/FrameManager';
 
 interface AddElementButtonProps {
   elementName: string;

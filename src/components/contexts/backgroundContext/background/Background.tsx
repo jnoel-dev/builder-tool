@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { Canvas, useFrame, useThree, extend, ThreeElements } from "@react-three/fiber";
 import * as THREE from "three";
 import { DitherMaterial } from "./ditherShader";
-import { useThemeColors } from "../themeManager/ThemeManager";
+import { useThemeColors } from "../../themeManager/ThemeManager";
 
 extend({ DitherMaterial });
 

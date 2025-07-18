@@ -4,7 +4,7 @@ import * as React from "react";
 import Divider from "@mui/material/Divider";
 import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
-import { useThemeColors } from "@/components/themeManager/ThemeManager";
+import { useThemeColors } from "@/components/contexts/themeManager/ThemeManager";
 import Typography from "@mui/material/Typography";
 
 export default function SettingsMenu() {
