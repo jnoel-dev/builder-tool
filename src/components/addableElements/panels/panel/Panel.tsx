@@ -1,6 +1,6 @@
 import React from 'react';
 import Box from '@mui/material/Box';
-import { Stack } from '@mui/material';
+import { Stack, Collapse } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 
 export default function Panel() {
@@ -20,6 +20,7 @@ export default function Panel() {
   };
 
   return (
+    
     <Box
       sx={{
         backgroundColor: theme.palette.text.secondary,

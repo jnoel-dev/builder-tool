@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import Collapse from '@mui/material/Collapse';
 import { useFrame } from '@/components/frameManager/FrameManager';
 import componentRegistry from '@/components/frameManager/componentRegistry';
 import ElementController from '../addableElements/elementController/ElementController';
@@ -10,18 +11,24 @@ interface FrameBaseProps {
   disableElementControlsForChildren?: boolean;
 }
 
-export default function FrameBase({ frameName, disableElementControlsForChildren=false }: FrameBaseProps) {
-  const { allFrameElements, addFrame, removeFrame, frameContainerRefs} = useFrame();
+function CollapseWrapper({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setOpen(true);
+  }, []);
+
+  return <Collapse in={open} timeout={200}>{children}</Collapse>;
+}
+
+export default function FrameBase({ frameName, disableElementControlsForChildren = false }: FrameBaseProps) {
+  const { allFrameElements, addFrame, removeFrame, frameContainerRefs } = useFrame();
   const elements = allFrameElements[frameName] || [];
 
   useEffect(() => {
     if (!frameName) return;
     addFrame(frameName);
-    
   }, [frameName]);
-
- 
-
 
   return (
     <>
@@ -29,9 +36,6 @@ export default function FrameBase({ frameName, disableElementControlsForChildren
         const entry = componentRegistry[el.componentName];
         if (!entry) return null;
         const { component: Component, neededProps = {} } = entry;
-     
-        
-        
         const extraProps = el.isFrameOrContainer ? { savedName: el.id } : {};
 
         return (
@@ -43,7 +47,9 @@ export default function FrameBase({ frameName, disableElementControlsForChildren
             containerRef={frameContainerRefs[frameName]}
             connectedFrameOrContainerName={frameName}
           >
-            <Component {...neededProps} {...extraProps} />
+            <CollapseWrapper>
+              <Component {...neededProps} {...extraProps} />
+            </CollapseWrapper>
           </ElementController>
         );
       })}

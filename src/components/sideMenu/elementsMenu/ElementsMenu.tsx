@@ -8,6 +8,7 @@ import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import { useFrame } from "@/components/frameManager/FrameManager";
+import { FormHelperText } from "@mui/material";
 
 enum TabIndex {
 	Panels,
@@ -61,6 +62,7 @@ export default function ElementsMenu() {
 		<div>
 			<Box display="flex" width="100%" alignItems="center">
 				<FormControl size="small" sx={{ flex: 1, paddingTop: "4px" }}>
+					<FormHelperText sx={{ margin:0}}>Select a frame</FormHelperText>
 					<Select
 						labelId="frame-select-label"
 						id="frame-select-label"

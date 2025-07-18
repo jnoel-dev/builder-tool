@@ -8,7 +8,7 @@ import React, {
 	useEffect,
 	ReactNode,
 } from "react";
-import LZString from "lz-string";
+
 
 export type FrameElement = {
 	id: string;
