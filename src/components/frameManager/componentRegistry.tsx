@@ -4,6 +4,7 @@ import Container from "../addableElements/frames/container/Container"
 import PanelSVG from "../addableElements/panels/panelSVG/PanelSVG"
 import Input from "../addableElements/inputs/input/Input"
 import InputReact from "../addableElements/inputs/inputReact/InputReact"
+import InputComplex from "../addableElements/inputs/inputComplex/InputComplex"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -25,6 +26,10 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
 
   InputReact: {
     component: InputReact,
+  },
+
+  InputComplex: {
+    component: InputComplex,
   },
 
   ContainerVertical: {

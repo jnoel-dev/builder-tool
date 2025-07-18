@@ -53,7 +53,6 @@ export default function InputReact() {
                 backgroundColor: theme.palette.background.paper,
                 color: theme.palette.text.primary,
                 padding: '8px',
-                borderRadius: '4px',
               }}
             >
               {displayText}

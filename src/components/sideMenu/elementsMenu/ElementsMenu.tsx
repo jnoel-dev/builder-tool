@@ -114,6 +114,8 @@ export default function ElementsMenu() {
 					<Divider component="li" />
 					<AddElementButton elementName="InputReact" />
 					<Divider component="li" />
+					<AddElementButton elementName="InputComplex" />
+					<Divider component="li" />
 				</CustomTabPanel>
 
 				<CustomTabPanel value={selectedTab} index={TabIndex.Dialogs}></CustomTabPanel>
