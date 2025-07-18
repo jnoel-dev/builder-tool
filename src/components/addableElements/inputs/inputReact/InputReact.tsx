@@ -26,7 +26,7 @@ export default function InputReact() {
     >
       <Stack direction="column" spacing={2}>
         <input
-          name="customInput"
+          name="InputReact"
           ref={inputRef}
           onChange={handleChange}
           placeholder="insert text here..."
