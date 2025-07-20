@@ -6,7 +6,7 @@ import Input from "../../addableElements/inputs/input/Input"
 import InputReact from "../../addableElements/inputs/inputReact/InputReact"
 import InputComplex from "../../addableElements/inputs/inputComplex/InputComplex"
 import InputRedraw from "../../addableElements/inputs/inputRedraw/InputRedraw"
-import IframeSameDomain from "../../addableElements/frames/iframeSameDomain/IframeSameDomain"
+import Frame from "@/components/addableElements/frames/frame/Frame"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -49,7 +49,8 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
   },
 
   IframeSameDomain: {
-    component: IframeSameDomain,
+    component: Frame,
+    neededProps: { frameType: "sameDomain" },
   },
 
 }

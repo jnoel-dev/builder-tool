@@ -115,6 +115,7 @@ export default function ElementController({
   }, [elementPositionPercent]);
 
   function handleRemoveElement() {
+
     removeElementFromFrame(elementToControl.id, connectedFrameOrContainerName);
     if (elementToControl.isFrameOrContainer){
       removeFrame(elementToControl)

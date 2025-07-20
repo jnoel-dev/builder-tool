@@ -18,6 +18,7 @@ export default function AddElementButton({ elementName, isFrameOrContainer=false
 const handleAdd = () => {
 
   addElementToFrame(elementName,isFrameOrContainer);
+
 };
 
 

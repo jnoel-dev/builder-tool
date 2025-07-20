@@ -59,6 +59,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
 
 
 useEffect(() => {
+ 
   const urlParams = new URLSearchParams(window.location.search);
   const framesParam = urlParams.get('frames');
   const elementsParam = urlParams.get('elements');
@@ -190,7 +191,7 @@ function removeFrame(frameElement: FrameElement) {
 }
 
 function addElementToFrame(componentName: string, isFrameOrContainer: boolean) {
-  // Find all elements with the same component name across all frames
+
   const allElements = Object.values(allFrameElements).flat();
 
   const matchingElements = allElements.filter((element) => {
@@ -225,6 +226,7 @@ function addElementToFrame(componentName: string, isFrameOrContainer: boolean) {
     };
 
     updatedElements[selectedFrameName] = [...currentFrameElements, newElement];
+ 
     return updatedElements;
   });
 

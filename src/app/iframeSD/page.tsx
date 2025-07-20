@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useBackground } from '@/components/contexts/backgroundContext/BackgroundManager';
+import ContainerBase from '@/components/addableElements/frames/containerBase/ContainerBase';
 
 export default function IframeSD() {
   const { setShowBackground } = useBackground();
@@ -24,9 +25,7 @@ export default function IframeSD() {
         alignItems: 'center',
       }}
     >
-      <div>
-        This is the iframe page — background is disabled.
-      </div>
+      <ContainerBase frameName='TopFrame'/>
     </div>
   );
 }

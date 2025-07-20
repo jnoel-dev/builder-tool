@@ -4,9 +4,9 @@ import React, { useEffect, useState } from 'react';
 import Collapse from '@mui/material/Collapse';
 import { useFrame } from '@/components/contexts/frameManager/FrameManager';
 import componentRegistry from '@/components/contexts/frameManager/componentRegistry';
-import ElementController from '../../../addableElements/elementController/ElementController';
+import ElementController from '../../elementController/ElementController';
 
-interface FrameBaseProps {
+interface ContainerBaseProps {
   frameName: string;
   disableElementControlsForChildren?: boolean;
 }
@@ -21,15 +21,16 @@ function CollapseWrapper({ children }: { children: React.ReactNode }) {
   return <Collapse in={open} timeout={200}>{children}</Collapse>;
 }
 
-export default function FrameBase({ frameName, disableElementControlsForChildren = false }: FrameBaseProps) {
-  const { allFrameElements, addFrame, removeFrame, frameContainerRefs } = useFrame();
+export default function ContainerBase({ frameName, disableElementControlsForChildren = false }: ContainerBaseProps) {
+  const { allFrameElements, frameContainerRefs, addFrame} = useFrame();
   const elements = allFrameElements[frameName] || [];
 
+ 
   useEffect(() => {
-    if (!frameName) return;
-    addFrame(frameName);
-  }, [frameName]);
-
+        if (!frameName) return;
+        addFrame(frameName);
+      }, [frameName]);
+      
   return (
     <>
       {elements.map(el => {

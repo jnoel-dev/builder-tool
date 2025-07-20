@@ -2,7 +2,7 @@
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
-import FrameBase from '../contexts/frameManager/frameBase/FrameBase';
+import ContainerBase from '../addableElements/frames/containerBase/ContainerBase';
 import { useFrame } from '../contexts/frameManager/FrameManager';
 
 export default function TopFrame(){
@@ -43,7 +43,7 @@ export default function TopFrame(){
           color: theme.palette.secondary.main,
         }}
       >
-        <FrameBase frameName='TopFrame'/>
+        <ContainerBase frameName='TopFrame'/>
       </Box>
     </div>
   );
