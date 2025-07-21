@@ -51,6 +51,8 @@ export default function ElementController({
   function handleMouseDown(event: React.MouseEvent<HTMLButtonElement>) {
 
     event.preventDefault();
+  
+
     const currentFrameContainer = containerRef.current;
     if (!currentFrameContainer) return;
 
@@ -93,17 +95,32 @@ export default function ElementController({
     });
   }
 
-  function handleMouseUp() {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
+function handleMouseUp() {
+  if (!isDraggingRef.current) return;
+  isDraggingRef.current = false;
 
-    updateElementPosition(
-      elementToControl.id,
-      elementPositionPercent.xPercent,
-      elementPositionPercent.yPercent,
-      connectedFrameOrContainerName
+  updateElementPosition(
+    elementToControl.id,
+    elementPositionPercent.xPercent,
+    elementPositionPercent.yPercent,
+    connectedFrameOrContainerName
+  );
+
+  // Only send postMessage if inside an iframe
+  if (window.top !== window) {
+    window.parent.postMessage(
+      {
+        type: 'updateElementPosition',
+        frameName: window.name,
+        elementId: elementToControl.id,
+        xPercent: elementPositionPercent.xPercent,
+        yPercent: elementPositionPercent.yPercent,
+      },
+      '*'
     );
   }
+}
+
 
   useEffect(() => {
     document.addEventListener("mousemove", handleMouseMove);
@@ -115,12 +132,26 @@ export default function ElementController({
   }, [elementPositionPercent]);
 
   function handleRemoveElement() {
-
     removeElementFromFrame(elementToControl.id, connectedFrameOrContainerName);
-    if (elementToControl.isFrameOrContainer){
-      removeFrame(elementToControl)
+
+    if (elementToControl.isFrameOrContainer) {
+      removeFrame(elementToControl);
+    }
+
+    // this should only be true if in iframe
+    if (window.parent !== window) {
+   
+      window.parent.postMessage(
+        {
+          type: 'removeElement',
+          elementId: elementToControl.id,
+          frameName: window.name,
+        },
+        '*'
+      );
     }
   }
+
 
   const containerStyle: CSSProperties = controlsDisabled
     ? { position: 'relative', width: 'fit-content' }

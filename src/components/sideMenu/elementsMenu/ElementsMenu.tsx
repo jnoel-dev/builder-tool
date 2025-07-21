@@ -126,6 +126,11 @@ export default function ElementsMenu() {
 
 				<CustomTabPanel value={selectedTab} index={TabIndex.Frames}>
 					<AddElementButton
+						elementName="IframeSameDomain"
+						isFrameOrContainer={true}
+					/>
+					<Divider component="li" />
+					<AddElementButton
 						elementName="ContainerVertical"
 						isFrameOrContainer={true}
 					/>
@@ -134,10 +139,7 @@ export default function ElementsMenu() {
 						elementName="ContainerHorizontal"
 						isFrameOrContainer={true}
 					/>
-					<AddElementButton
-						elementName="IframeSameDomain"
-						isFrameOrContainer={true}
-					/>
+
 					<Divider component="li" />
 				</CustomTabPanel>
 			</Box>

@@ -3,9 +3,12 @@
 import { useEffect } from 'react';
 import { useBackground } from '@/components/contexts/backgroundContext/BackgroundManager';
 import ContainerBase from '@/components/addableElements/frames/containerBase/ContainerBase';
-
+import { useFrame } from '@/components/contexts/frameManager/FrameManager';
+import { useTheme } from '@mui/material/styles';
 export default function IframeSD() {
   const { setShowBackground } = useBackground();
+  const { frameContainerRefs } = useFrame();
+  const theme = useTheme();
 
   useEffect(() => {
     setShowBackground(false);
@@ -13,6 +16,7 @@ export default function IframeSD() {
 
   return (
     <div
+      ref={frameContainerRefs["TopFrame"]}
       style={{
         width: '100%',
         height: '100%',
@@ -23,6 +27,8 @@ export default function IframeSD() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+        color: theme.palette.secondary.main,
+        
       }}
     >
       <ContainerBase frameName='TopFrame'/>
