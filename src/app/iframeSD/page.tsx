@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useBackground } from '@/components/contexts/backgroundContext/BackgroundManager';
 import ContainerBase from '@/components/addableElements/frames/containerBase/ContainerBase';
-import { useFrame } from '@/components/contexts/frameManager/FrameManager';
+import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
 import { useTheme } from '@mui/material/styles';
 export default function IframeSD() {
   const { setShowBackground } = useBackground();

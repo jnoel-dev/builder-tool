@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Collapse from '@mui/material/Collapse';
-import { useFrame, FrameElement } from '@/components/contexts/frameManager/FrameManager';
-import componentRegistry from '@/components/contexts/frameManager/componentRegistry';
+import { useFrame, FrameElement } from '@/components/contexts/FrameManager/FrameManager';
+import componentRegistry from '@/components/contexts/FrameManager/componentRegistry';
 import ElementController from '../../elementController/ElementController';
 
 interface ContainerBaseProps {
@@ -33,6 +33,8 @@ export default function ContainerBase({
   } = useFrame();
 
   const elements = allFrameElements[frameName] || [];
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
 
   useEffect(() => {
         if (!frameName) return;
@@ -40,30 +42,16 @@ export default function ContainerBase({
       }, [frameName]);
 
 
-  useEffect(() => {
-    function handleMessage(event: MessageEvent) {
-      console.log("found")
-      if (
-        !event.data ||
-        typeof event.data !== 'object' ||
-        event.data.type !== 'syncFrame' ||
-        event.data.frameName !== window.name
-      ) {
-        
-        return;
-      }
+useEffect(() => {
+  if (window.top === window || frameName === "TopFrame") return; 
 
-      const incoming = event.data.elements;
-      if (!Array.isArray(incoming)) return;
-      console.log("syncing from container: ",window.name," event: ",event)
-      replaceElementsInFrame('TopFrame', incoming as FrameElement[]);
-    }
+  window.top?.postMessage({
+    type: 'frameAdded',
+    frameName,
+  }, '*');
+}, [frameName]);
 
-    window.addEventListener('message', handleMessage);
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-  }, [replaceElementsInFrame]);
+
 
   return (
     <>
@@ -84,7 +72,8 @@ export default function ContainerBase({
             connectedFrameOrContainerName={frameName}
           >
             <CollapseWrapper>
-              <Component {...neededProps} {...extraProps} />
+              <Component {...neededProps} {...extraProps} ref={containerRef} />
+
             </CollapseWrapper>
           </ElementController>
         );

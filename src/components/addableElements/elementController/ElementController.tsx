@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useRef, useEffect, useState, CSSProperties } from "react";
-import { FrameElement, useFrame } from "@/components/contexts/frameManager/FrameManager";
+import { FrameElement, useFrame } from "@/components/contexts/FrameManager/FrameManager";
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -29,6 +29,8 @@ export default function ElementController({
     updateElementPosition,
     removeElementFromFrame,
     removeFrame,
+    frameContainerRefs,
+
   } = useFrame();
 
   const isDraggingRef = useRef(false);
@@ -96,6 +98,7 @@ export default function ElementController({
   }
 
 function handleMouseUp() {
+  console.log(frameContainerRefs)
   if (!isDraggingRef.current) return;
   isDraggingRef.current = false;
 
@@ -106,9 +109,11 @@ function handleMouseUp() {
     connectedFrameOrContainerName
   );
 
+
   // Only send postMessage if inside an iframe
   if (window.top !== window) {
-    window.parent.postMessage(
+ 
+    window.top?.postMessage(
       {
         type: 'updateElementPosition',
         frameName: window.name,
@@ -138,10 +143,10 @@ function handleMouseUp() {
       removeFrame(elementToControl);
     }
 
-    // this should only be true if in iframe
-    if (window.parent !== window) {
+    // Only send postMessage if inside an iframe
+    if (window.top !== window) {
    
-      window.parent.postMessage(
+      window.top?.postMessage(
         {
           type: 'removeElement',
           elementId: elementToControl.id,

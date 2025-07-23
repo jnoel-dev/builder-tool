@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useRef } from 'react';
 import Box from "@mui/material/Box";
 import ContainerBase from "@/components/addableElements/frames/containerBase/ContainerBase";
-import { useFrame } from "@/components/contexts/frameManager/FrameManager";
+import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 
 
 interface ContainerProps {
@@ -15,13 +15,15 @@ export default function Container({
   containerType = "vertical",
   savedName,
 }: ContainerProps) {
-  const { allFrameElements } = useFrame();
+  const { allFrameElements, frameContainerRefs } = useFrame();
   const hasChildren = allFrameElements[savedName]?.length > 0;
+  const containerRef = useRef<HTMLDivElement>(null);
 
 
 
   return (
     <Box
+      ref={frameContainerRefs[savedName]}
       sx={{
         border: '1px solid',
         display: 'flex', 
@@ -29,7 +31,7 @@ export default function Container({
         maxWidth: '100%',
       }}
     >
-      <ContainerBase frameName={savedName} disableElementControlsForChildren={true} />
+      <ContainerBase frameName={savedName} disableElementControlsForChildren={true}/>
       {!hasChildren && (
         <Box
           sx={{

@@ -157,17 +157,115 @@ export function FrameManager({ children }: { children: ReactNode }) {
 	}, [frameNames, allFrameElements]);
 
 
-  // used to replace element data in iframes via post messages
-	function replaceElementsInFrame(
-		frameName: string,
-		newElements: FrameElement[]
-	) {
-		setAllFrameElements((prev) => {
-			const updated: { [key: string]: FrameElement[] } = { ...prev };
-			updated[frameName] = newElements;
-			return updated;
-		});
+//used to remove iframe elements 
+useEffect(() => {
+	if (window.top !== window) return;
+  function handleRemoveElementMessage(event: MessageEvent) {
+	
+	if (!event.data || typeof event.data !== 'object') return;
+
+	const { type, elementId, frameName } = event.data;
+
+	if (type === 'removeElement' && elementId && frameName) {
+		console.log("in:", window.name, "received message from:", (event.source as Window)?.name ?? "unknown", "to remove element");
+
+	  removeElementFromFrame(elementId, frameName);
 	}
+  }
+
+  window.addEventListener('message', handleRemoveElementMessage);
+  return () => window.removeEventListener('message', handleRemoveElementMessage);
+}, []);
+
+//used to update element postitions in iframes
+useEffect(() => {
+	if (window.top !== window) return;
+  function handleUpdateElementPositionMessage(event: MessageEvent) {
+	
+	if (!event.data || typeof event.data !== 'object') return;
+
+	const {
+	  type,
+	  elementId,
+	  frameName,
+	  xPercent,
+	  yPercent
+	} = event.data;
+
+	if (type === 'updateElementPosition' && elementId && frameName) {
+		console.log("in:", window.name, "received message from:", (event.source as Window)?.name ?? "unknown", "to update position");
+
+	  updateElementPosition(elementId, xPercent, yPercent, frameName);
+	}
+  }
+
+  window.addEventListener('message', handleUpdateElementPositionMessage);
+  return () => window.removeEventListener('message', handleUpdateElementPositionMessage);
+}, []);
+
+  useEffect(() => {
+	
+	if (window.top === window) return;
+
+	function handleMessage(event: MessageEvent) {
+	  
+	  if (
+		!event.data ||
+		typeof event.data !== 'object' ||
+		event.data.type !== 'syncFrame' ||
+		event.data.frameName !== window.name
+	  ) {
+		
+		return;
+	  }
+
+	  const incoming = event.data.elements;
+	  if (!Array.isArray(incoming)) return;
+	 console.log("in:", window.name, "received message from:", (event.source as Window)?.name ?? "unknown","to sync data");
+
+
+	  replaceElementsInFrame('TopFrame', incoming as FrameElement[]);
+	}
+
+	
+	window.addEventListener('message', handleMessage);
+
+	window.top?.postMessage({ type: 'iframeReady' }, '*');
+
+	return () => {
+		
+	  window.removeEventListener('message', handleMessage);
+	};
+  }, []);
+
+  useEffect(() => {
+  if (window.top !== window) return;
+
+  function handleMessage(event: MessageEvent) {
+    if (!event.data || typeof event.data !== 'object') return;
+    if (event.data.type !== 'frameAdded' || !event.data.frameName) return;
+
+    console.log("Top frame received frameAdded from:", (event.source as Window)?.name ?? 'unknown', "for frame:", event.data.frameName);
+	addFrame(event.data.frameName);
+    // handle frame addition logic here if needed
+  }
+
+  window.addEventListener('message', handleMessage);
+  return () => window.removeEventListener('message', handleMessage);
+}, []);
+
+
+// used to replace all element data in iframes when loading 
+function replaceElementsInFrame(
+	frameName: string,
+	newElements: FrameElement[]
+) {
+	setAllFrameElements((prev) => {
+		const updated: { [key: string]: FrameElement[] } = { ...prev };
+		updated[frameName] = newElements;
+		return updated;
+	});
+}
 
   // used to add/remove frame data when frame/container is added/removed
 function addFrame(newFrameName: string) {
