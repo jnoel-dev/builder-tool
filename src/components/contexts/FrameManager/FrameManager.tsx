@@ -164,12 +164,17 @@ useEffect(() => {
 	
 	if (!event.data || typeof event.data !== 'object') return;
 
-	const { type, elementId, frameName } = event.data;
+	const { type, elementId, frameName, element } = event.data;
 
 	if (type === 'removeElement' && elementId && frameName) {
-		console.log("in:", window.name, "received message from:", (event.source as Window)?.name ?? "unknown", "to remove element");
+		console.log("in:", window.name, "received message from:", (event.source as Window)?.name ?? "unknown", "to remove element: ",elementId, "from: ",frameName, "full data: ",event.data);
 
 	  removeElementFromFrame(elementId, frameName);
+		console.log("huh2",element.isFrameOrContainer)
+	  if (element.isFrameOrContainer) {
+		console.log("removig")
+		removeFrame(element)
+	  }
 	}
   }
 
@@ -203,40 +208,38 @@ useEffect(() => {
   return () => window.removeEventListener('message', handleUpdateElementPositionMessage);
 }, []);
 
-  useEffect(() => {
-	
-	if (window.top === window) return;
+useEffect(() => {
+  if (window.top === window) return;
 
-	function handleMessage(event: MessageEvent) {
-	  
-	  if (
-		!event.data ||
-		typeof event.data !== 'object' ||
-		event.data.type !== 'syncFrame' ||
-		event.data.frameName !== window.name
-	  ) {
-		
-		return;
-	  }
+  function handleMessage(event: MessageEvent) {
+    const data = event.data;
 
-	  const incoming = event.data.elements;
-	  if (!Array.isArray(incoming)) return;
-	 console.log("in:", window.name, "received message from:", (event.source as Window)?.name ?? "unknown","to sync data");
+    if (
+      !data ||
+      typeof data !== 'object' ||
+      data.type !== 'syncFrame' ||
+      data.frameName !== window.name
+    ) {
+      return;
+    }
 
+    const incoming = data.elements;
+    if (!incoming || typeof incoming !== 'object') return;
 
-	  replaceElementsInFrame('TopFrame', incoming as FrameElement[]);
-	}
+    console.log("in:", window.name, "received full sync from:", (event.source as Window)?.name ?? "unknown", incoming);
 
-	
-	window.addEventListener('message', handleMessage);
+    // Replace the full allFrameElements tree
+    setAllFrameElements(incoming);
+  }
 
-	window.top?.postMessage({ type: 'iframeReady' }, '*');
+  window.addEventListener('message', handleMessage);
+  window.top?.postMessage({ type: 'iframeReady' }, '*');
 
-	return () => {
-		
-	  window.removeEventListener('message', handleMessage);
-	};
-  }, []);
+  return () => {
+    window.removeEventListener('message', handleMessage);
+  };
+}, []);
+
 
   useEffect(() => {
   if (window.top !== window) return;
@@ -263,6 +266,7 @@ function replaceElementsInFrame(
 	setAllFrameElements((prev) => {
 		const updated: { [key: string]: FrameElement[] } = { ...prev };
 		updated[frameName] = newElements;
+		console.log("UPDATED FRAME ELEMENTS: ",updated)
 		return updated;
 	});
 }
@@ -283,6 +287,7 @@ function addFrame(newFrameName: string) {
 }
 
 function removeFrame(frameToRemove: FrameElement) {
+	console.log("removing frame called with : ", frameToRemove)
   if (!frameToRemove.isFrameOrContainer) return;
 
   const frameIdsToRemove: string[] = [];
@@ -357,6 +362,7 @@ function addElementToFrame(
     };
 
     updatedElements[selectedFrameName] = [...elementsInTargetFrame, newElement];
+	console.log("ELEMENT LIST for: ",window.name, "here: ", updatedElements)
     return updatedElements;
   });
 
@@ -372,7 +378,7 @@ function removeElementFromFrame(elementId: string, frameName: string) {
     updatedElements[frameName] = currentElements.filter(
       (element) => element.id !== elementId
     );
-
+	console.log("UPDATED ALLFRAMEELEMENTS: ",updatedElements, "IN FRAME: ",window.name)
     return updatedElements;
   });
 }

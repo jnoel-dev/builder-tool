@@ -98,7 +98,7 @@ export default function ElementController({
   }
 
 function handleMouseUp() {
-  console.log(frameContainerRefs)
+ 
   if (!isDraggingRef.current) return;
   isDraggingRef.current = false;
 
@@ -112,7 +112,7 @@ function handleMouseUp() {
 
   // Only send postMessage if inside an iframe
   if (window.top !== window) {
- 
+    console.log("sending message from:", window.name, "to update element position");
     window.top?.postMessage(
       {
         type: 'updateElementPosition',
@@ -136,26 +136,34 @@ function handleMouseUp() {
     };
   }, [elementPositionPercent]);
 
-  function handleRemoveElement() {
-    removeElementFromFrame(elementToControl.id, connectedFrameOrContainerName);
+function handleRemoveElement() {
+  removeElementFromFrame(elementToControl.id, connectedFrameOrContainerName);
 
-    if (elementToControl.isFrameOrContainer) {
-      removeFrame(elementToControl);
-    }
-
-    // Only send postMessage if inside an iframe
-    if (window.top !== window) {
-   
-      window.top?.postMessage(
-        {
-          type: 'removeElement',
-          elementId: elementToControl.id,
-          frameName: window.name,
-        },
-        '*'
-      );
-    }
+  if (elementToControl.isFrameOrContainer) {
+    removeFrame(elementToControl);
   }
+
+  // Only send postMessage if inside an iframe
+  if (window.top !== window) {
+    const frameNameToSend =
+      connectedFrameOrContainerName === 'TopFrame'
+        ? window.name
+        : connectedFrameOrContainerName;
+
+    console.log("sending message from:", window.name, "to remove element");
+
+    window.top?.postMessage(
+      {
+        type: 'removeElement',
+        elementId: elementToControl.id,
+        frameName: frameNameToSend,
+        element: elementToControl
+      },
+      '*'
+    );
+  }
+}
+
 
 
   const containerStyle: CSSProperties = controlsDisabled

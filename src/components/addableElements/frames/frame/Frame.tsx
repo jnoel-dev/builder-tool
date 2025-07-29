@@ -21,7 +21,7 @@ export default function Frame({ frameType, savedName }: FrameProps) {
   useEffect(() => {
     function handleReady(e: MessageEvent) {
       if (e.data?.type === 'iframeReady') {
-        console.log("received iframe ready!")
+      
         setIsIframeReady(true);
       }
     }
@@ -38,7 +38,7 @@ export default function Frame({ frameType, savedName }: FrameProps) {
 
 useEffect(() => {
   if (window.top === window) return; 
-  console.log("SENDING POST")
+ 
   window.top?.postMessage({
     type: 'frameAdded',
     savedName,
@@ -66,23 +66,62 @@ useEffect(() => {
 
 // sends element data from top frame to iframe to sync element data
 useEffect(() => {
-  console.log("trying to sync")
-  console.log("isIframeReady: ", isIframeReady)
-  
   if (!isIframeReady) return;
 
-  previousElementsRef.current = elements;
+  function collectNestedElements(
+    currentFrameName: string,
+    allElements: Record<string, FrameElement[]>,
+    visited: Set<string> = new Set()
+  ): Record<string, FrameElement[]> {
+    if (visited.has(currentFrameName)) return {};
+    visited.add(currentFrameName);
+
+    const result: Record<string, FrameElement[]> = {};
+    const currentElements = allElements[currentFrameName] || [];
+    result[currentFrameName] = currentElements;
+
+    for (const el of currentElements) {
+      if (el.isFrameOrContainer) {
+        Object.assign(
+          result,
+          collectNestedElements(el.id, allElements, visited)
+        );
+      }
+    }
+
+    return result;
+  }
 
   const targetWindow = iframeRef.current?.contentWindow;
   if (!targetWindow) return;
 
-  console.log("sending message from:", window.name, "to sync data");
-  targetWindow.postMessage({
-    type: 'syncFrame',
-    frameName: savedName,
-    elements,
-  }, '*');
-}, [elements, isIframeReady]);
+  const nestedTree = collectNestedElements(savedName, allFrameElements);
+
+  console.log("Sending syncFrame postMessage to iframe", {
+    from: window.name,
+    nestedTree,
+  });
+
+  targetWindow.postMessage(
+    {
+      type: 'syncFrame',
+      frameName: savedName,
+      elements: {
+        TopFrame: nestedTree[savedName] || [],
+        ...Object.fromEntries(
+          Object.entries(nestedTree).filter(([key]) => key !== savedName)
+        ),
+      },
+    },
+    '*'
+  );
+}, [allFrameElements, isIframeReady]);
+
+
+
+
+
+
 
 
 
