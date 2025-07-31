@@ -104,21 +104,25 @@ useEffect(() => {
 }, []);
 
   // save frames and elements to URL parameters
-  useEffect(() => {
-    const framesQuery = frameList.join(",");
-    const entries = frameList.map((frame) => {
-      const items = (frameElementsMap[frame] || []).map((el) => {
-        const xInt = Math.round(el.xPercent * 100);
-        const yInt = Math.round(el.yPercent * 100);
-        return [el.id, el.componentName, xInt, yInt, el.isFrameOrContainer].join(",");
-      });
-      return `${frame}:${items.join("|")}`;
+useEffect(() => {
+  const serializedFrameNames = frameList.join(',');
+  const frameEntries = frameList.map(frameName => {
+    const elementEntries = (frameElementsMap[frameName] || []).map(element => {
+      const roundedX = Math.round(element.xPercent * 100);
+      const roundedY = Math.round(element.yPercent * 100);
+      return [element.id, element.componentName, roundedX, roundedY, element.isFrameOrContainer].join(',');
     });
-    const elementsQuery = entries.join(";");
-    const params = new URLSearchParams({ frames: framesQuery, elements: elementsQuery });
-    const url = `${window.location.origin}${window.location.pathname}?${params}`;
-    window.history.replaceState(null, "", url);
-  }, [frameList, frameElementsMap]);
+    return `${frameName}:${elementEntries.join('|')}`;
+  });
+  const serializedFrameElements = frameEntries.join(';');
+  const queryParameters = new URLSearchParams({
+    frames: serializedFrameNames,
+    elements: serializedFrameElements,
+  });
+  const newUrl = `${window.location.origin}${window.location.pathname}?${queryParameters}`;
+  window.history.replaceState(null, '', newUrl);
+}, [frameList, frameElementsMap]);
+
 
   function handleRemoveMessage(event: MessageEvent) {
     const data = event.data as Record<string, any>;
@@ -244,76 +248,123 @@ function registerFrame(frameName: string) {
 }
 
 
-  function unregisterFrame(frame: FrameElement) {
-    if (!frame.isFrameOrContainer) return;
-    const idsToRemove: string[] = [];
+function unregisterFrame(frame: FrameElement) {
+  if (!frame.isFrameOrContainer) {
+    return;
+  }
 
-	// recursive search to ensure all frames are found, this ensures frames in frames are removed from frame list
-    function collect(id: string) {
-      idsToRemove.push(id);
-      (frameElementsMap[id] || [])
-        .filter((el) => el.isFrameOrContainer)
-        .forEach((el) => collect(el.id));
+  const frameIdsToRemove: string[] = [];
+
+  // recursive search to ensure all frames are found, this ensures frames in frames are removed from frame list
+  function gatherDescendantFrameIds(frameId: string) {
+    frameIdsToRemove.push(frameId);
+    const childElements = frameElementsMap[frameId] || [];
+    for (const child of childElements) {
+      if (child.isFrameOrContainer) {
+        gatherDescendantFrameIds(child.id);
+      }
     }
-    collect(frame.id);
+  }
+  gatherDescendantFrameIds(frame.id);
 
-    setFrameList((names) => names.filter((n) => !idsToRemove.includes(n)));
-    idsToRemove.forEach((id) => delete refs.current[id]);
-    setFrameElementsMap((prev) => {
-      const copy = { ...prev };
-      idsToRemove.forEach((id) => delete copy[id]);
-      return copy;
-    });
-    setCurrentFrame(DEFAULT_FRAME);
+  setFrameList(currentList =>
+    currentList.filter(name => !frameIdsToRemove.includes(name))
+  );
+
+  for (const id of frameIdsToRemove) {
+    delete refs.current[id];
   }
 
-  function addElementToCurrentFrame(
-    componentName: string,
-    isFrameOrContainer: boolean
-  ): string {
-    const allElements = Object.values(frameElementsMap).flat();
-    const suffixes = allElements
-      .filter((el) => el.componentName === componentName)
-      .map((el) => parseInt(el.id.split("-").pop() || "0", 10))
-      .filter((n) => !isNaN(n));
+  setFrameElementsMap(previousMap => {
+    const updatedMap = { ...previousMap };
+    for (const id of frameIdsToRemove) {
+      delete updatedMap[id];
+    }
+    return updatedMap;
+  });
 
-    const nextIndex = suffixes.length ? Math.max(...suffixes) + 1 : 1;
-    const newId = `${componentName}-${nextIndex}`;
-    const newElement: FrameElement = {
-      id: newId,
-      componentName,
-      xPercent: 50,
-      yPercent: 50,
-      isFrameOrContainer,
+  setCurrentFrame(DEFAULT_FRAME);
+}
+
+function addElementToCurrentFrame(
+  componentName: string,
+  isFrameOrContainer: boolean
+): string {
+  const allElements = Object.values(frameElementsMap).flat();
+  const matchingElements = allElements.filter(
+    element => element.componentName === componentName
+  );
+
+  const existingSuffixes = matchingElements.map(element => {
+    const parts = element.id.split('-');
+    const suffix = parts[parts.length - 1];
+    const suffixNumber = parseInt(suffix, 10);
+    return Number.isNaN(suffixNumber) ? 0 : suffixNumber;
+  });
+
+  const nextSuffix = existingSuffixes.length
+    ? Math.max(...existingSuffixes) + 1
+    : 1;
+
+  const newElementId = `${componentName}-${nextSuffix}`;
+  const newElement: FrameElement = {
+    id: newElementId,
+    componentName,
+    xPercent: 50,
+    yPercent: 50,
+    isFrameOrContainer,
+  };
+
+  setFrameElementsMap(previousMap => {
+    const currentElements = previousMap[currentFrame] || [];
+    return {
+      ...previousMap,
+      [currentFrame]: [...currentElements, newElement],
     };
+  });
 
-    setFrameElementsMap((prev) => ({
-      ...prev,
-      [currentFrame]: [...(prev[currentFrame] || []), newElement],
-    }));
-    return newId;
-  }
+  return newElementId;
+}
 
-  function removeElementFromFrame(elementId: string, frameName: string) {
-    setFrameElementsMap((prev) => ({
-      ...prev,
-      [frameName]: (prev[frameName] || []).filter((el) => el.id !== elementId),
-    }));
-  }
+function removeElementFromFrame(elementId: string, frameName: string) {
+  setFrameElementsMap(previousMap => {
+    const updatedElements = (previousMap[frameName] || []).filter(
+      element => element.id !== elementId
+    );
+    return {
+      ...previousMap,
+      [frameName]: updatedElements,
+    };
+  });
+}
 
-  function updateElementPosition(
-    elementId: string,
-    xPercent: number,
-    yPercent: number,
-    frameName: string
-  ) {
-    setFrameElementsMap((prev) => ({
-      ...prev,
-      [frameName]: (prev[frameName] || []).map((el) =>
-        el.id === elementId ? { ...el, xPercent, yPercent } : el
-      ),
-    }));
-  }
+
+function updateElementPosition(
+  elementId: string,
+  newXPercent: number,
+  newYPercent: number,
+  frameName: string
+) {
+  setFrameElementsMap(previousMap => {
+    const currentElements = previousMap[frameName] || [];
+    const updatedElements = currentElements.map(element => {
+      if (element.id !== elementId) {
+        return element;
+      }
+      return {
+        ...element,
+        xPercent: newXPercent,
+        yPercent: newYPercent,
+      };
+    });
+
+    return {
+      ...previousMap,
+      [frameName]: updatedElements,
+    };
+  });
+}
+
 
   return (
     <FrameContext.Provider

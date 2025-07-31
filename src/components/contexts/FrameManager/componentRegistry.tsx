@@ -53,6 +53,11 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
     neededProps: { frameType: "sameDomain" },
   },
 
+  IframeCrossDomain: {
+    component: Frame,
+    neededProps: { frameType: "crossDomain" },
+  },
+
 }
 
 export default componentRegistry

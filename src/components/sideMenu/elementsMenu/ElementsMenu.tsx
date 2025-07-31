@@ -134,6 +134,11 @@ export default function ElementsMenu() {
 					/>
 					<Divider component="li" />
 					<AddElementButton
+						elementName="IframeCrossDomain"
+						isFrameOrContainer={true}
+					/>
+					<Divider component="li" />
+					<AddElementButton
 						elementName="ContainerVertical"
 						isFrameOrContainer={true}
 					/>
