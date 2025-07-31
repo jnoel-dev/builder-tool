@@ -112,10 +112,10 @@ export default function Frame({ savedName, frameType }: FrameProps) {
   const isDev = process.env.NODE_ENV === 'development';
   const frameSrc =
     frameType === 'sameDomain'
-      ? '/frame'
+      ? `/frame/${savedName}`
       : isDev
-      ? 'http://localhost:3001/frame'
-      : 'https://frame.jonnoel.dev/frame';
+      ? `http://localhost:3001/frame/${savedName}`
+      : `https://frame.jonnoel.dev/frame/${savedName}`;
 
   return (
     <Box sx={{ border: 'dashed', display: 'flex' }}>
