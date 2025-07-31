@@ -1,433 +1,343 @@
 "use client";
 
 import React, {
-	createContext,
-	useState,
-	useContext,
-	useRef,
-	useEffect,
-	ReactNode,
+  createContext,
+  useState,
+  useContext,
+  useRef,
+  useEffect,
+  ReactNode,
+  createRef,
 } from "react";
 
-export type FrameElement = {
-	id: string;
-	componentName: string;
-	xPercent: number;
-	yPercent: number;
-	isFrameOrContainer: boolean;
-};
+export const POST_MESSAGE_LOG_ENABLED = false;
 
-export type FrameContextType = {
-	selectedFrameName: string;
-	setSelectedFrameName: (frameName: string) => void;
-	frameNames: string[];
-	replaceElementsInFrame: (
-		frameName: string,
-		newElements: FrameElement[]
-	) => void;
-	addFrame: (frameName: string) => void;
-	removeFrame: (frameElement: FrameElement) => void;
-	addElementToFrame: (
-		componentName: string,
-		isFrameOrContainer: boolean
-	) => string;
-	removeElementFromFrame: (
-		elementId: string,
-		connectedFrameOrContainerName: string
-	) => void;
-	updateElementPosition: (
-		elementId: string,
-		xPercent: number,
-		yPercent: number,
-		connectedFrameOrContainerName: string
-	) => void;
-	allFrameElements: { [frameName: string]: FrameElement[] };
-	frameContainerRefs: {
-		[frameName: string]: React.RefObject<HTMLDivElement | null>;
-	};
-};
+export interface FrameElement {
+  id: string;
+  componentName: string;
+  xPercent: number;
+  yPercent: number;
+  isFrameOrContainer: boolean;
+}
 
-const FrameContext = createContext<FrameContextType | undefined>(undefined);
+export interface FrameContextValue {
+  currentFrame: string;
+  setCurrentFrame: (frameName: string) => void;
+  frameList: string[];
+  replaceFrameElements: (frameName: string, elements: FrameElement[]) => void;
+  registerFrame: (frameName: string) => void;
+  unregisterFrame: (frame: FrameElement) => void;
+  addElementToCurrentFrame: (
+    componentName: string,
+    isFrameOrContainer: boolean
+  ) => string;
+  removeElementFromFrame: (elementId: string, frameName: string) => void;
+  updateElementPosition: (
+    elementId: string,
+    xPercent: number,
+    yPercent: number,
+    frameName: string
+  ) => void;
+  frameElementsMap: Record<string, FrameElement[]>;
+  containerRefs: Record<string, React.RefObject<HTMLDivElement | null>>;
+}
+
+const DEFAULT_FRAME = "TopFrame";
+const FrameContext = createContext<FrameContextValue | undefined>(undefined);
 
 export function FrameManager({ children }: { children: ReactNode }) {
-	const [frameNames, setFrameNames] = useState<string[]>([]);
-	const [selectedFrameName, setSelectedFrameName] = useState<string>("");
-	const [allFrameElements, setAllFrameElements] = useState<{
-		[frameName: string]: FrameElement[];
-	}>({});
-	const [nextElementId, setNextElementId] = useState(0);
+  const [frameList, setFrameList] = useState<string[]>([DEFAULT_FRAME]);
+  const [currentFrame, setCurrentFrame] = useState<string>(DEFAULT_FRAME);
+  const [frameElementsMap, setFrameElementsMap] = useState<
+    Record<string, FrameElement[]>
+  >({ [DEFAULT_FRAME]: [] });
 
-	const containerRefs = useRef<
-		Record<string, React.RefObject<HTMLDivElement | null>>
-	>({});
+  const refs = useRef<
+    Record<string, React.RefObject<HTMLDivElement | null>>
+  >({
+    [DEFAULT_FRAME]: createRef<HTMLDivElement | null>(),
+  });
+  const containerRefs = refs.current;
 
-	const frameContainerRefs = containerRefs.current;
-
-	// "load" elements via URL params - set needed frames and elements
-	useEffect(() => {
-		const urlParams = new URLSearchParams(window.location.search);
-		const framesParam = urlParams.get("frames");
-		const elementsParam = urlParams.get("elements");
-		if (!framesParam || !elementsParam) return;
-		const frameNameList = framesParam.split(",");
-
-		const elementsByFrame: Record<string, FrameElement[]> = {};
-		for (const frameEntry of elementsParam.split(";")) {
-			const [frameName, elementListString] = frameEntry.split(":");
-			if (!frameName) continue;
-
-			const elementArray: FrameElement[] = [];
-			if (elementListString) {
-				for (const elementEntry of elementListString.split("|")) {
-					const [
-						id,
-						componentName,
-						xInt,
-						yInt,
-						isFrameOrContainerStr,
-					] = elementEntry.split(",");
-					const xPercent = Number(xInt) / 100;
-					const yPercent = Number(yInt) / 100;
-					const isFrameOrContainer = isFrameOrContainerStr === "true";
-					elementArray.push({
-						id,
-						componentName,
-						xPercent,
-						yPercent,
-						isFrameOrContainer,
-					});
-				}
-			}
-			elementsByFrame[frameName] = elementArray;
-		}
-		setFrameNames(frameNameList);
-		setAllFrameElements(elementsByFrame);
-
-		let highestIdNumber = 0;
-		for (const elementList of Object.values(elementsByFrame)) {
-			for (const element of elementList) {
-				const idParts = element.id.split("-");
-				const idNumber = parseInt(idParts[idParts.length - 1], 10);
-				if (!isNaN(idNumber) && idNumber > highestIdNumber) {
-					highestIdNumber = idNumber;
-				}
-			}
-		}
-		setNextElementId(highestIdNumber);
-
-		if (frameNameList.length > 0) {
-			setSelectedFrameName(frameNameList[0]);
-		}
-	}, []);
-
-  // "save" elements and frames and construct URL params
-	useEffect(() => {
-		const serializedFrames = frameNames.join(",");
-
-		const serializedElements = frameNames
-			.map((frame) => {
-				const elementList = allFrameElements[frame] || [];
-				const serializedEntries = elementList
-					.map((element) => {
-						const xInt = Math.round(element.xPercent * 100);
-						const yInt = Math.round(element.yPercent * 100);
-						return [
-							element.id,
-							element.componentName,
-							xInt,
-							yInt,
-							element.isFrameOrContainer,
-						].join(",");
-					})
-					.join("|");
-
-				return `${frame}:${serializedEntries}`;
-			})
-			.join(";");
-
-		const newSearchParams = new URLSearchParams();
-		newSearchParams.set("frames", serializedFrames);
-		newSearchParams.set("elements", serializedElements);
-
-		const newUrl = `${window.location.origin}${
-			window.location.pathname
-		}?${newSearchParams.toString()}`;
-
-		window.history.replaceState(null, "", newUrl);
-	}, [frameNames, allFrameElements]);
-
-
-//used to remove iframe elements 
+// load frames and elements from URL parameters
 useEffect(() => {
-	if (window.top !== window) return;
-  function handleRemoveElementMessage(event: MessageEvent) {
-	
-	if (!event.data || typeof event.data !== 'object') return;
-
-	const { type, elementId, frameName, element } = event.data;
-
-	if (type === 'removeElement' && elementId && frameName) {
-		console.log("in:", window.name, "received message from:", (event.source as Window)?.name ?? "unknown", "to remove element: ",elementId, "from: ",frameName, "full data: ",event.data);
-
-	  removeElementFromFrame(elementId, frameName);
-		console.log("huh2",element.isFrameOrContainer)
-	  if (element.isFrameOrContainer) {
-		console.log("removig")
-		removeFrame(element)
-	  }
-	}
-  }
-
-  window.addEventListener('message', handleRemoveElementMessage);
-  return () => window.removeEventListener('message', handleRemoveElementMessage);
-}, []);
-
-//used to update element postitions in iframes
-useEffect(() => {
-	if (window.top !== window) return;
-  function handleUpdateElementPositionMessage(event: MessageEvent) {
-	
-	if (!event.data || typeof event.data !== 'object') return;
-
-	const {
-	  type,
-	  elementId,
-	  frameName,
-	  xPercent,
-	  yPercent
-	} = event.data;
-
-	if (type === 'updateElementPosition' && elementId && frameName) {
-		console.log("in:", window.name, "received message from:", (event.source as Window)?.name ?? "unknown", "to update position");
-
-	  updateElementPosition(elementId, xPercent, yPercent, frameName);
-	}
-  }
-
-  window.addEventListener('message', handleUpdateElementPositionMessage);
-  return () => window.removeEventListener('message', handleUpdateElementPositionMessage);
-}, []);
-
-useEffect(() => {
-  if (window.top === window) return;
-
-  function handleMessage(event: MessageEvent) {
-    const data = event.data;
-
-    if (
-      !data ||
-      typeof data !== 'object' ||
-      data.type !== 'syncFrame' ||
-      data.frameName !== window.name
-    ) {
-      return;
-    }
-
-    const incoming = data.elements;
-    if (!incoming || typeof incoming !== 'object') return;
-
-    console.log("in:", window.name, "received full sync from:", (event.source as Window)?.name ?? "unknown", incoming);
-
-    // Replace the full allFrameElements tree
-    setAllFrameElements(incoming);
-  }
-
-  window.addEventListener('message', handleMessage);
-  window.top?.postMessage({ type: 'iframeReady' }, '*');
-
-  return () => {
-    window.removeEventListener('message', handleMessage);
-  };
-}, []);
-
-
-  useEffect(() => {
   if (window.top !== window) return;
+  const params = new URLSearchParams(window.location.search);
+  const framesParam = params.get("frames");
+  const elementsParam = params.get("elements");
+  if (!framesParam || !elementsParam) return;
 
-  function handleMessage(event: MessageEvent) {
-    if (!event.data || typeof event.data !== 'object') return;
-    if (event.data.type !== 'frameAdded' || !event.data.frameName) return;
+  const parsedFrames = framesParam.split(",");
+  const parsedMap: Record<string, FrameElement[]> = {};
+  let maxId = 0;
 
-    console.log("Top frame received frameAdded from:", (event.source as Window)?.name ?? 'unknown', "for frame:", event.data.frameName);
-	addFrame(event.data.frameName);
-    // handle frame addition logic here if needed
-  }
+  for (const entry of elementsParam.split(";")) {
+    const [frame, list] = entry.split(":");
+    if (!frame) continue;
 
-  window.addEventListener('message', handleMessage);
-  return () => window.removeEventListener('message', handleMessage);
-}, []);
+    const elements: FrameElement[] = [];
+    const serializedItems = list ? list.split("|") : [];
+    for (const serializedItem of serializedItems) {
+      if (!serializedItem) continue;
+      const parts = serializedItem.split(",");
+      if (parts.length !== 5) continue;
 
+      const [id, componentName, xString, yString, isFrameOrContainerString] = parts;
+      const xPercent = Number(xString) / 100;
+      const yPercent = Number(yString) / 100;
+      const isFrameOrContainer = isFrameOrContainerString === "true";
 
-// used to replace all element data in iframes when loading 
-function replaceElementsInFrame(
-	frameName: string,
-	newElements: FrameElement[]
-) {
-	setAllFrameElements((prev) => {
-		const updated: { [key: string]: FrameElement[] } = { ...prev };
-		updated[frameName] = newElements;
-		console.log("UPDATED FRAME ELEMENTS: ",updated)
-		return updated;
-	});
-}
+      elements.push({ id, componentName, xPercent, yPercent, isFrameOrContainer });
 
-  // used to add/remove frame data when frame/container is added/removed
-function addFrame(newFrameName: string) {
-  setFrameNames(existing =>
-    existing.includes(newFrameName) ? existing : [...existing, newFrameName]
-  );
-
-  setSelectedFrameName(current =>
-    current === "" ? newFrameName : current
-  );
-
-  if (!containerRefs.current[newFrameName]) {
-    containerRefs.current[newFrameName] = React.createRef<HTMLDivElement | null>();
-  }
-}
-
-function removeFrame(frameToRemove: FrameElement) {
-	console.log("removing frame called with : ", frameToRemove)
-  if (!frameToRemove.isFrameOrContainer) return;
-
-  const frameIdsToRemove: string[] = [];
-
-  const collectFrames = (id: string) => {
-    frameIdsToRemove.push(id);
-    const children = allFrameElements[id] || [];
-    for (const child of children) {
-      if (child.isFrameOrContainer) {
-        collectFrames(child.id);
+      const suffix = parseInt(id.split("-").pop() || "0", 10);
+      if (!isNaN(suffix) && suffix > maxId) {
+        maxId = suffix;
       }
     }
-  };
 
-  collectFrames(frameToRemove.id);
-
-  setFrameNames(existing =>
-    existing.filter(name => !frameIdsToRemove.includes(name))
-  );
-
-  setAllFrameElements(existing => {
-    const updated = { ...existing };
-    for (const name of frameIdsToRemove) {
-      delete updated[name];
-    }
-    return updated;
-  });
-
-  for (const name of frameIdsToRemove) {
-    delete containerRefs.current[name];
+    parsedMap[frame] = elements;
   }
 
-  setSelectedFrameName("TopFrame");
+  setFrameList(parsedFrames);
+  setFrameElementsMap(parsedMap);
+  if (parsedFrames.length) setCurrentFrame(parsedFrames[0]);
+}, []);
+
+  // save frames and elements to URL parameters
+  useEffect(() => {
+    const framesQuery = frameList.join(",");
+    const entries = frameList.map((frame) => {
+      const items = (frameElementsMap[frame] || []).map((el) => {
+        const xInt = Math.round(el.xPercent * 100);
+        const yInt = Math.round(el.yPercent * 100);
+        return [el.id, el.componentName, xInt, yInt, el.isFrameOrContainer].join(",");
+      });
+      return `${frame}:${items.join("|")}`;
+    });
+    const elementsQuery = entries.join(";");
+    const params = new URLSearchParams({ frames: framesQuery, elements: elementsQuery });
+    const url = `${window.location.origin}${window.location.pathname}?${params}`;
+    window.history.replaceState(null, "", url);
+  }, [frameList, frameElementsMap]);
+
+  function handleRemoveMessage(event: MessageEvent) {
+    const data = event.data as Record<string, any>;
+    if (data?.type !== "removeElement") return;
+    const { elementId, frameName, element } = data;
+    if (!elementId || !frameName) return;
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Receive] removeElement` +
+        ` | source: ${(event.source as Window)?.name || DEFAULT_FRAME}` +
+        ` | targetFrame: ${frameName}` +
+        ` | elementId: ${elementId}`
+      );
+    }
+    removeElementFromFrame(elementId, frameName);
+    if (element?.isFrameOrContainer) unregisterFrame(element);
+  }
+
+  useEffect(() => {
+    if (window.top !== window) return;
+    window.addEventListener("message", handleRemoveMessage);
+    return () => window.removeEventListener("message", handleRemoveMessage);
+  }, [frameElementsMap]);
+
+  // listen for updateElementPosition messages and adjust positions
+  function handlePositionMessage(event: MessageEvent) {
+    const data = event.data as Record<string, any>;
+    if (data?.type !== "updateElementPosition") return;
+    const { elementId, frameName, xPercent, yPercent } = data;
+    if (!elementId || !frameName) return;
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Receive] updateElementPosition` +
+        ` | source: ${(event.source as Window)?.name || DEFAULT_FRAME}` +
+        ` | frame: ${frameName}` +
+        ` | elementId: ${elementId}` +
+        ` | x: ${xPercent}` +
+        ` | y: ${yPercent}`
+      );
+    }
+    updateElementPosition(elementId, xPercent, yPercent, frameName);
+  }
+
+  useEffect(() => {
+    if (window.top !== window) return;
+    window.addEventListener("message", handlePositionMessage);
+    return () => window.removeEventListener("message", handlePositionMessage);
+  }, []);
+
+  // listen for syncFrame messages to replace the entire elements map
+  function handleSyncFrame(event: MessageEvent) {
+    const data = event.data as Record<string, any>;
+    if (data?.type !== "syncFrame" || data.frameName !== window.name) return;
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Receive] syncFrame` +
+        ` | source: ${(event.source as Window)?.name || DEFAULT_FRAME}` +
+        ` | frameName: ${data.frameName}` +
+        ` | elements:`, data.elements
+      );
+    }
+    setFrameElementsMap(data.elements);
+  }
+
+  useEffect(() => {
+    if (window.top === window) return;
+    window.addEventListener("message", handleSyncFrame);
+	// this ensures iframe is fully loaded before sending any post messages from other frames...
+    window.parent?.postMessage({ type: "iframeReady", frameName: window.name }, "*");
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Send] iframeReady` +
+        ` | target: parent` +
+        ` | source: ${window.name}`
+      );
+    }
+    return () => window.removeEventListener("message", handleSyncFrame);
+  }, []);
+
+  // listen for frameAdded messages to register new frames
+  function handleFrameAdded(event: MessageEvent) {
+	if (window !== window.top) return;
+    const data = event.data as Record<string, any>;
+    if (data?.type !== "frameAdded" || !data.frameName) return;
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Receive] frameAdded` +
+        ` | source: ${(event.source as Window)?.name || DEFAULT_FRAME}` +
+        ` | newFrame: ${data.frameName}`
+      );
+    }
+    registerFrame(data.frameName);
+  }
+
+  useEffect(() => {
+    if (window.top !== window) return;
+    window.addEventListener("message", handleFrameAdded);
+    return () => window.removeEventListener("message", handleFrameAdded);
+  }, []);
+
+  function replaceFrameElements(
+    frameName: string,
+    elements: FrameElement[]
+  ) {
+    setFrameElementsMap((prev) => ({ ...prev, [frameName]: elements }));
+  }
+
+  // register frame to show in menu 
+function registerFrame(frameName: string) {
+	
+  setFrameList(prev =>
+    prev.includes(frameName) ? prev : [...prev, frameName]
+  );
+ 
+
+  setCurrentFrame((curr) => {
+    return frameName;
+  });
+
+  if (!refs.current[frameName]) {
+    refs.current[frameName] = createRef<HTMLDivElement | null>();
+  }
 }
 
-   // used to add/remove element data when element is added/removed
-function addElementToFrame(
-  componentName: string,
-  isFrameOrContainer: boolean
-) {
-  // get all elements from all frames
-  const allExistingElements = Object.values(allFrameElements).flat();
 
-  const elementsWithSameComponent = allExistingElements.filter(
-    (element) => element.componentName === componentName
-  );
+  function unregisterFrame(frame: FrameElement) {
+    if (!frame.isFrameOrContainer) return;
+    const idsToRemove: string[] = [];
 
-  // find number of all existing elements and find the highest one and use it for new element
-  const numericSuffixes = elementsWithSameComponent
-    .map((element) => {
-      const idParts = element.id.split("-");
-      const numericSuffix = parseInt(idParts[idParts.length - 1], 10);
-      return isNaN(numericSuffix) ? null : numericSuffix;
-    })
-    .filter((suffix): suffix is number => suffix !== null);
+	// recursive search to ensure all frames are found, this ensures frames in frames are removed from frame list
+    function collect(id: string) {
+      idsToRemove.push(id);
+      (frameElementsMap[id] || [])
+        .filter((el) => el.isFrameOrContainer)
+        .forEach((el) => collect(el.id));
+    }
+    collect(frame.id);
 
-  const highestSuffix = numericSuffixes.length > 0 ? Math.max(...numericSuffixes) : 0;
-  const newIndex = highestSuffix + 1;
-  const newElementId = `${componentName}-${newIndex}`;
+    setFrameList((names) => names.filter((n) => !idsToRemove.includes(n)));
+    idsToRemove.forEach((id) => delete refs.current[id]);
+    setFrameElementsMap((prev) => {
+      const copy = { ...prev };
+      idsToRemove.forEach((id) => delete copy[id]);
+      return copy;
+    });
+    setCurrentFrame(DEFAULT_FRAME);
+  }
 
-  // Add the new element to the selected frame
-  setAllFrameElements(existingElements => {
-    const updatedElements = { ...existingElements };
-    const elementsInTargetFrame = updatedElements[selectedFrameName] || [];
+  function addElementToCurrentFrame(
+    componentName: string,
+    isFrameOrContainer: boolean
+  ): string {
+    const allElements = Object.values(frameElementsMap).flat();
+    const suffixes = allElements
+      .filter((el) => el.componentName === componentName)
+      .map((el) => parseInt(el.id.split("-").pop() || "0", 10))
+      .filter((n) => !isNaN(n));
 
-    const newElement = {
-      id: newElementId,
+    const nextIndex = suffixes.length ? Math.max(...suffixes) + 1 : 1;
+    const newId = `${componentName}-${nextIndex}`;
+    const newElement: FrameElement = {
+      id: newId,
       componentName,
       xPercent: 50,
       yPercent: 50,
       isFrameOrContainer,
     };
 
-    updatedElements[selectedFrameName] = [...elementsInTargetFrame, newElement];
-	console.log("ELEMENT LIST for: ",window.name, "here: ", updatedElements)
-    return updatedElements;
-  });
+    setFrameElementsMap((prev) => ({
+      ...prev,
+      [currentFrame]: [...(prev[currentFrame] || []), newElement],
+    }));
+    return newId;
+  }
 
-  return newElementId;
-}
+  function removeElementFromFrame(elementId: string, frameName: string) {
+    setFrameElementsMap((prev) => ({
+      ...prev,
+      [frameName]: (prev[frameName] || []).filter((el) => el.id !== elementId),
+    }));
+  }
 
-function removeElementFromFrame(elementId: string, frameName: string) {
-  // Remove element by ID from a specific frame
-  setAllFrameElements(existingElements => {
-    const updatedElements = { ...existingElements };
-    const currentElements = updatedElements[frameName] || [];
-
-    updatedElements[frameName] = currentElements.filter(
-      (element) => element.id !== elementId
-    );
-	console.log("UPDATED ALLFRAMEELEMENTS: ",updatedElements, "IN FRAME: ",window.name)
-    return updatedElements;
-  });
-}
-
-  // used to update element postition
   function updateElementPosition(
     elementId: string,
     xPercent: number,
     yPercent: number,
     frameName: string
   ) {
-    setAllFrameElements(currentElements => {
-      const updatedElements = { ...currentElements };
-
-      const updatedFrameElements = (updatedElements[frameName] || []).map(element =>
-        element.id === elementId
-          ? { ...element, xPercent, yPercent }
-          : element
-      );
-
-      updatedElements[frameName] = updatedFrameElements;
-      return updatedElements;
-    });
+    setFrameElementsMap((prev) => ({
+      ...prev,
+      [frameName]: (prev[frameName] || []).map((el) =>
+        el.id === elementId ? { ...el, xPercent, yPercent } : el
+      ),
+    }));
   }
 
-
-	return (
-		<FrameContext.Provider
-			value={{
-				selectedFrameName,
-				setSelectedFrameName,
-				frameNames,
-				replaceElementsInFrame,
-				addFrame,
-				removeFrame,
-				addElementToFrame,
-				removeElementFromFrame,
-				updateElementPosition,
-				allFrameElements,
-				frameContainerRefs,
-			}}
-		>
-			{children}
-		</FrameContext.Provider>
-	);
+  return (
+    <FrameContext.Provider
+      value={{
+        currentFrame,
+        setCurrentFrame,
+        frameList,
+        replaceFrameElements,
+        registerFrame,
+        unregisterFrame,
+        addElementToCurrentFrame,
+        removeElementFromFrame,
+        updateElementPosition,
+        frameElementsMap,
+        containerRefs,
+      }}
+    >
+      {children}
+    </FrameContext.Provider>
+  );
 }
 
 export function useFrame() {
-	const ctx = useContext(FrameContext);
-	if (!ctx) throw new Error("useFrame must be used within FrameManager");
-	return ctx;
+  const context = useContext(FrameContext);
+  if (!context) throw new Error("useFrame must be used within FrameManager");
+  return context;
 }

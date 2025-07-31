@@ -12,12 +12,12 @@ interface AddElementButtonProps {
 }
 
 export default function AddElementButton({ elementName, isFrameOrContainer=false}: AddElementButtonProps) {
-  const { addElementToFrame} = useFrame();
+  const { addElementToCurrentFrame} = useFrame();
 
 
 const handleAdd = () => {
 
-  addElementToFrame(elementName,isFrameOrContainer);
+  addElementToCurrentFrame(elementName,isFrameOrContainer);
 
 };
 

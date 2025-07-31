@@ -7,7 +7,7 @@ import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
 import { useTheme } from '@mui/material/styles';
 export default function IframeSD() {
   const { setShowBackground } = useBackground();
-  const { frameContainerRefs } = useFrame();
+  const { containerRefs } = useFrame();
   const theme = useTheme();
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function IframeSD() {
 
   return (
     <div
-      ref={frameContainerRefs["TopFrame"]}
+      ref={containerRefs["TopFrame"]}
       style={{
         width: '100%',
         height: '100%',

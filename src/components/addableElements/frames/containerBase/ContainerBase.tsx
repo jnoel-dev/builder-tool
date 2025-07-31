@@ -1,23 +1,22 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useRef } from 'react';
-import Collapse from '@mui/material/Collapse';
-import { useFrame, FrameElement } from '@/components/contexts/FrameManager/FrameManager';
-import componentRegistry from '@/components/contexts/FrameManager/componentRegistry';
-import ElementController from '../../elementController/ElementController';
+import React, { ReactNode, useEffect } from "react";
+import Collapse from "@mui/material/Collapse";
+import {
+  useFrame,
+  POST_MESSAGE_LOG_ENABLED,
+} from "@/components/contexts/FrameManager/FrameManager";
+import componentRegistry from "@/components/contexts/FrameManager/componentRegistry";
+import ElementController from "../../elementController/ElementController";
 
 interface ContainerBaseProps {
   frameName: string;
   disableElementControlsForChildren?: boolean;
 }
 
-function CollapseWrapper({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    setOpen(true);
-  }, []);
-
+function CollapseWrapper({ children }: { children: ReactNode }) {
+  const [open, setOpen] = React.useState(false);
+  useEffect(() => setOpen(true), []);
   return <Collapse in={open} timeout={200}>{children}</Collapse>;
 }
 
@@ -25,43 +24,32 @@ export default function ContainerBase({
   frameName,
   disableElementControlsForChildren = false,
 }: ContainerBaseProps) {
-  const {
-    allFrameElements,
-    frameContainerRefs,
-    addFrame,
-    replaceElementsInFrame,
-  } = useFrame();
-
-  const elements = allFrameElements[frameName] || [];
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
+  const { frameElementsMap, containerRefs, registerFrame } = useFrame();
+  const elements = frameElementsMap[frameName] || [];
 
   useEffect(() => {
-        if (!frameName) return;
-        addFrame(frameName);
-      }, [frameName]);
+    if (frameName) registerFrame(frameName);
+  }, [frameName]);
 
-
-useEffect(() => {
-  if (window.top === window || frameName === "TopFrame") return; 
-
-  window.top?.postMessage({
-    type: 'frameAdded',
-    frameName,
-  }, '*');
-}, [frameName]);
-
-
-
+  useEffect(() => {
+    if (window.top === window || frameName === "TopFrame") return;
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Send] frameAdded | from: ${window.name || "TopFrame"} | newFrame: ${frameName}`
+      );
+    }
+    window.top?.postMessage({ type: "frameAdded", frameName }, "*");
+  }, [frameName]);
 
   return (
     <>
       {elements.map((el) => {
-      
-        const entry = componentRegistry[el.componentName];
-        if (!entry) return null;
-        const { component: Component, neededProps = {} } = entry;
+        const registryEntry = componentRegistry[el.componentName];
+        if (!registryEntry) return null;
+
+        const { component: Component, neededProps = {} } = registryEntry;
         const extraProps = el.isFrameOrContainer ? { savedName: el.id } : {};
+        const containerRef = containerRefs[frameName];
 
         return (
           <ElementController
@@ -69,12 +57,11 @@ useEffect(() => {
             elementToControl={el}
             controlsDisabled={disableElementControlsForChildren}
             shouldShowName={el.isFrameOrContainer}
-            containerRef={frameContainerRefs[frameName]}
+            containerRef={containerRef}
             connectedFrameOrContainerName={frameName}
           >
             <CollapseWrapper>
               <Component {...neededProps} {...extraProps} ref={containerRef} />
-
             </CollapseWrapper>
           </ElementController>
         );

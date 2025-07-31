@@ -15,15 +15,12 @@ export default function Container({
   containerType = "vertical",
   savedName,
 }: ContainerProps) {
-  const { allFrameElements, frameContainerRefs } = useFrame();
-  const hasChildren = allFrameElements[savedName]?.length > 0;
-  const containerRef = useRef<HTMLDivElement>(null);
-
-
+  const { frameElementsMap, containerRefs } = useFrame();
+  const hasChildren = frameElementsMap[savedName]?.length > 0;
 
   return (
     <Box
-      ref={frameContainerRefs[savedName]}
+      ref={containerRefs[savedName]}
       sx={{
         border: '1px solid',
         display: 'flex', 

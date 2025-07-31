@@ -1,12 +1,21 @@
-'use client';
+"use client";
 
-import { ReactNode, useRef, useEffect, useState, CSSProperties } from "react";
-import { FrameElement, useFrame } from "@/components/contexts/FrameManager/FrameManager";
-import IconButton from '@mui/material/IconButton';
-import Stack from '@mui/material/Stack';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import CloseIcon from '@mui/icons-material/Close';
-
+import React, {
+  ReactNode,
+  useRef,
+  useEffect,
+  useState,
+  CSSProperties,
+} from "react";
+import {
+  FrameElement,
+  useFrame,
+  POST_MESSAGE_LOG_ENABLED,
+} from "@/components/contexts/FrameManager/FrameManager";
+import IconButton from "@mui/material/IconButton";
+import Stack from "@mui/material/Stack";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import CloseIcon from "@mui/icons-material/Close";
 
 interface ElementControllerProps {
   elementToControl: FrameElement;
@@ -28,159 +37,157 @@ export default function ElementController({
   const {
     updateElementPosition,
     removeElementFromFrame,
-    removeFrame,
-    frameContainerRefs,
-
+    unregisterFrame,
   } = useFrame();
 
-  const isDraggingRef = useRef(false);
-  const dragOffsetPercentRef = useRef({ xOffsetPercent: 0, yOffsetPercent: 0 });
- 
-  const [elementPositionPercent, setElementPositionPercent] = useState({
-    xPercent: elementToControl.xPercent,
-    yPercent: elementToControl.yPercent
+  const draggingRef = useRef(false);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+  const [positionPercent, setPositionPercent] = useState({
+    x: elementToControl.xPercent,
+    y: elementToControl.yPercent,
   });
 
-
   useEffect(() => {
-    setElementPositionPercent({ xPercent: elementToControl.xPercent, yPercent: elementToControl.yPercent });
-  }, [elementToControl.xPercent, elementToControl.yPercent ]);
+    setPositionPercent({
+      x: elementToControl.xPercent,
+      y: elementToControl.yPercent,
+    });
+  }, [elementToControl.xPercent, elementToControl.yPercent]);
 
-  function clamp(value: number, min: number, max: number): number {
-    return Math.min(Math.max(value, min), max);
-  }
+  const clampValue = (value: number, min: number, max: number) =>
+    Math.min(Math.max(value, min), max);
 
-  function handleMouseDown(event: React.MouseEvent<HTMLButtonElement>) {
-
+  function onDragStart(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
-  
+    const frameEl = containerRef.current;
+    if (!frameEl) return;
+    const rect = frameEl.getBoundingClientRect();
+    const clickX = ((event.clientX - rect.left) / rect.width) * 100;
+    const clickY = ((event.clientY - rect.top) / rect.height) * 100;
 
-    const currentFrameContainer = containerRef.current;
-    if (!currentFrameContainer) return;
-
-    const frameRect = currentFrameContainer.getBoundingClientRect();
-    const clickXPercent = ((event.clientX - frameRect.left) / frameRect.width) * 100;
-    const clickYPercent = ((event.clientY - frameRect.top) / frameRect.height) * 100;
-
-    dragOffsetPercentRef.current = {
-      xOffsetPercent: clickXPercent - elementPositionPercent.xPercent,
-      yOffsetPercent: clickYPercent - elementPositionPercent.yPercent,
+    dragOffsetRef.current = {
+      x: clickX - positionPercent.x,
+      y: clickY - positionPercent.y,
     };
-    isDraggingRef.current = true;
+    draggingRef.current = true;
   }
 
-  function handleMouseMove(event: MouseEvent) {
-    if (!isDraggingRef.current) return;
-    const currentFrameContainer = containerRef.current;
-    if (!currentFrameContainer) return;
+  function onDrag(event: MouseEvent) {
+    if (!draggingRef.current) return;
+    const frameEl = containerRef.current;
+    if (!frameEl) return;
 
-    const frameRect = currentFrameContainer.getBoundingClientRect();
+    const frameRect = frameEl.getBoundingClientRect();
     const elNode = document.getElementById(elementToControl.id);
     if (!elNode) return;
 
     const elRect = elNode.getBoundingClientRect();
-    const widthPercent = (elRect.width / frameRect.width) * 100;
-    const heightPercent = (elRect.height / frameRect.height) * 100;
-    const cursorXPercent = ((event.clientX - frameRect.left) / frameRect.width) * 100;
-    const cursorYPercent = ((event.clientY - frameRect.top) / frameRect.height) * 100;
+    const widthPct = (elRect.width / frameRect.width) * 100;
+    const heightPct = (elRect.height / frameRect.height) * 100;
 
-    const unclampedX = cursorXPercent - dragOffsetPercentRef.current.xOffsetPercent;
-    const unclampedY = cursorYPercent - dragOffsetPercentRef.current.yOffsetPercent;
-    const minX = widthPercent / 2;
-    const maxX = 100 - (widthPercent / 2);
-    const minY = heightPercent / 2;
-    const maxY = 100 - (heightPercent / 2);
+    const cursorX = ((event.clientX - frameRect.left) / frameRect.width) * 100;
+    const cursorY = ((event.clientY - frameRect.top) / frameRect.height) * 100;
 
-    setElementPositionPercent({
-      xPercent: clamp(unclampedX, minX, maxX),
-      yPercent: clamp(unclampedY, minY, maxY),
+    const rawX = cursorX - dragOffsetRef.current.x;
+    const rawY = cursorY - dragOffsetRef.current.y;
+
+    setPositionPercent({
+      x: clampValue(rawX, widthPct / 2, 100 - widthPct / 2),
+      y: clampValue(rawY, heightPct / 2, 100 - heightPct / 2),
     });
   }
 
-function handleMouseUp() {
- 
-  if (!isDraggingRef.current) return;
-  isDraggingRef.current = false;
+  function onDragEnd() {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
 
-  updateElementPosition(
-    elementToControl.id,
-    elementPositionPercent.xPercent,
-    elementPositionPercent.yPercent,
-    connectedFrameOrContainerName
-  );
-
-
-  // Only send postMessage if inside an iframe
-  if (window.top !== window) {
-    console.log("sending message from:", window.name, "to update element position");
-    window.top?.postMessage(
-      {
-        type: 'updateElementPosition',
-        frameName: window.name,
-        elementId: elementToControl.id,
-        xPercent: elementPositionPercent.xPercent,
-        yPercent: elementPositionPercent.yPercent,
-      },
-      '*'
+    updateElementPosition(
+      elementToControl.id,
+      positionPercent.x,
+      positionPercent.y,
+      connectedFrameOrContainerName
     );
-  }
-}
 
+    if (window.top !== window && POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Send] updateElementPosition` +
+        ` | from: ${window.name || "TopFrame"}` +
+        ` | element: ${elementToControl.id}` +
+        ` | x: ${positionPercent.x}` +
+        ` | y: ${positionPercent.y}`
+      );
+    }
+
+    if (window.top !== window) {
+      window.top?.postMessage(
+        {
+          type: "updateElementPosition",
+          frameName: window.name,
+          elementId: elementToControl.id,
+          xPercent: positionPercent.x,
+          yPercent: positionPercent.y,
+        },
+        "*"
+      );
+    }
+  }
 
   useEffect(() => {
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("mousemove", onDrag);
+    document.addEventListener("mouseup", onDragEnd);
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mousemove", onDrag);
+      document.removeEventListener("mouseup", onDragEnd);
     };
-  }, [elementPositionPercent]);
+  }, [positionPercent]);
 
-function handleRemoveElement() {
-  removeElementFromFrame(elementToControl.id, connectedFrameOrContainerName);
-
-  if (elementToControl.isFrameOrContainer) {
-    removeFrame(elementToControl);
-  }
-
-  // Only send postMessage if inside an iframe
-  if (window.top !== window) {
-    const frameNameToSend =
-      connectedFrameOrContainerName === 'TopFrame'
-        ? window.name
-        : connectedFrameOrContainerName;
-
-    console.log("sending message from:", window.name, "to remove element");
-
-    window.top?.postMessage(
-      {
-        type: 'removeElement',
-        elementId: elementToControl.id,
-        frameName: frameNameToSend,
-        element: elementToControl
-      },
-      '*'
+  function onRemove() {
+    removeElementFromFrame(
+      elementToControl.id,
+      connectedFrameOrContainerName
     );
+    if (elementToControl.isFrameOrContainer) {
+      unregisterFrame(elementToControl);
+    }
+
+    if (window.top !== window && POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Send] removeElement` +
+        ` | from: ${window.name || "TopFrame"}` +
+        ` | element: ${elementToControl.id}`
+      );
+    }
+
+    if (window.top !== window) {
+      window.top?.postMessage(
+        {
+          type: "removeElement",
+          elementId: elementToControl.id,
+          frameName:
+            connectedFrameOrContainerName === "TopFrame"
+              ? window.name
+              : connectedFrameOrContainerName,
+          element: elementToControl,
+        },
+        "*"
+      );
+    }
   }
-}
 
-
-
-  const containerStyle: CSSProperties = controlsDisabled
-    ? { position: 'relative', width: 'fit-content' }
+  const wrapperStyle: CSSProperties = controlsDisabled
+    ? { position: "relative", width: "fit-content" }
     : {
-        position: 'absolute',
-        left: `${elementPositionPercent.xPercent}%`,
-        top: `${elementPositionPercent.yPercent}%`,
-        transform: 'translate(-50%, -50%)',
+        position: "absolute",
+        left: `${positionPercent.x}%`,
+        top: `${positionPercent.y}%`,
+        transform: "translate(-50%, -50%)",
       };
 
-      
-
   return (
-    <div id={elementToControl.id} style={containerStyle}>
+    <div id={elementToControl.id} style={wrapperStyle}>
       <Stack direction="row-reverse">
-        <IconButton size="small" onClick={handleRemoveElement} sx={{ padding: 0 }}>
+        <IconButton size="small" onClick={onRemove} sx={{ padding: 0 }}>
           <CloseIcon />
         </IconButton>
 
@@ -188,7 +195,7 @@ function handleRemoveElement() {
           <IconButton
             disableRipple
             size="small"
-            onMouseDown={handleMouseDown}
+            onMouseDown={onDragStart}
             sx={{
               padding: 0,
               cursor: "grab",
@@ -199,9 +206,8 @@ function handleRemoveElement() {
             <DragIndicatorIcon />
           </IconButton>
         )}
-
-        {elementToControl.id}
         {/* change later idk */}
+        {elementToControl.id}
         {/* {shouldShowName && elementToControl.id} */}
       </Stack>
       {children}

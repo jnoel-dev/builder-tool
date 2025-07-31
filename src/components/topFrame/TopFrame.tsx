@@ -7,7 +7,7 @@ import { useFrame } from '../contexts/FrameManager/FrameManager';
 
 export default function TopFrame(){
   const theme = useTheme();
-   const { frameContainerRefs } = useFrame();
+   const { containerRefs } = useFrame();
 
   return (
     <div
@@ -33,7 +33,7 @@ export default function TopFrame(){
 
       <Box
         id="TopFrame"
-        ref={frameContainerRefs["TopFrame"]}
+        ref={containerRefs["TopFrame"]}
         sx={{
           position: 'relative',
           overflow: 'hidden',

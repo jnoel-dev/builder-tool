@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import Divider from "@mui/material/Divider";
 import AddElementButton from "@/components/sideMenu/elementsMenu/addElementButton/AddElementButton";
@@ -48,14 +50,15 @@ function getTabProps(index: number) {
 
 export default function ElementsMenu() {
 	const [selectedTab, setTab] = React.useState(TabIndex.Panels);
-	const { selectedFrameName, setSelectedFrameName, frameNames } = useFrame();
+	const { currentFrame, setCurrentFrame, frameList } = useFrame();
 
 	const handleTabChange = (event: React.SyntheticEvent, tabIndex: number) => {
 		setTab(tabIndex);
 	};
 
 	const handleFrameChange = (event: SelectChangeEvent) => {
-		setSelectedFrameName(event.target.value as string);
+
+		setCurrentFrame(event.target.value as string);
 	};
 
 	return (
@@ -66,11 +69,11 @@ export default function ElementsMenu() {
 					<Select
 						labelId="frame-select-label"
 						id="frame-select-label"
-						value={selectedFrameName}
+						value={currentFrame}
 						onChange={handleFrameChange}
 						sx={{ textAlign: "center" }}
 					>
-						{frameNames.map((frame) => {
+						{frameList.map((frame) => {
 							const displayName = frame
 								.replace(/([A-Z])/g, " $1")
 								.trim()
