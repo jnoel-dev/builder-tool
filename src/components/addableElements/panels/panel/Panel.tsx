@@ -23,7 +23,7 @@ export default function Panel() {
     
     <Box
       sx={{
-        backgroundColor: theme.palette.text.secondary,
+        backgroundColor: theme.palette.primary.main,
         padding: 2,
       }}
     >

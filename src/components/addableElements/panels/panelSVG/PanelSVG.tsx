@@ -30,7 +30,7 @@ export default function PanelSVG() {
       width={totalWidth}
       height={svgHeight}
       style={{
-        backgroundColor: theme.palette.text.secondary,
+        backgroundColor: theme.palette.primary.main,
         display: 'block',
       }}
     >

@@ -1,61 +1,79 @@
-'use client';
+"use client";
 
-import * as React from "react";
-import Divider from "@mui/material/Divider";
-import TextField from "@mui/material/TextField";
+import React from "react";
 import Box from "@mui/material/Box";
-import { useThemeColors } from "@/components/contexts/themeManager/ThemeManager";
+import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
+import { MuiColorInput } from "mui-color-input";
+import { useThemeColors } from "@/components/contexts/themeManager/ThemeManager";
 
 export default function SettingsMenu() {
   const { colors, setColors } = useThemeColors();
 
-    const handleColorChange = (index: number, value: string) => {
+  function updateColorByIndex(index: number, newColor: string) {
     const updatedColors = [...colors];
-    updatedColors[index] = value;
+    updatedColors[index] = newColor;
     setColors(updatedColors);
-    };
+  }
 
+  function createColorChangeHandler(index: number) {
+    return function handleColorPickerChange(colorValue: string) {
+      updateColorByIndex(index, colorValue);
+    };
+  }
 
   const colorLabels = [
-    "Primary color",
-    "Secondary color",
-    "Background default",
-    "Background paper",
-    "Text primary",
-    "Text secondary",
+    "Main",
+    "Main Alt",
+    "Background",
+    "Background Alt",
+    "Text",
+    "Text Alt",
   ];
 
   return (
-    <div>
+    <Box
+      component="ul"
+      sx={{
+        padding: "0px",
+        margin: "0px",
+        listStyle: "none",
+      }}
+    >
       <Divider component="li" />
 
-      {colors.map((color, index) => (
-        <Box key={index} sx={{ mb: 1 }}>
-          <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-            {colorLabels[index]}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Box
-              sx={{
-                width: 30,
-                height: 30,
-                backgroundColor: color,
-                border: '1px solid #ccc',
-                marginRight: 2,
-              }}
-            />
-            <TextField
-              value={color}
-              onChange={(e) => handleColorChange(index, e.target.value)}
-              variant="outlined"
+      {colors.map((currentColor, index) => {
+        const label = colorLabels[index];
+        const onColorChange = createColorChangeHandler(index);
+
+        return (
+          <Box
+            key={label}
+            component="li"
+            sx={{
+              marginBottom: "8px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{ width: "100px", marginRight: "16px" }}
+            >
+              {label}
+            </Typography>
+
+            <MuiColorInput
+              value={currentColor}
+              onChange={onColorChange}
+              format="hex"
               size="small"
             />
           </Box>
-        </Box>
-      ))}
+        );
+      })}
 
       <Divider component="li" />
-    </div>
+    </Box>
   );
 }

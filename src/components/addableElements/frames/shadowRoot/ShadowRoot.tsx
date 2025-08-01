@@ -35,6 +35,7 @@ export default function ShadowRoot({
     const styleContainer = document.createElement('div');
     root.appendChild(styleContainer);
 
+    //mui uses emotion to allow sx styling. this creates cache so our inline sx style is preserved in shadowroot
     const cache = createCache({
       key: 'shadow',
       container: styleContainer,
