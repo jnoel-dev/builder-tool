@@ -8,6 +8,7 @@ import InputComplex from "../../addableElements/inputs/inputComplex/InputComplex
 import InputRedraw from "../../addableElements/inputs/inputRedraw/InputRedraw"
 import Frame from "@/components/addableElements/frames/frame/Frame"
 import ShadowRoot from "@/components/addableElements/frames/shadowRoot/ShadowRoot"
+import PanelCanvas from "@/components/addableElements/panels/panelCanvas/PanelCanvas"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -21,6 +22,10 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
 
   PanelSVG: {
     component: PanelSVG,
+  },
+
+  PanelCanvas: {
+    component: PanelCanvas,
   },
 
   Input: {

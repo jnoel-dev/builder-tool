@@ -113,6 +113,8 @@ export default function ElementsMenu() {
 					<Divider component="li" />
 					<AddElementButton elementName="PanelSVG" />
 					<Divider component="li" />
+					<AddElementButton elementName="PanelCanvas" />
+					<Divider component="li" />
 				</CustomTabPanel>
 
 				<CustomTabPanel value={selectedTab} index={TabIndex.Inputs}>
