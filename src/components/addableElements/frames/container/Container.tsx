@@ -26,6 +26,7 @@ export default function Container({
         display: 'flex', 
         flexDirection: containerType === "horizontal" ? "row" : "column",
         maxWidth: '100%',
+        padding: '10px',
       }}
     >
       <ContainerBase frameName={savedName} disableElementControlsForChildren={true}/>
@@ -37,7 +38,7 @@ export default function Container({
             width: 200,
           }}
         >
-          Add elements here by selecting container in Elements menu
+          Add elements here by selecting Container in Elements menu
         </Box>
       )}
     </Box>

@@ -13,10 +13,10 @@ import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 import { FormHelperText } from "@mui/material";
 
 enum TabIndex {
+	Frames,
 	Panels,
 	Inputs,
 	Dialogs,
-	Frames
 }
 
 interface TabPanelProps {
@@ -49,7 +49,7 @@ function getTabProps(index: number) {
 }
 
 export default function ElementsMenu() {
-	const [selectedTab, setTab] = React.useState(TabIndex.Panels);
+	const [selectedTab, setTab] = React.useState(TabIndex.Frames);
 	const { currentFrame, setCurrentFrame, frameList } = useFrame();
 
 	const handleTabChange = (event: React.SyntheticEvent, tabIndex: number) => {
@@ -99,10 +99,11 @@ export default function ElementsMenu() {
 						indicatorColor="secondary"
 						centered
 					>
+						<Tab label="Frames" {...getTabProps(TabIndex.Frames)} />
 						<Tab label="Panels" {...getTabProps(TabIndex.Panels)} />
 						<Tab label="Inputs" {...getTabProps(TabIndex.Inputs)} />
 						<Tab label="Dialogs" {...getTabProps(TabIndex.Dialogs)} />
-						<Tab label="Frames" {...getTabProps(TabIndex.Frames)} />
+						
 					</Tabs>
 				</Box>
 
@@ -147,7 +148,16 @@ export default function ElementsMenu() {
 						elementName="ContainerHorizontal"
 						isFrameOrContainer={true}
 					/>
-
+					<Divider component="li" />
+					<AddElementButton
+						elementName="ShadowRootOpen"
+						isFrameOrContainer={true}
+					/>
+					<Divider component="li" />
+					<AddElementButton
+						elementName="ShadowRootClosed"
+						isFrameOrContainer={true}
+					/>
 					<Divider component="li" />
 				</CustomTabPanel>
 			</Box>

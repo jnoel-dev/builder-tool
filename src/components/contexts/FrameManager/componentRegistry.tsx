@@ -7,6 +7,7 @@ import InputReact from "../../addableElements/inputs/inputReact/InputReact"
 import InputComplex from "../../addableElements/inputs/inputComplex/InputComplex"
 import InputRedraw from "../../addableElements/inputs/inputRedraw/InputRedraw"
 import Frame from "@/components/addableElements/frames/frame/Frame"
+import ShadowRoot from "@/components/addableElements/frames/shadowRoot/ShadowRoot"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -56,6 +57,14 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
   IframeCrossDomain: {
     component: Frame,
     neededProps: { frameType: "crossDomain" },
+  },
+  ShadowRootOpen: {
+    component: ShadowRoot,
+    neededProps: { shadowRootType: "open" },
+  },
+  ShadowRootClosed: {
+    component: ShadowRoot,
+    neededProps: { shadowRootType: "closed" },
   },
 
 }
