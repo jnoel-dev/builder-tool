@@ -131,6 +131,8 @@ export default function ElementsMenu() {
 				<CustomTabPanel value={selectedTab} index={TabIndex.Dialogs}>
 					<AddElementButton elementName="DialogNative" />
 					<Divider component="li" />
+					<AddElementButton elementName="DialogUI5" />
+					<Divider component="li" />
 					<AddElementButton elementName="DialogMUI" />
 					<Divider component="li" />
 				</CustomTabPanel>

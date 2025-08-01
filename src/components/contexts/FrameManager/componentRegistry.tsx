@@ -11,6 +11,7 @@ import ShadowRoot from "@/components/addableElements/frames/shadowRoot/ShadowRoo
 import PanelCanvas from "@/components/addableElements/panels/panelCanvas/PanelCanvas"
 import DialogNative from "@/components/addableElements/dialogs/dialogNative/DialogNative"
 import DialogMUI from "@/components/addableElements/dialogs/dialogMUI/DialogMUI"
+import DialogUI5 from "@/components/addableElements/dialogs/dialogUI5/DialogUI5"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -78,6 +79,9 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
   },
   DialogMUI: {
     component: DialogMUI,
+  },
+  DialogUI5: {
+    component: DialogUI5,
   },
 }
 
