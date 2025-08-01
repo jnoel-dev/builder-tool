@@ -9,6 +9,7 @@ import InputRedraw from "../../addableElements/inputs/inputRedraw/InputRedraw"
 import Frame from "@/components/addableElements/frames/frame/Frame"
 import ShadowRoot from "@/components/addableElements/frames/shadowRoot/ShadowRoot"
 import PanelCanvas from "@/components/addableElements/panels/panelCanvas/PanelCanvas"
+import DialogNative from "@/components/addableElements/dialogs/dialogNative/DialogNative"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -70,6 +71,9 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
   ShadowRootClosed: {
     component: ShadowRoot,
     neededProps: { shadowRootType: "closed" },
+  },
+  DialogNative: {
+    component: DialogNative,
   },
 
 }

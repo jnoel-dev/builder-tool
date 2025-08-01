@@ -128,7 +128,10 @@ export default function ElementsMenu() {
 					<Divider component="li" />
 				</CustomTabPanel>
 
-				<CustomTabPanel value={selectedTab} index={TabIndex.Dialogs}></CustomTabPanel>
+				<CustomTabPanel value={selectedTab} index={TabIndex.Dialogs}>
+					<AddElementButton elementName="DialogNative" />
+					<Divider component="li" />
+				</CustomTabPanel>
 
 				<CustomTabPanel value={selectedTab} index={TabIndex.Frames}>
 					<AddElementButton

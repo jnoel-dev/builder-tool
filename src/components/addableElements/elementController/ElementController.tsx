@@ -16,6 +16,7 @@ import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import CloseIcon from "@mui/icons-material/Close";
+import { useTheme } from "@mui/material";
 
 interface ElementControllerProps {
   elementToControl: FrameElement;
@@ -34,6 +35,8 @@ export default function ElementController({
   connectedFrameOrContainerName,
   children,
 }: ElementControllerProps) {
+  const theme = useTheme();
+
   const {
     updateElementPosition,
     removeElementFromFrame,
@@ -186,7 +189,7 @@ export default function ElementController({
 
   return (
     <div id={elementToControl.id} style={wrapperStyle}>
-      <Stack direction="row-reverse">
+      <Stack direction="row-reverse" sx={{ color: theme.palette.text.primary }}>
         <IconButton size="small" onClick={onRemove} sx={{ padding: 0 }}>
           <CloseIcon />
         </IconButton>

@@ -25,7 +25,7 @@ export default function TopFrame(){
           top: '-30px',
           left: 0,
           fontSize: '20px',
-          color: theme.palette.secondary.main,
+          color: theme.palette.text.primary,
         }}
       >
         TopFrame
