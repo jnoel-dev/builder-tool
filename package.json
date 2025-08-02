@@ -16,6 +16,8 @@
     "@mui/material": "^7.2.0",
     "@react-three/drei": "^10.0.4",
     "@react-three/fiber": "^9.1.0",
+    "@tylertech/forge": "^3.10.4",
+    "@tylertech/forge-react": "^3.1.0",
     "@ui5/webcomponents-react": "^2.12.0",
     "lz-string": "^1.5.0",
     "mui-color-input": "^7.0.0",

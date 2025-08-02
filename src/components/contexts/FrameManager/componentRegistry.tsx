@@ -12,6 +12,7 @@ import PanelCanvas from "@/components/addableElements/panels/panelCanvas/PanelCa
 import DialogNative from "@/components/addableElements/dialogs/dialogNative/DialogNative"
 import DialogMUI from "@/components/addableElements/dialogs/dialogMUI/DialogMUI"
 import DialogUI5 from "@/components/addableElements/dialogs/dialogUI5/DialogUI5"
+import DialogForge from "@/components/addableElements/dialogs/dialogForge/DialogForge"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -82,6 +83,9 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
   },
   DialogUI5: {
     component: DialogUI5,
+  },
+  DialogForge: {
+    component: DialogForge,
   },
 }
 
