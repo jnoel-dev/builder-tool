@@ -33,7 +33,6 @@ export default function DialogMUI({ shouldFocus = false }: DialogMUIProps) {
         open={isDialogOpen}
         onClose={closeDialog}
         disableEnforceFocus={!shouldFocus}
-        disableAutoFocus={!shouldFocus}
         disableRestoreFocus={!shouldFocus}
       >
         <Box
