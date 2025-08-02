@@ -5,7 +5,11 @@ import { Box, Button, Stack, Dialog } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import Panel from '../../panels/panel/Panel';
 
-export default function DialogMUI() {
+interface DialogMUIProps {
+  shouldFocus?: boolean;
+}
+
+export default function DialogMUI({ shouldFocus = false }: DialogMUIProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const theme = useTheme();
 
@@ -19,7 +23,7 @@ export default function DialogMUI() {
           variant="contained"
           onClick={openDialog}
           color="secondary"
-          sx={{ color: theme.palette.text.primary }}
+          sx={{ color: theme.palette.text.primary, width:'100%'}}
         >
           Open Dialog
         </Button>
@@ -28,7 +32,9 @@ export default function DialogMUI() {
       <Dialog
         open={isDialogOpen}
         onClose={closeDialog}
-        PaperProps={{ sx: { borderRadius: 0 } }}
+        disableEnforceFocus={!shouldFocus}
+        disableAutoFocus={!shouldFocus}
+        disableRestoreFocus={!shouldFocus}
       >
         <Box
           sx={{

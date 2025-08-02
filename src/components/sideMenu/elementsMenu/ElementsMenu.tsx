@@ -137,6 +137,8 @@ export default function ElementsMenu() {
 					<Divider component="li" />
 					<AddElementButton elementName="DialogForge" />
 					<Divider component="li" />
+					<AddElementButton elementName="DialogFocusTrap" />
+					<Divider component="li" />
 				</CustomTabPanel>
 
 				<CustomTabPanel value={selectedTab} index={TabIndex.Frames}>

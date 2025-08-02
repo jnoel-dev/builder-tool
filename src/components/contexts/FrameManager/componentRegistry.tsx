@@ -80,6 +80,11 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
   },
   DialogMUI: {
     component: DialogMUI,
+    neededProps: { shouldFocus: false },
+  },
+  DialogFocusTrap: {
+    component: DialogMUI,
+    neededProps: { shouldFocus: true },
   },
   DialogUI5: {
     component: DialogUI5,
