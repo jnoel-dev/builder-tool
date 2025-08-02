@@ -31,15 +31,19 @@ export default function ContainerBase({
     if (frameName) registerFrame(frameName);
   }, [frameName]);
 
-  useEffect(() => {
-    if (window.top === window || frameName === "TopFrame") return;
-    if (POST_MESSAGE_LOG_ENABLED) {
-      console.log(
-        `[PostMessage Send] frameAdded | from: ${window.name || "TopFrame"} | newFrame: ${frameName}`
-      );
-    }
-    window.top?.postMessage({ type: "frameAdded", frameName }, "*");
-  }, [frameName]);
+useEffect(() => {
+  const targetWindow = window.opener ?? window.top
+  if (targetWindow === window) return
+  if (POST_MESSAGE_LOG_ENABLED) {
+    console.log(
+      `[PostMessage Send] frameAdded | from: ${window.name || 'TopFrame'} | newFrame: ${frameName}`
+    )
+  }
+  targetWindow.postMessage(
+    { type: 'frameAdded', frameName: frameName },
+    '*'
+  )
+}, [frameName])
 
   return (
     <>

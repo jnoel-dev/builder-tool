@@ -5,13 +5,15 @@ import { useBackground } from '@/components/contexts/backgroundContext/Backgroun
 import ContainerBase from '@/components/addableElements/frames/containerBase/ContainerBase';
 import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
 import { useTheme } from '@mui/material/styles';
-export default function IframeSD() {
+
+export default function Iframe() {
   const { setShowBackground } = useBackground();
   const { containerRefs } = useFrame();
   const theme = useTheme();
 
   useEffect(() => {
-    setShowBackground(false);
+    const isPopup = Boolean(window.opener);
+    setShowBackground(isPopup);
   }, [setShowBackground]);
 
   return (
@@ -28,10 +30,9 @@ export default function IframeSD() {
         justifyContent: 'center',
         alignItems: 'center',
         color: theme.palette.secondary.main,
-        
       }}
     >
-      <ContainerBase frameName='TopFrame'/>
+      <ContainerBase frameName="TopFrame" />
     </div>
   );
 }

@@ -65,7 +65,7 @@ export default function ElementsMenu() {
 		<div>
 			<Box display="flex" width="100%" alignItems="center">
 				<FormControl size="small" sx={{ flex: 1, paddingTop: "4px" }}>
-					<FormHelperText sx={{ margin:0}}>Select a frame</FormHelperText>
+					<FormHelperText sx={{ margin:0}}>Select a container</FormHelperText>
 					<Select
 						labelId="frame-select-label"
 						id="frame-select-label"
@@ -169,6 +169,11 @@ export default function ElementsMenu() {
 					<Divider component="li" />
 					<AddElementButton
 						elementName="ShadowRootClosed"
+						isFrameOrContainer={true}
+					/>
+					<Divider component="li" />
+					<AddElementButton
+						elementName="PopupWindowSameDomain"
 						isFrameOrContainer={true}
 					/>
 					<Divider component="li" />

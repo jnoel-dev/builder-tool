@@ -67,6 +67,10 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
     component: Frame,
     neededProps: { frameType: "crossDomain" },
   },
+  PopupWindowSameDomain: {
+    component: Frame,
+    neededProps: { frameType: "popupSameDomain" },
+  },
   ShadowRootOpen: {
     component: ShadowRoot,
     neededProps: { shadowRootType: "open" },

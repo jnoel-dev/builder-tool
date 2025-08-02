@@ -51,6 +51,24 @@ export default function ElementController({
     y: elementToControl.yPercent,
   });
 
+function getTopAppWindow(): Window | null {
+  if (window.opener && window.top === window) {
+    // Inside a popup window or an iframe in a popup
+    return window.opener;
+  }
+
+  if (window.top !== window) {
+    // Inside an iframe in the main tab
+    return window.top;
+  }
+
+  // This is the top frame in the main tab
+  return null;
+}
+
+
+
+  // reset locked size on window resize
   useEffect(() => {
     function onWindowResize() {
       const wrapperEl = wrapperRef.current;
@@ -62,6 +80,14 @@ export default function ElementController({
     window.addEventListener('resize', onWindowResize);
     return () => window.removeEventListener('resize', onWindowResize);
   }, []);
+
+  // reset locked size whenever children are added/removed
+  useEffect(() => {
+    const wrapperEl = wrapperRef.current;
+    if (!wrapperEl) return;
+    wrapperEl.style.width = '';
+    wrapperEl.style.height = '';
+  }, [children]);
 
   useEffect(() => {
     setPositionPercent({
@@ -79,8 +105,10 @@ export default function ElementController({
     if (!containerEl) return;
     const containerRect = containerEl.getBoundingClientRect();
 
-    const clickPercentX = ((event.clientX - containerRect.left) / containerRect.width) * 100;
-    const clickPercentY = ((event.clientY - containerRect.top) / containerRect.height) * 100;
+    const clickPercentX =
+      ((event.clientX - containerRect.left) / containerRect.width) * 100;
+    const clickPercentY =
+      ((event.clientY - containerRect.top) / containerRect.height) * 100;
     dragOffsetPercent.current = {
       x: clickPercentX - positionPercent.x,
       y: clickPercentY - positionPercent.y,
@@ -107,11 +135,15 @@ export default function ElementController({
     const wrapperEl = wrapperRef.current;
     if (!wrapperEl) return;
     const wrapperRect = wrapperEl.getBoundingClientRect();
-    const widthPercent = (wrapperRect.width / containerRect.width) * 100;
-    const heightPercent = (wrapperRect.height / containerRect.height) * 100;
+    const widthPercent =
+      (wrapperRect.width / containerRect.width) * 100;
+    const heightPercent =
+      (wrapperRect.height / containerRect.height) * 100;
 
-    const cursorPercentX = ((event.clientX - containerRect.left) / containerRect.width) * 100;
-    const cursorPercentY = ((event.clientY - containerRect.top) / containerRect.height) * 100;
+    const cursorPercentX =
+      ((event.clientX - containerRect.left) / containerRect.width) * 100;
+    const cursorPercentY =
+      ((event.clientY - containerRect.top) / containerRect.height) * 100;
 
     const newX = cursorPercentX - dragOffsetPercent.current.x;
     const newY = cursorPercentY - dragOffsetPercent.current.y;
@@ -122,39 +154,47 @@ export default function ElementController({
     });
   }
 
-  function onDragEnd() {
-    if (!isDragging.current) return;
-    isDragging.current = false;
+function onDragEnd() {
+  if (!isDragging.current) return;
+  isDragging.current = false;
 
-    updateElementPosition(
-      elementToControl.id,
-      positionPercent.x,
-      positionPercent.y,
-      connectedFrameOrContainerName
-    );
+  updateElementPosition(
+    elementToControl.id,
+    positionPercent.x,
+    positionPercent.y,
+    connectedFrameOrContainerName
+  );
 
-    if (window.top !== window && POST_MESSAGE_LOG_ENABLED) {
+  const targetWindow = getTopAppWindow();
+
+  if (targetWindow) {
+    if (POST_MESSAGE_LOG_ENABLED) {
       console.log(
         `[PostMessage Send] updateElementPosition` +
           ` | from: ${window.name || 'TopFrame'}` +
+          ` | to: ${targetWindow === window.opener ? 'opener' : 'top'}` +
           ` | element: ${elementToControl.id}` +
           ` | x: ${positionPercent.x}` +
           ` | y: ${positionPercent.y}`
       );
     }
-    if (window.top !== window) {
-      window.top?.postMessage(
-        {
-          type: 'updateElementPosition',
-          frameName: window.name,
-          elementId: elementToControl.id,
-          xPercent: positionPercent.x,
-          yPercent: positionPercent.y,
-        },
-        '*'
-      );
-    }
+
+   
+
+    targetWindow.postMessage(
+      {
+        type: 'updateElementPosition',
+        frameName: window.name,
+        elementId: elementToControl.id,
+        xPercent: positionPercent.x,
+        yPercent: positionPercent.y,
+      },
+      '*'
+    );
   }
+}
+
+
 
   useEffect(() => {
     document.addEventListener('mousemove', onDragMove);
@@ -165,34 +205,45 @@ export default function ElementController({
     };
   }, [positionPercent]);
 
-  function onRemoveClick() {
-    removeElementFromFrame(elementToControl.id, connectedFrameOrContainerName);
-    if (elementToControl.isFrameOrContainer) {
-      unregisterFrame(elementToControl);
-    }
+function onRemoveClick() {
+  removeElementFromFrame(
+    elementToControl.id,
+    connectedFrameOrContainerName
+  );
 
-    if (window.top !== window && POST_MESSAGE_LOG_ENABLED) {
+  if (elementToControl.isFrameOrContainer) {
+    unregisterFrame(elementToControl);
+  }
+
+  const targetWindow = getTopAppWindow();
+
+  if (targetWindow) {
+    if (POST_MESSAGE_LOG_ENABLED) {
       console.log(
         `[PostMessage Send] removeElement` +
           ` | from: ${window.name || 'TopFrame'}` +
+          ` | to: ${targetWindow === window.opener ? 'opener' : 'top'}` +
           ` | element: ${elementToControl.id}`
       );
     }
-    if (window.top !== window) {
-      window.top?.postMessage(
-        {
-          type: 'removeElement',
-          elementId: elementToControl.id,
-          frameName:
-            connectedFrameOrContainerName === 'TopFrame'
-              ? window.name
-              : connectedFrameOrContainerName,
-          element: elementToControl,
-        },
-        '*'
-      );
-    }
+
+    targetWindow.postMessage(
+      {
+        type: 'removeElement',
+        elementId: elementToControl.id,
+        frameName:
+          connectedFrameOrContainerName === 'TopFrame'
+            ? window.name
+            : connectedFrameOrContainerName,
+        element: elementToControl,
+      },
+      '*'
+    );
   }
+}
+
+
+
 
   const wrapperStyle: CSSProperties = controlsDisabled
     ? { position: 'relative', width: 'fit-content' }
@@ -204,11 +255,7 @@ export default function ElementController({
       };
 
   return (
-    <div
-      id={elementToControl.id}
-      ref={wrapperRef}
-      style={wrapperStyle}
-    >
+    <div id={elementToControl.id} ref={wrapperRef} style={wrapperStyle}>
       <Stack direction="row-reverse" sx={{ color: theme.palette.text.primary }}>
         <IconButton size="small" onClick={onRemoveClick} sx={{ padding: 0 }}>
           <CloseIcon />

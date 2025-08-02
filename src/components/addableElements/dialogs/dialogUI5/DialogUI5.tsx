@@ -19,7 +19,7 @@ export default function DialogUI5() {
     const handleOverlayClick = (event: Event) => {
       
       const targetElement = event.target as HTMLElement;
-      console.log(targetElement.tagName)
+    
       if (targetElement.tagName === 'UI5-DIALOG') {
         closeDialog();
       }

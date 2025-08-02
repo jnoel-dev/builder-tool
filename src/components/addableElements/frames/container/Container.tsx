@@ -38,7 +38,7 @@ export default function Container({
             width: 200,
           }}
         >
-          Add elements here by selecting Container in Elements menu
+          Add elements here by selecting container in elements menu
         </Box>
       )}
     </Box>
