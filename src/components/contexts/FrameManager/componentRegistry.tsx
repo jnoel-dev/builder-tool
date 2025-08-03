@@ -16,6 +16,7 @@ import DialogForge from "@/components/addableElements/dialogs/dialogForge/Dialog
 import PanelTable from "@/components/addableElements/panels/panelTable/PanelTable"
 import PanelEmbedExamples from "@/components/addableElements/panels/panelEmbed/PanelEmbed"
 
+
 interface ComponentEntry {
   component: React.ComponentType<any>
   neededProps?: { [key: string]: any }
@@ -53,6 +54,10 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
 
   InputRedraw: {
     component: InputRedraw,
+  },
+  InputPointerEvent: {
+    component: Input,
+    neededProps: { pointerEvent: "true" },
   },
 
   ContainerVertical: {

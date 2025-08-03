@@ -130,6 +130,8 @@ export default function ElementsMenu() {
 					<Divider component="li" />
 					<AddElementButton elementName="InputRedraw" />
 					<Divider component="li" />
+					<AddElementButton elementName="InputPointerEvent" />
+					<Divider component="li" />
 				</CustomTabPanel>
 
 				<CustomTabPanel value={selectedTab} index={TabIndex.Dialogs}>
