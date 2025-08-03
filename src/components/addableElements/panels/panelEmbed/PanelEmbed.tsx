@@ -21,53 +21,53 @@ export default function PanelEmbedExamples() {
     color: theme.palette.text.primary,
   };
 
-  function renderContainer(labelText: string, boxTexts: string[], containerCustomStyle: object) {
-    return (
-      <Box sx={{ position: 'relative', width: 'fit-content' }}>
-        <Box
+function renderContainer(labelText: string, boxTexts: string[], containerCustomStyle: object) {
+  return (
+    <Box sx={{ position: 'relative', width: 'fit-content', ...containerCustomStyle }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: -32,
+          right: 0,
+          backgroundColor: theme.palette.secondary.main,
+          paddingX: 1,
+          paddingY: 0.5,
+          width: '100%',
+        }}
+      >
+        <Typography
+          variant="caption"
           sx={{
-            position: 'absolute',
-            top: -32,
-            right: 0,
-            backgroundColor: theme.palette.secondary.main,
-            paddingX: 1,
-            paddingY: 0.5,
-            width: '100%'
+            color: theme.palette.text.primary,
+            textTransform: 'uppercase',
+            fontWeight: 500,
           }}
         >
-          <Typography
-            variant="caption"
-            sx={{
-              color: theme.palette.text.primary,
-              textTransform: 'uppercase',
-              fontWeight: 500,
-            }}
-          >
-            {labelText}
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            border: `2px solid ${theme.palette.secondary.main}`,
-            padding: 2,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 2,
-            ...containerCustomStyle,
-          }}
-        >
-          <Stack direction="row" spacing={2}>
-            {boxTexts.map((text) => (
-              <Box key={text} sx={boxStyles}>
-                {text}
-              </Box>
-            ))}
-          </Stack>
-        </Box>
+          {labelText}
+        </Typography>
       </Box>
-    );
-  }
+      <Box
+        sx={{
+          border: `2px solid ${theme.palette.secondary.main}`,
+          padding: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 2,
+        }}
+      >
+        <Stack direction="row" spacing={2}>
+          {boxTexts.map((text) => (
+            <Box key={text} sx={boxStyles}>
+              {text}
+            </Box>
+          ))}
+        </Stack>
+      </Box>
+    </Box>
+  );
+}
+
 
   return (
     <Box
