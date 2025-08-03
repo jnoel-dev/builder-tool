@@ -14,6 +14,7 @@ import DialogMUI from "@/components/addableElements/dialogs/dialogMUI/DialogMUI"
 import DialogUI5 from "@/components/addableElements/dialogs/dialogUI5/DialogUI5"
 import DialogForge from "@/components/addableElements/dialogs/dialogForge/DialogForge"
 import PanelTable from "@/components/addableElements/panels/panelTable/PanelTable"
+import PanelEmbedExamples from "@/components/addableElements/panels/panelEmbed/PanelEmbed"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -24,7 +25,9 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
   Panel: {
     component: Panel,
   },
-
+  PanelEmbedExamples: {
+    component: PanelEmbedExamples,
+  },
   PanelSVG: {
     component: PanelSVG,
   },
