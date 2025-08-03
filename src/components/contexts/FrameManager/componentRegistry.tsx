@@ -13,6 +13,7 @@ import DialogNative from "@/components/addableElements/dialogs/dialogNative/Dial
 import DialogMUI from "@/components/addableElements/dialogs/dialogMUI/DialogMUI"
 import DialogUI5 from "@/components/addableElements/dialogs/dialogUI5/DialogUI5"
 import DialogForge from "@/components/addableElements/dialogs/dialogForge/DialogForge"
+import PanelTable from "@/components/addableElements/panels/panelTable/PanelTable"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -30,6 +31,9 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
 
   PanelCanvas: {
     component: PanelCanvas,
+  },
+  PanelTable: {
+    component: PanelTable,
   },
 
   Input: {
@@ -70,6 +74,10 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
   PopupWindowSameDomain: {
     component: Frame,
     neededProps: { frameType: "popupSameDomain" },
+  },
+  PopupWindowCrossDomain: {
+    component: Frame,
+    neededProps: { frameType: "popupCrossDomain" },
   },
   ShadowRootOpen: {
     component: ShadowRoot,

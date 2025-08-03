@@ -35,7 +35,7 @@ export default function DialogUI5() {
           variant="contained"
           onClick={openDialog}
           color="secondary"
-          sx={{ color: theme.palette.text.primary }}
+          sx={{ color: theme.palette.text.primary, width:'100%' }}
         >
           Open Dialog
         </Button>

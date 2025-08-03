@@ -22,6 +22,7 @@ export default function InputReact() {
       sx={{
         backgroundColor: theme.palette.primary.main,
         padding: 2,
+        
       }}
     >
       <Stack direction="column" spacing={2}>
@@ -42,7 +43,7 @@ export default function InputReact() {
           <Button
             variant="contained"
             color="secondary"
-            sx={{ color: theme.palette.text.primary }}
+            sx={{ color: theme.palette.text.primary,width: '100%' }}
             onClick={handleShowClick}
           >
             show text

@@ -32,7 +32,7 @@ export default function DialogForge() {
         <Button
           variant="contained"
           color="secondary"
-          sx={{ color: theme.palette.text.primary }}
+          sx={{ color: theme.palette.text.primary, width:'100%'  }}
           onClick={openDialog}
         >
           Open Dialog

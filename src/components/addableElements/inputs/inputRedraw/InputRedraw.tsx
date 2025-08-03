@@ -34,6 +34,7 @@ export default function InputRedraw() {
           padding: '8px',
           color: theme.palette.text.primary,
           flex: 1,
+          width: '100%'
         }}
       />
     </Box>

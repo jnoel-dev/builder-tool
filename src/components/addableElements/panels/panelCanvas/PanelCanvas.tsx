@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
+import Box from '@mui/material/Box';
 
 export default function PanelCanvas() {
   const theme = useTheme();
@@ -51,5 +52,17 @@ export default function PanelCanvas() {
     }
   }, [theme, SCALE_FACTOR]);
 
-  return <canvas ref={canvasRef} style={{ display: 'block' }} />;
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: theme.palette.background.default,
+       
+      }}
+    >
+      <canvas ref={canvasRef} style={{ display: 'block' }} />
+    </Box>
+  );
 }

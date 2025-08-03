@@ -115,6 +115,8 @@ export default function ElementsMenu() {
 					<Divider component="li" />
 					<AddElementButton elementName="PanelCanvas" />
 					<Divider component="li" />
+					<AddElementButton elementName="PanelTable" />
+					<Divider component="li" />
 				</CustomTabPanel>
 
 				<CustomTabPanel value={selectedTab} index={TabIndex.Inputs}>
@@ -174,6 +176,11 @@ export default function ElementsMenu() {
 					<Divider component="li" />
 					<AddElementButton
 						elementName="PopupWindowSameDomain"
+						isFrameOrContainer={true}
+					/>
+					<Divider component="li" />
+					<AddElementButton
+						elementName="PopupWindowCrossDomain"
 						isFrameOrContainer={true}
 					/>
 					<Divider component="li" />

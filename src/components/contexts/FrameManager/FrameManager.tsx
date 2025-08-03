@@ -128,7 +128,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
     window.history.replaceState(null, '', newUrl);
   }, [frameList, frameElementsMap]);
 
-  // handle removeElement messages
 function handleRemoveMessage(event: MessageEvent) {
   const data = event.data as Record<string, any>;
   if (data?.type !== "removeElement") return;

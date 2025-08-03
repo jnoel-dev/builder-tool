@@ -64,7 +64,7 @@ export default function ShadowRoot({
             width: 200,
           }}
         >
-          Add elements here by selecting shadowRoot in Elements menu
+          Add elements here by selecting shadow root in elements menu
         </Box>
       )}
     </Box>

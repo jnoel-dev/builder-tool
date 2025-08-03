@@ -9,25 +9,25 @@ export default function Panel() {
   const innerBoxStyles = {
     backgroundColor: theme.palette.secondary.main,
     padding: 2,
-    minHeight: "75px",
-    minWidth: "75px",
-     display: "flex",
+    width: "75px",
+    height: "75px",
+    display: "flex",
     alignItems: "center", 
     justifyContent: "center", 
-
     fontSize: "1.5rem",
     color: theme.palette.text.primary,
   };
 
   return (
-    
     <Box
       sx={{
         backgroundColor: theme.palette.primary.main,
         padding: 2,
+        display: 'flex',
+        justifyContent: 'center',
       }}
     >
-      <Stack direction="row" spacing={2}> 
+      <Stack direction="row" spacing={2} justifyContent="center" alignItems="center">
         <Box sx={innerBoxStyles}>1</Box>
         <Box sx={innerBoxStyles}>2</Box>
         <Box sx={innerBoxStyles}>3</Box>

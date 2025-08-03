@@ -53,16 +53,13 @@ export default function ElementController({
 
 function getTopAppWindow(): Window | null {
   if (window.opener && window.top === window) {
-    // Inside a popup window or an iframe in a popup
+    // true if in popup
     return window.opener;
   }
 
   if (window.top !== window) {
-    // Inside an iframe in the main tab
     return window.top;
   }
-
-  // This is the top frame in the main tab
   return null;
 }
 
@@ -81,7 +78,7 @@ function getTopAppWindow(): Window | null {
     return () => window.removeEventListener('resize', onWindowResize);
   }, []);
 
-  // reset locked size whenever children are added/removed
+  // reset locked size whenever children are added/removed/rendered
   useEffect(() => {
     const wrapperEl = wrapperRef.current;
     if (!wrapperEl) return;
@@ -254,32 +251,40 @@ function onRemoveClick() {
         transform: 'translate(-50%, -50%)',
       };
 
-  return (
-    <div id={elementToControl.id} ref={wrapperRef} style={wrapperStyle}>
-      <Stack direction="row-reverse" sx={{ color: theme.palette.text.primary }}>
-        <IconButton size="small" onClick={onRemoveClick} sx={{ padding: 0 }}>
-          <CloseIcon />
+return (
+  <div
+    id={elementToControl.id}
+    ref={wrapperRef}
+    style={{
+      ...wrapperStyle,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+    }}
+  >
+    <Stack direction="row-reverse" sx={{ color: theme.palette.text.primary }}>
+      <IconButton size="small" onClick={onRemoveClick} sx={{ padding: 0 }}>
+        <CloseIcon />
+      </IconButton>
+      {!controlsDisabled && (
+        <IconButton
+          disableRipple
+          size="small"
+          onMouseDown={onDragStart}
+          sx={{
+            padding: 0,
+            cursor: 'grab',
+            '&:hover': { cursor: 'grab' },
+            '&:active': { cursor: 'grabbing' },
+          }}
+        >
+          <DragIndicatorIcon />
         </IconButton>
-        {!controlsDisabled && (
-          <IconButton
-            disableRipple
-            size="small"
-            onMouseDown={onDragStart}
-            sx={{
-              padding: 0,
-              cursor: 'grab',
-              '&:hover': { cursor: 'grab' },
-              '&:active': { cursor: 'grabbing' },
-            }}
-          >
-            <DragIndicatorIcon />
-          </IconButton>
-        )}
-        {/* change later idk */}
-        {/* {shouldShowName && elementToControl.id} */}
-        {elementToControl.id}
-      </Stack>
-      {children}
-    </div>
-  );
+      )}
+      {elementToControl.id}
+    </Stack>
+    {children}
+  </div>
+);
+
 }

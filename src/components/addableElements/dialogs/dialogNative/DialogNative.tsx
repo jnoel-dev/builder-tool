@@ -30,7 +30,7 @@ export default function DialogNative() {
           variant="contained"
           onClick={openDialogNative}
           color="secondary"
-          sx={{ color: theme.palette.text.primary }}
+          sx={{ color: theme.palette.text.primary,width:'100%'  }}
         >
           Open Dialog
         </Button>
@@ -63,7 +63,7 @@ export default function DialogNative() {
               variant="contained"
               onClick={closeDialogNative}
               color="secondary"
-              sx={{ color: theme.palette.text.primary }}
+              sx={{ color: theme.palette.text.primary}}
             >
               Close
             </Button>

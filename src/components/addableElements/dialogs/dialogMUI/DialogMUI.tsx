@@ -23,7 +23,7 @@ export default function DialogMUI({ shouldFocus = false }: DialogMUIProps) {
           variant="contained"
           onClick={openDialog}
           color="secondary"
-          sx={{ color: theme.palette.text.primary, width:'100%'}}
+          sx={{ color: theme.palette.text.primary, width:'100%', px:4}}
         >
           Open Dialog
         </Button>
