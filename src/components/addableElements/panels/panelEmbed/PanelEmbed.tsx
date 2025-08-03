@@ -21,53 +21,51 @@ export default function PanelEmbedExamples() {
     color: theme.palette.text.primary,
   };
 
-function renderContainer(labelText: string, boxTexts: string[], containerCustomStyle: object) {
-  return (
-    <Box sx={{ position: 'relative', width: 'fit-content', ...containerCustomStyle }}>
-      <Box
-        sx={{
-          position: 'absolute',
-          top: -32,
-          right: 0,
-          backgroundColor: theme.palette.secondary.main,
-          paddingX: 1,
-          paddingY: 0.5,
-          width: '100%',
-        }}
-      >
-        <Typography
-          variant="caption"
+  function renderLabeledContainer(labelText: string, boxTexts: string[], containerStyles: object) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '100%' }}>
+        <Box
           sx={{
-            color: theme.palette.text.primary,
-            textTransform: 'uppercase',
-            fontWeight: 500,
+            backgroundColor: theme.palette.secondary.main,
+            paddingX: 1,
+            paddingY: 0.5,
+            width: '100%',
           }}
         >
-          {labelText}
-        </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: theme.palette.text.primary,
+              textTransform: 'uppercase',
+              fontWeight: 500,
+            }}
+          >
+            {labelText}
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            border: `2px solid ${theme.palette.secondary.main}`,
+            padding: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            width: '100%',
+            ...containerStyles,
+          }}
+        >
+          <Stack direction="row" spacing={2}>
+            {boxTexts.map((text) => (
+              <Box key={text} sx={boxStyles}>
+                {text}
+              </Box>
+            ))}
+          </Stack>
+        </Box>
       </Box>
-      <Box
-        sx={{
-          border: `2px solid ${theme.palette.secondary.main}`,
-          padding: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 2,
-        }}
-      >
-        <Stack direction="row" spacing={2}>
-          {boxTexts.map((text) => (
-            <Box key={text} sx={boxStyles}>
-              {text}
-            </Box>
-          ))}
-        </Stack>
-      </Box>
-    </Box>
-  );
-}
-
+    );
+  }
 
   return (
     <Box
@@ -75,15 +73,15 @@ function renderContainer(labelText: string, boxTexts: string[], containerCustomS
         backgroundColor: theme.palette.primary.main,
         padding: 2,
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        paddingTop: 6
+        gap: 2,
+        paddingTop: 2,
+        width: '100%',
       }}
     >
-      {renderContainer('css override', ['1', '2', '3'], { filter: 'hue-rotate(45deg)' })}
-      {renderContainer('overflow', ['4', '5', '6'], { overflow: 'clip' })}
-      {renderContainer('position relative', ['7', '8', '9'], { position: 'relative' })}
+      {renderLabeledContainer('css override', ['1', '2', '3'], { filter: 'hue-rotate(45deg)' })}
+      {renderLabeledContainer('overflow hidden', ['4', '5', '6'], { overflow: 'clip' })}
     </Box>
   );
 }
