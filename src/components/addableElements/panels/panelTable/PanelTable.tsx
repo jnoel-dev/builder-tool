@@ -15,38 +15,65 @@ import {
   MenuItem,
   Button,
   Stack,
+  IconButton,
+  SelectChangeEvent,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import CloseIcon from '@mui/icons-material/Close';
 
 export default function PanelTable() {
   const theme = useTheme();
 
-  const availableItems = [
+  const initialOptions = [
     { name: 'Alpha', value: '100' },
     { name: 'Beta', value: '200' },
     { name: 'Gamma', value: '300' },
     { name: 'Delta', value: '400' },
   ];
 
-  const [rows, setRows] = useState<{ id: number; name: string; value: string }[]>([]);
-  const [selectedItem, setSelectedItem] = useState(availableItems[0]);
+  const initialRows = [
+    { id: 1, name: 'Alpha', value: '100' },
+    { id: 2, name: 'Beta', value: '200' },
+    { id: 3, name: 'Gamma', value: '300' },
+  ];
 
-  const handleChange = (index: number, field: string, newValue: string) => {
-    const updated = [...rows];
-    (updated[index] as any)[field] = newValue;
-    setRows(updated);
-  };
+  const [tableRows, setTableRows] = useState(initialRows);
+  const [nextRowId, setNextRowId] = useState(4);
+  const [selectedOption, setSelectedOption] = useState(initialOptions[0]);
 
-  const handleAdd = () => {
-    setRows((prev) => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        name: selectedItem.name,
-        value: selectedItem.value,
-      },
-    ]);
-  };
+  function updateRowValue(rowIndex: number, fieldName: string, newValue: string) {
+    const updatedRows = [...tableRows];
+    const targetRow = updatedRows[rowIndex];
+    if (fieldName === 'name') {
+      targetRow.name = newValue;
+    } else if (fieldName === 'value') {
+      targetRow.value = newValue;
+    }
+    setTableRows(updatedRows);
+  }
+
+  function addSelectedOptionToTable() {
+    const newRow = {
+      id: nextRowId,
+      name: selectedOption.name,
+      value: selectedOption.value,
+    };
+    setTableRows([...tableRows, newRow]);
+    setNextRowId(nextRowId + 1);
+  }
+
+  function removeRowById(rowIdToRemove: number) {
+    const remainingRows = tableRows.filter((row) => row.id !== rowIdToRemove);
+    setTableRows(remainingRows);
+  }
+
+  function updateSelectedOption(event: SelectChangeEvent<string>) {
+    const selectedName = event.target.value;
+    const matchingOption = initialOptions.find((option) => option.name === selectedName);
+    if (matchingOption) {
+      setSelectedOption(matchingOption);
+    }
+  }
 
   return (
     <Box
@@ -60,12 +87,9 @@ export default function PanelTable() {
       }}
     >
       <Stack direction="row" spacing={2}>
-        <Select
-          value={selectedItem.name}
-          onChange={(e) => {
-            const found = availableItems.find((item) => item.name === e.target.value);
-            if (found) setSelectedItem(found);
-          }}
+        <Select<string>
+          value={selectedOption.name}
+          onChange={updateSelectedOption}
           variant="outlined"
           size="small"
           sx={{
@@ -74,15 +98,17 @@ export default function PanelTable() {
             color: theme.palette.text.primary,
           }}
         >
-          {availableItems.map((item) => (
-            <MenuItem key={item.name} value={item.name}>
-              {item.name}
-            </MenuItem>
-          ))}
+          {initialOptions.map((option) => {
+            return (
+              <MenuItem key={option.name} value={option.name}>
+                {option.name}
+              </MenuItem>
+            );
+          })}
         </Select>
         <Button
           variant="contained"
-          onClick={handleAdd}
+          onClick={addSelectedOptionToTable}
           color="secondary"
           sx={{ color: theme.palette.text.primary }}
         >
@@ -93,8 +119,9 @@ export default function PanelTable() {
       <TableContainer
         component={Paper}
         sx={{
-          backgroundColor: theme.palette.background.paper,
+          backgroundColor: theme.palette.secondary.main,
           color: theme.palette.text.primary,
+          maxWidth: 400,
           minWidth: 400,
         }}
       >
@@ -104,32 +131,49 @@ export default function PanelTable() {
               <TableCell sx={{ color: theme.palette.text.primary }}>ID</TableCell>
               <TableCell sx={{ color: theme.palette.text.primary }}>Name</TableCell>
               <TableCell sx={{ color: theme.palette.text.primary }}>Value</TableCell>
+              <TableCell />
             </TableRow>
           </TableHead>
-            <TableBody>
-            {rows.map((row, index) => (
+          <TableBody>
+            {tableRows.map((row, rowIndex) => {
+              return (
                 <TableRow key={row.id}>
-                <TableCell sx={{ color: theme.palette.text.primary }}>{row.id}</TableCell>
-                <TableCell>
+                  <TableCell sx={{ color: theme.palette.text.primary }}>{row.id}</TableCell>
+                  <TableCell>
                     <TextField
-                    variant="standard"
-                    value={row.name}
-                    onChange={(e) => handleChange(index, 'name', e.target.value)}
-                    sx={{ input: { color: theme.palette.text.primary } }}
+                      variant="standard"
+                      value={row.name}
+                      onChange={function handleNameChange(event) {
+                        updateRowValue(rowIndex, 'name', event.target.value);
+                      }}
+                      sx={{ input: { color: theme.palette.text.primary } }}
                     />
-                </TableCell>
-                <TableCell>
+                  </TableCell>
+                  <TableCell>
                     <TextField
-                    variant="standard"
-                    value={row.value}
-                    onChange={(e) => handleChange(index, 'value', e.target.value)}
-                    sx={{ input: { color: theme.palette.text.primary } }}
+                      variant="standard"
+                      value={row.value}
+                      onChange={function handleValueChange(event) {
+                        updateRowValue(rowIndex, 'value', event.target.value);
+                      }}
+                      sx={{ input: { color: theme.palette.text.primary } }}
                     />
-                </TableCell>
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      size="small"
+                      onClick={function handleDeleteClick() {
+                        removeRowById(row.id);
+                      }}
+                      sx={{ color: theme.palette.text.primary }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
                 </TableRow>
-            ))}
-            </TableBody>
-
+              );
+            })}
+          </TableBody>
         </Table>
       </TableContainer>
     </Box>
