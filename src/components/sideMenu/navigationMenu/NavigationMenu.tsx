@@ -17,10 +17,12 @@ import {
   Typography,
   List,
   ListItem,
+  IconButton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 
 export default function NavigationMenu() {
-  const [pages, setPages] = React.useState<string[]>(["Home Page"]);
+  const [pages, setPages] = React.useState(["Home Page"]);
   const [selectedPage, setSelectedPage] = React.useState("Home Page");
   const [navigationType, setNavigationType] = React.useState("full");
 
@@ -32,14 +34,19 @@ export default function NavigationMenu() {
     setNavigationType(event.target.value);
   }
 
-function handleAddNewPage() {
-  const nonHomePages = pages.filter((p) => p !== "Home Page");
-  const newPageNumber = nonHomePages.length + 1;
-  const newPageName = `Page ${newPageNumber}`;
-  setPages((prev) => [...prev, newPageName]);
-  // to be implemented
-}
+  function handleAddNewPage() {
+    const baseName = "Page ";
+    let i = 1;
+    while (pages.includes(`${baseName}${i}`)) i++;
+    const newPage = `${baseName}${i}`;
+    setPages(prev => [...prev, newPage]);
+    setSelectedPage(newPage);
+  }
 
+  function handleRemovePage(page: string) {
+    setPages(prev => prev.filter(p => p !== page));
+    if (selectedPage === page) setSelectedPage("Home Page");
+  }
 
   function handleAddNavigationButton() {
     // to be implemented
@@ -48,27 +55,27 @@ function handleAddNewPage() {
   return (
     <div>
       <Box sx={{ width: "100%", marginBottom: 2 }}>
-        <FormHelperText sx={{ marginX: 0, marginBottom: 1 }}>
-          Pages
-        </FormHelperText>
-
+        <FormHelperText sx={{ marginX: 0, marginBottom: 1 }}>Pages</FormHelperText>
         <List dense disablePadding>
           {pages.map((page, index) => (
             <ListItem key={page} sx={{ paddingX: 1, paddingY: 0.5 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  color: "text.primary",
-                  display: "flex",
-                  alignItems: "center",
-                  fontWeight: 400,
-                }}
-              >
-                <Box component="span" sx={{ minWidth: 24 }}>
-                  {index + 1}.
-                </Box>
-                {page}
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
+                <Typography variant="body1" sx={{ flex: 1 }}>
+                  <Box component="span" sx={{ minWidth: 24, display: "inline-block" }}>
+                    {index + 1}.
+                  </Box>{" "}
+                  {page}
+                </Typography>
+                {page !== "Home Page" && (
+                  <IconButton
+                    size="small"
+                    onClick={() => handleRemovePage(page)}
+                    sx={{ ml: 1 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
             </ListItem>
           ))}
         </List>
@@ -95,7 +102,7 @@ function handleAddNewPage() {
             onChange={handlePageChange}
             sx={{ textAlign: "center" }}
           >
-            {pages.map((page) => (
+            {pages.map(page => (
               <MenuItem key={page} value={page}>
                 {page.toUpperCase()}
               </MenuItem>
