@@ -14,7 +14,7 @@ export default function SectionHeader({ sectionName }: SectionHeaderProps) {
         <div>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon />}
-          aria-controls={`panel-${sectionName}-content`}
+          
           id={`panel-${sectionName}-header`}
         >
           <Typography component="span" sx={{ width: '100%', textAlign: 'center' }}>

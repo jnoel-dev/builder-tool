@@ -33,7 +33,7 @@ function CustomTabPanel(props: TabPanelProps) {
 			role="tabpanel"
 			hidden={value !== index}
 			id={`simple-tabpanel-${index}`}
-			aria-labelledby={`simple-tab-${index}`}
+		
 			{...other}
 		>
 			{value === index && <Box>{children}</Box>}
@@ -44,7 +44,6 @@ function CustomTabPanel(props: TabPanelProps) {
 function getTabProps(index: number) {
 	return {
 		id: `simple-tab-${index}`,
-		"aria-controls": `simple-tabpanel-${index}`,
 	};
 }
 
@@ -94,7 +93,6 @@ export default function ElementsMenu() {
 					<Tabs
 						value={selectedTab}
 						onChange={handleTabChange}
-						aria-label="element tabs"
 						textColor="secondary"
 						indicatorColor="secondary"
 						centered

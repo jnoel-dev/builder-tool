@@ -32,7 +32,7 @@ const handleAdd = () => {
             alignItems: 'center',
           }}
         />
-        <IconButton aria-label="add" onClick={handleAdd}>
+        <IconButton onClick={handleAdd}>
           <AddIcon />
         </IconButton>
       </Stack>

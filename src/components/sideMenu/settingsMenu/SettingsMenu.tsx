@@ -40,7 +40,7 @@ export default function SettingsMenu() {
         listStyle: "none",
       }}
     >
-      <Divider component="li" />
+     
 
       {colors.map((currentColor, index) => {
         const label = colorLabels[index];
@@ -73,7 +73,7 @@ export default function SettingsMenu() {
         );
       })}
 
-      <Divider component="li" />
+     
     </Box>
   );
 }
