@@ -187,7 +187,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
   }
 
   return (
-    <Box sx={{ border: 'dashed', display: 'flex' }}>
+    <Box ref={containerRefs[savedName]} id="iframeContainer" sx={{ border: 'dashed', display: 'flex' }}>
       <iframe
         ref={iframeRef}
         name={savedName}
