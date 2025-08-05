@@ -124,7 +124,8 @@ export function FrameManager({ children }: { children: ReactNode }) {
       frames: serializedFrameNames,
       elements: serializedFrameElements,
     });
-    const newUrl = `${window.location.origin}${window.location.pathname}?${queryParameters}`;
+    const existingHash = window.location.hash;
+    const newUrl = `${window.location.origin}${window.location.pathname}?${queryParameters}${existingHash}`;
     window.history.replaceState(null, '', newUrl);
   }, [frameList, frameElementsMap]);
 
