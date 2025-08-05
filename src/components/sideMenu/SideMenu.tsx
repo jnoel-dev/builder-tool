@@ -18,6 +18,7 @@ export default function SideMenu() {
         top: 0,
         height: "100%",
         overflowY: "auto",
+        minWidth: "475px"
       }}
     >
       <MenuBase

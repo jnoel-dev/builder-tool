@@ -64,7 +64,7 @@ export default function ElementsMenu() {
 		<div>
 			<Box display="flex" width="100%" alignItems="center">
 				<FormControl size="small" sx={{ flex: 1, paddingTop: "4px" }}>
-					<FormHelperText sx={{ margin:0}}>Select a container</FormHelperText>
+					<FormHelperText>Select a container</FormHelperText>
 					<Select
 						labelId="frame-select-label"
 						id="frame-select-label"
@@ -105,87 +105,74 @@ export default function ElementsMenu() {
 					</Tabs>
 				</Box>
 
-				{/* //ELEMENT NAME MUST MATCH WHAT IS DEFINED IN COMPONENT REGISTRY - strings are used here cause we add elements to frame in the same way we deserialize from URL*/}
+				{/* COMPONENT NAMES MUST MATCH WHAT IS DEFINED IN COMPONENT REGISTRY 
+				- if component names are not used, display name will be used
+				- strings are used here cause we add elements to frame in the same way we deserialize from URL*/}
 				<CustomTabPanel value={selectedTab} index={TabIndex.Panels}>
-					<AddElementButton elementName="Panel" />
+					<AddElementButton displayName="Panel"/>
 					<Divider component="li" />
-					<AddElementButton elementName="PanelSVG" />
+					<AddElementButton displayName="PanelSVG" />
 					<Divider component="li" />
-					<AddElementButton elementName="PanelCanvas" />
+					<AddElementButton displayName="PanelCanvas" />
 					<Divider component="li" />
-					<AddElementButton elementName="PanelTable" />
+					<AddElementButton displayName="PanelTable" />
 					<Divider component="li" />
-					<AddElementButton elementName="PanelEmbedExamples" />
+					<AddElementButton displayName="PanelEmbedExamples" />
 					<Divider component="li" />
 				</CustomTabPanel>
 
 				<CustomTabPanel value={selectedTab} index={TabIndex.Inputs}>
-					<AddElementButton elementName="Input" />
+					<AddElementButton displayName="Input" />
 					<Divider component="li" />
-					<AddElementButton elementName="InputReact" />
+					<AddElementButton displayName="InputReact" />
 					<Divider component="li" />
-					<AddElementButton elementName="InputComplex" />
+					<AddElementButton displayName="InputComplex" />
 					<Divider component="li" />
-					<AddElementButton elementName="InputRedraw" />
+					<AddElementButton displayName="InputRedraw" />
 					<Divider component="li" />
-					<AddElementButton elementName="InputPointerEvent" />
+					<AddElementButton displayName="InputPointerEvent" />
 					<Divider component="li" />
 				</CustomTabPanel>
 
 				<CustomTabPanel value={selectedTab} index={TabIndex.Dialogs}>
-					<AddElementButton elementName="DialogNative" />
+					<AddElementButton displayName="DialogNative" />
 					<Divider component="li" />
-					<AddElementButton elementName="DialogUI5" />
+					<AddElementButton displayName="DialogUI5" />
 					<Divider component="li" />
-					<AddElementButton elementName="DialogMUI" />
+					<AddElementButton displayName="DialogMUI" />
 					<Divider component="li" />
-					<AddElementButton elementName="DialogForge" />
+					<AddElementButton displayName="DialogForge" />
 					<Divider component="li" />
-					<AddElementButton elementName="DialogFocusTrap" />
+					<AddElementButton displayName="DialogFocusTrap" />
 					<Divider component="li" />
 				</CustomTabPanel>
 
 				<CustomTabPanel value={selectedTab} index={TabIndex.Frames}>
 					<AddElementButton
-						elementName="IframeSameDomain"
+						displayName="Iframe"
+						componentNames={["IframeSameDomain","IframeCrossDomain"]}
 						isFrameOrContainer={true}
 					/>
 					<Divider component="li" />
 					<AddElementButton
-						elementName="IframeCrossDomain"
+						displayName="PopupWindow"
+						componentNames={["PopupWindowSameDomain","PopupWindowCrossDomain"]}
 						isFrameOrContainer={true}
 					/>
 					<Divider component="li" />
 					<AddElementButton
-						elementName="ContainerVertical"
+						displayName="Container"
+						componentNames={["ContainerVertical","ContainerHorizontal"]}
 						isFrameOrContainer={true}
 					/>
 					<Divider component="li" />
 					<AddElementButton
-						elementName="ContainerHorizontal"
+						displayName="ShadowRoot"
+						componentNames={["ShadowRootOpen","ShadowRootClosed"]}
 						isFrameOrContainer={true}
 					/>
 					<Divider component="li" />
-					<AddElementButton
-						elementName="ShadowRootOpen"
-						isFrameOrContainer={true}
-					/>
-					<Divider component="li" />
-					<AddElementButton
-						elementName="ShadowRootClosed"
-						isFrameOrContainer={true}
-					/>
-					<Divider component="li" />
-					<AddElementButton
-						elementName="PopupWindowSameDomain"
-						isFrameOrContainer={true}
-					/>
-					<Divider component="li" />
-					<AddElementButton
-						elementName="PopupWindowCrossDomain"
-						isFrameOrContainer={true}
-					/>
-					<Divider component="li" />
+
 				</CustomTabPanel>
 			</Box>
 		</div>
