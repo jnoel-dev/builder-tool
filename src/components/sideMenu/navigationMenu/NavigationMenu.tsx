@@ -80,6 +80,7 @@ export default function NavigationMenu() {
     frameList,
     containerRefs,
     frameElementsMap,
+    addElementToCurrentFrame
   } = useFrame();
 
   const initialPagesMap = getInitialPagesByOrigin();
@@ -132,6 +133,15 @@ export default function NavigationMenu() {
       `${selectedOriginUrl}-${newPageTitle}`,
     ]);
     setSelectedPageName(newPageTitle);
+  }
+
+  function handleAddNavigationButton(): void {
+    const isFrameOrContainer = false;
+
+    addElementToCurrentFrame("NavigationButton", isFrameOrContainer, {
+      destinationPage: destinationOriginUrl + selectedPageName,
+      navigationType: navigationMode,
+    });
   }
 
   function removePage(originUrl: string, pageTitle: string): void {
@@ -282,7 +292,7 @@ export default function NavigationMenu() {
         color="secondary"
         fullWidth
         sx={{ mt: 2 }}
-        onClick={() => {}}
+        onClick={handleAddNavigationButton}
       >
         Add Navigation Button
       </Button>

@@ -16,6 +16,7 @@ import DialogForge from "@/components/addableElements/dialogs/dialogForge/Dialog
 import PanelTable from "@/components/addableElements/panels/panelTable/PanelTable"
 import PanelEmbedExamples from "@/components/addableElements/panels/panelEmbed/PanelEmbed"
 import Fragment from "@/components/addableElements/frames/fragment/Fragment"
+import NavigationButton from "@/components/sideMenu/navigationMenu/navigationButton/NavigationButton"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -121,6 +122,9 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
   },
   DialogForge: {
     component: DialogForge,
+  },
+  NavigationButton: {
+    component: NavigationButton,
   },
 }
 

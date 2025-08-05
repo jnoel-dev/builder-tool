@@ -18,6 +18,7 @@ export interface FrameElement {
   xPercent: number;
   yPercent: number;
   isFrameOrContainer: boolean;
+  customProps: Record<string, any>;
 }
 
 export interface FrameContextValue {
@@ -29,7 +30,8 @@ export interface FrameContextValue {
   unregisterFrame: (frame: FrameElement) => void;
   addElementToCurrentFrame: (
     componentName: string,
-    isFrameOrContainer: boolean
+    isFrameOrContainer: boolean,
+    customProps?: Record<string, any>
   ) => string;
   removeElementFromFrame: (elementId: string, frameName: string) => void;
   updateElementPosition: (
@@ -60,74 +62,104 @@ export function FrameManager({ children }: { children: ReactNode }) {
   const containerRefs = refs.current;
 
   // load frames and elements from URL parameters
-  useEffect(() => {
-    if (window.top !== window) return;
-    const params = new URLSearchParams(window.location.search);
-    const framesParam = params.get("frames");
-    const elementsParam = params.get("elements");
-    if (!framesParam || !elementsParam) return;
+useEffect(() => {
+  if (window.top !== window) return;
+  const params = new URLSearchParams(window.location.search);
+  const framesParam = params.get("frames");
+  const elementsParam = params.get("elements");
+  if (!framesParam || !elementsParam) return;
 
-    const parsedFrames = framesParam.split(",");
-    const parsedMap: Record<string, FrameElement[]> = {};
-    let maxId = 0;
+  const parsedFrames = framesParam.split(",");
+  const parsedMap: Record<string, FrameElement[]> = {};
+  let maxId = 0;
 
-    for (const entry of elementsParam.split(";")) {
-      const [frame, list] = entry.split(":");
-      if (!frame) continue;
+  for (const entry of elementsParam.split(";")) {
+    const [frame, list] = entry.split(":");
+    if (!frame) continue;
 
-      const elements: FrameElement[] = [];
-      const serializedItems = list ? list.split("|") : [];
-      for (const serializedItem of serializedItems) {
-        if (!serializedItem) continue;
-        const parts = serializedItem.split(",");
-        if (parts.length !== 5) continue;
-        const [
-          id,
-          componentName,
-          xString,
-          yString,
-          isFrameOrContainerString,
-        ] = parts;
-        const xPercent = Number(xString) / 100;
-        const yPercent = Number(yString) / 100;
-        const isFrameOrContainer = isFrameOrContainerString === "true";
-
-        elements.push({ id, componentName, xPercent, yPercent, isFrameOrContainer });
-
-        const suffix = parseInt(id.split("-").pop() || "0", 10);
-        if (!isNaN(suffix) && suffix > maxId) {
-          maxId = suffix;
-        }
+    const elements: FrameElement[] = [];
+    for (const serializedItem of (list || "").split("|")) {
+      if (!serializedItem) continue;
+      const parts = serializedItem.split(",");
+      if (parts.length < 6) continue;        
+      const [
+        id,
+        componentName,
+        xString,
+        yString,
+        isFrameStr,
+        propsStr
+      ] = parts;
+      const xPercent = Number(xString) / 100;
+      const yPercent = Number(yString) / 100;
+      const isFrameOrContainer = isFrameStr === "true";
+      let neededProps: Record<string, any> = {};
+      try {
+        neededProps = propsStr
+          ? JSON.parse(decodeURIComponent(propsStr))
+          : {};
+      } catch {
       }
+ 
+      elements.push({
+        id,
+        componentName,
+        xPercent,
+        yPercent,
+        isFrameOrContainer,
+        customProps: neededProps
+      });
 
-      parsedMap[frame] = elements;
+      const suffix = parseInt(id.split("-").pop() || "0", 10);
+      if (!isNaN(suffix) && suffix > maxId) {
+        maxId = suffix;
+      }
     }
 
-    setFrameList(parsedFrames);
-    setFrameElementsMap(parsedMap);
-    if (parsedFrames.length) setCurrentFrame(parsedFrames[0]);
-  }, []);
+    parsedMap[frame] = elements;
+    console.log(parsedMap[frame])
+  }
+
+  setFrameList(parsedFrames);
+  setFrameElementsMap(parsedMap);
+  if (parsedFrames.length) setCurrentFrame(parsedFrames[0]);
+}, []);
+
 
   // save frames and elements to URL parameters
-  useEffect(() => {
-    const serializedFrameNames = frameList.join(',');
-    const frameEntries = frameList.map(frameName => {
-      const elementEntries = (frameElementsMap[frameName] || []).map(element => {
+useEffect(() => {
+  const serializedFrameNames = frameList.join(",");
+  const frameEntries = frameList.map(frameName => {
+    const elementEntries = (frameElementsMap[frameName] || []).map(
+      element => {
         const roundedX = Math.round(element.xPercent * 100);
         const roundedY = Math.round(element.yPercent * 100);
-        return [element.id, element.componentName, roundedX, roundedY, element.isFrameOrContainer].join(',');
-      });
-      return `${frameName}:${elementEntries.join('|')}`;
-    });
-    const serializedFrameElements = frameEntries.join(';');
-    const queryParameters = new URLSearchParams({
-      frames: serializedFrameNames,
-      elements: serializedFrameElements,
-    });
-    const existingHash = window.location.hash;
-    const newUrl = `${window.location.origin}${window.location.pathname}?${queryParameters}${existingHash}`;
-    window.history.replaceState(null, '', newUrl);
-  }, [frameList, frameElementsMap]);
+        //custom props will be objects, we just serialize as string for now
+        const encodedProps = encodeURIComponent(
+          JSON.stringify(element.customProps || {})
+        );
+        return [
+          element.id,
+          element.componentName,
+          roundedX,
+          roundedY,
+          element.isFrameOrContainer,
+          encodedProps
+        ].join(",");
+      }
+    );
+    return `${frameName}:${elementEntries.join("|")}`;
+  });
+  const serializedFrameElements = frameEntries.join(";");
+  const queryParameters = new URLSearchParams({
+    frames: serializedFrameNames,
+    elements: serializedFrameElements
+  });
+  const existingHash = window.location.hash;
+  const newUrl = `${window.location.origin}${window.location.pathname}?${queryParameters}${existingHash}`;
+  window.history.replaceState(null, "", newUrl);
+}, [frameList, frameElementsMap]);
+
 
 function handleRemoveMessage(event: MessageEvent) {
   const data = event.data as Record<string, any>;
@@ -326,14 +358,15 @@ function handleFrameAdded(event: MessageEvent) {
 
   function addElementToCurrentFrame(
     componentName: string,
-    isFrameOrContainer: boolean
+    isFrameOrContainer: boolean,
+    customProps: Record<string, any> = {}
   ): string {
     const allEles = Object.values(frameElementsMap).flat();
     const matches = allEles.filter(e => e.componentName === componentName);
     const suffixes = matches.map(e => parseInt(e.id.split("-").pop()||"0",10));
     const nextSuffix = suffixes.length ? Math.max(...suffixes)+1 : 1;
     const newId = `${componentName}-${nextSuffix}`;
-    const newElement: FrameElement = { id:newId, componentName, xPercent:50, yPercent:50, isFrameOrContainer };
+    const newElement: FrameElement = { id:newId, componentName, xPercent:50, yPercent:50, isFrameOrContainer, customProps};
     setFrameElementsMap(prev => {
       const curr = prev[currentFrame]||[];
       return { ...prev, [currentFrame]:[...curr,newElement] };

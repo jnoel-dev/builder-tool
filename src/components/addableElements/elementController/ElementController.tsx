@@ -69,7 +69,6 @@ function getTopAppWindow(): Window | null {
 
 
   useEffect(() => {
-    console.log(elementToControl)
     setPositionPercent({
       x: elementToControl.xPercent,
       y: elementToControl.yPercent,

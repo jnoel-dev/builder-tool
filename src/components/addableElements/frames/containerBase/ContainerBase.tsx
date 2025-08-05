@@ -47,25 +47,32 @@ useEffect(() => {
 
   return (
     <>
-      {elements.map((el) => {
-        const registryEntry = componentRegistry[el.componentName];
+      {elements.map((element) => {
+        const registryEntry = componentRegistry[element.componentName];
         if (!registryEntry) return null;
 
         const { component: Component, neededProps = {} } = registryEntry;
-        const extraProps = el.isFrameOrContainer ? { savedName: el.id } : {};
+        const instanceProps = element.customProps || {}; 
+        const extraProps = element.isFrameOrContainer ? { savedName: element.id } : {};
+        
         const containerRef = containerRefs[frameName];
 
         return (
           <ElementController
-            key={el.id}
-            elementToControl={el}
+            key={element.id}
+            elementToControl={element}
             controlsDisabled={disableElementControlsForChildren}
-            shouldShowName={el.isFrameOrContainer}
+            shouldShowName={element.isFrameOrContainer}
             containerRef={containerRef}
             connectedFrameOrContainerName={frameName}
           >
             <CollapseWrapper>
-              <Component {...neededProps} {...extraProps} ref={containerRef} />
+              <Component
+                {...neededProps}
+                {...instanceProps}
+                {...extraProps}
+                ref={containerRef}
+              />
             </CollapseWrapper>
           </ElementController>
         );
