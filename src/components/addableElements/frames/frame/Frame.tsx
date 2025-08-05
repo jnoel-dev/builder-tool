@@ -64,16 +64,18 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     ? `${SAME_DOMAIN_PATH}${savedName}`
     : `${isDev ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN}${SAME_DOMAIN_PATH}${savedName}`;
 
-  const openPopup = () => {
-    const width = window.innerWidth / 2;
-    const height = window.innerHeight;
-    const popup = window.open(
-      iframeSrc,
-      savedName,
-      `width=${width},height=${height}`
-    );
-    popupWindowRef.current = popup;
-  };
+const openPopup = () => {
+  const topWindow = window.top ?? window;
+  const popupWidth = topWindow.innerWidth / 2;
+  const popupHeight = topWindow.innerHeight;
+  const popup = window.open(
+    iframeSrc,
+    savedName,
+    `width=${popupWidth},height=${popupHeight}`
+  );
+  popupWindowRef.current = popup;
+};
+
 
   useEffect(() => {
     function handleReady(event: MessageEvent) {

@@ -40,6 +40,7 @@ export default function ElementController({
     updateElementPosition,
     removeElementFromFrame,
     unregisterFrame,
+    
   } = useFrame();
 
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -53,7 +54,7 @@ export default function ElementController({
 
 function getTopAppWindow(): Window | null {
   if (window.opener && window.top === window) {
-    // true if in popup
+   
     return window.opener;
   }
 
@@ -65,28 +66,10 @@ function getTopAppWindow(): Window | null {
 
 
 
-  // reset locked size on window resize
-  useEffect(() => {
-    function onWindowResize() {
-      const wrapperEl = wrapperRef.current;
-      if (!wrapperEl) return;
-      wrapperEl.style.width = '';
-      wrapperEl.style.height = '';
-    }
 
-    window.addEventListener('resize', onWindowResize);
-    return () => window.removeEventListener('resize', onWindowResize);
-  }, []);
-
-  // reset locked size whenever children are added/removed/rendered
-  useEffect(() => {
-    const wrapperEl = wrapperRef.current;
-    if (!wrapperEl) return;
-    wrapperEl.style.width = '';
-    wrapperEl.style.height = '';
-  }, [children]);
 
   useEffect(() => {
+    console.log(elementToControl)
     setPositionPercent({
       x: elementToControl.xPercent,
       y: elementToControl.yPercent,
@@ -111,14 +94,6 @@ function getTopAppWindow(): Window | null {
       y: clickPercentY - positionPercent.y,
     };
 
-    // lock current size in pixels
-    const wrapperEl = wrapperRef.current;
-    if (wrapperEl) {
-      const wrapperRect = wrapperEl.getBoundingClientRect();
-      wrapperEl.style.width = `${wrapperRect.width}px`;
-      wrapperEl.style.height = `${wrapperRect.height}px`;
-      wrapperEl.style.right = 'auto';
-    }
 
     isDragging.current = true;
   }
@@ -126,10 +101,12 @@ function getTopAppWindow(): Window | null {
   function onDragMove(event: MouseEvent) {
     if (!isDragging.current) return;
     const containerEl = containerRef.current;
+    
     if (!containerEl) return;
     const containerRect = containerEl.getBoundingClientRect();
 
     const wrapperEl = wrapperRef.current;
+ 
     if (!wrapperEl) return;
     const wrapperRect = wrapperEl.getBoundingClientRect();
     const widthPercent =
@@ -251,6 +228,9 @@ function onRemoveClick() {
         transform: 'translate(-50%, -50%)',
       };
 
+
+
+
 return (
   <div
     id={elementToControl.id}
@@ -260,6 +240,9 @@ return (
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'flex-end',
+      width: 'max-content',
+     
+    
     }}
   >
     <Stack direction="row-reverse" sx={{ color: theme.palette.text.primary }}>

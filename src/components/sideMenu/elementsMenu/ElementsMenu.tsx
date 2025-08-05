@@ -166,6 +166,12 @@ export default function ElementsMenu() {
 						isFrameOrContainer={true}
 					/>
 					<Divider component="li" />
+					<AddElementButton 
+						displayName="Fragment"
+						componentNames={["FragmentVertical","FragmentHorizontal"]}
+						isFrameOrContainer={true}
+					/>
+					<Divider component="li" />
 					<AddElementButton
 						displayName="ShadowRoot"
 						componentNames={["ShadowRootOpen","ShadowRootClosed"]}

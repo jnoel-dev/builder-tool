@@ -15,7 +15,7 @@ import DialogUI5 from "@/components/addableElements/dialogs/dialogUI5/DialogUI5"
 import DialogForge from "@/components/addableElements/dialogs/dialogForge/DialogForge"
 import PanelTable from "@/components/addableElements/panels/panelTable/PanelTable"
 import PanelEmbedExamples from "@/components/addableElements/panels/panelEmbed/PanelEmbed"
-
+import Fragment from "@/components/addableElements/frames/fragment/Fragment"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -69,7 +69,14 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
     component: Container,
     neededProps: { containerType: "horizontal" },
   },
-
+  FragmentVertical: {
+    component: Fragment,
+    neededProps: { fragmentType: "vertical" },
+  },
+  FragmentHorizontal: {
+    component: Fragment,
+    neededProps: { fragmentType: "horizontal" },
+  },
   IframeSameDomain: {
     component: Frame,
     neededProps: { frameType: "sameDomain" },
@@ -94,6 +101,9 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
   ShadowRootClosed: {
     component: ShadowRoot,
     neededProps: { shadowRootType: "closed" },
+  },
+  Fragment: {
+    component: Fragment,
   },
   DialogNative: {
     component: DialogNative,

@@ -18,7 +18,7 @@ export default function DialogMUI({ shouldFocus = false }: DialogMUIProps) {
 
   return (
     <>
-      <Box sx={{ backgroundColor: theme.palette.primary.main, padding: 2 }}>
+      <Box sx={{ backgroundColor: theme.palette.primary.main, padding: 2}}>
         <Button
           variant="contained"
           onClick={openDialog}
