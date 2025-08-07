@@ -17,7 +17,6 @@ import PanelTable from "@/components/addableElements/panels/panelTable/PanelTabl
 import PanelEmbedExamples from "@/components/addableElements/panels/panelEmbed/PanelEmbed"
 import Fragment from "@/components/addableElements/frames/fragment/Fragment"
 import NavigationButton from "@/components/sideMenu/navigationMenu/navigationButton/NavigationButton"
-import PanelDisabled from "@/components/addableElements/panels/panelDisabled/PanelDisabled"
 
 interface ComponentEntry {
   component: React.ComponentType<any>
@@ -42,7 +41,8 @@ const componentRegistry: { [key: string]: ComponentEntry } = {
     component: PanelTable,
   },
   PanelDisabled: {
-    component: PanelDisabled,
+    component: Panel,
+    neededProps: { isDisabled: "true" },
   },
 
   Input: {
