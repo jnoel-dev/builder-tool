@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, ChangeEvent } from "react";
+import { NavigationType, NAVIGATION_TYPES } from "./NavigationTypes";
 import {
   Box,
   Button,
@@ -90,7 +91,8 @@ export default function NavigationMenu() {
     Object.keys(initialPagesMap)[0]
   );
   const [selectedPageName, setSelectedPageName] = useState("Home Page");
-  const [navigationMode, setNavigationMode] = useState("full");
+  const [navigationMode, setNavigationMode] = useState<NavigationType>(NavigationType.Full);
+
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>(() =>
     Object.entries(initialPagesMap).flatMap(([originUrl, pageTitles]) => [
       originUrl,
@@ -117,7 +119,7 @@ export default function NavigationMenu() {
   }, [destinationOriginUrl, pagesByOrigin]);
 
   function addNewPage(): void {
-    const baseName = "Page ";
+    const baseName = "Page";
     let counter = 1;
     const existingPages = pagesByOrigin[selectedOriginUrl];
     while (existingPages.includes(`${baseName}${counter}`)) {
@@ -261,26 +263,26 @@ export default function NavigationMenu() {
         <RadioGroup
           value={navigationMode}
           onChange={(event: ChangeEvent<HTMLInputElement>) =>
-            setNavigationMode(event.target.value)
+            setNavigationMode(event.target.value as NavigationType)
           }
         >
           <FormControlLabel
-            value="full"
+            value={NavigationType.Full}
             control={<Radio />}
             label="Full Page Navigation"
           />
           <FormControlLabel
-            value="full-redirect"
+            value={NavigationType.FullRedirect}
             control={<Radio />}
             label="Full Page Navigation + Redirect"
           />
           <FormControlLabel
-            value="spa"
+            value={NavigationType.SPA}
             control={<Radio />}
             label="SPA Navigation"
           />
           <FormControlLabel
-            value="spa-replace"
+            value={NavigationType.SPAReplace}
             control={<Radio />}
             label="SPA Navigation + Replace"
           />

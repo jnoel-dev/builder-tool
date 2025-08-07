@@ -2,9 +2,8 @@
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
-import ContainerBase from '../addableElements/frames/containerBase/ContainerBase';
-import { useFrame } from '../contexts/FrameManager/FrameManager';
-
+import ContainerBase from '@/components/addableElements/frames/containerBase/ContainerBase';
+import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
 export default function TopFrame(){
   const theme = useTheme();
    const { containerRefs } = useFrame();

@@ -47,6 +47,19 @@ export interface FrameContextValue {
 const DEFAULT_FRAME = "TopFrame";
 const FrameContext = createContext<FrameContextValue | undefined>(undefined);
 
+function getPageDataFromUrl(fullUrl: string, pageName: string): {
+  frames: string | null;
+  elements: string | null;
+} {
+  const search = fullUrl.split("?")[1]?.split("#")[0] || "";
+  const params = new URLSearchParams(search);
+  return {
+    frames: params.get(`frames.${pageName}`),
+    elements: params.get(`elements.${pageName}`),
+  };
+}
+
+
 export function FrameManager({ children }: { children: ReactNode }) {
   const [frameList, setFrameList] = useState<string[]>([DEFAULT_FRAME]);
   const [currentFrame, setCurrentFrame] = useState<string>(DEFAULT_FRAME);
@@ -61,63 +74,113 @@ export function FrameManager({ children }: { children: ReactNode }) {
   });
   const containerRefs = refs.current;
 
-  // load frames and elements from URL parameters
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+// load frames and elements from URL parameters
 useEffect(() => {
   if (window.top !== window) return;
-  const params = new URLSearchParams(window.location.search);
-  const framesParam = params.get("frames");
-  const elementsParam = params.get("elements");
+
+  const currentPage = window.location.pathname.slice(1) || "HomePage";
+  const currentUrl = window.location.href;
+
+  const lastSavedUrl = sessionStorage.getItem("lastSavedUrl");
+  const landedUrl = sessionStorage.getItem("landedUrl");
+  const savedSessionRaw = sessionStorage.getItem("savedPageParams") || "";
+  let sessionParams = new URLSearchParams(savedSessionRaw);
+  const urlParams = new URLSearchParams(window.location.search);
+
+  const isSharedUrl = currentUrl !== lastSavedUrl && currentUrl !== landedUrl;
+
+  // Shared URL handling — replace session storage entirely
+  if (isSharedUrl) {
+    const newSession = new URLSearchParams();
+    for (const key of urlParams.keys()) {
+      if (key.startsWith("frames.") || key.startsWith("elements.")) {
+        const value = urlParams.get(key);
+        if (value !== null) newSession.set(key, value);
+      }
+    }
+    sessionParams = newSession;
+    sessionStorage.setItem("savedPageParams", newSession.toString());
+    sessionStorage.setItem("landedUrl", currentUrl);
+  }
+
+
+
+  const shouldPreferSavedParams =
+    currentUrl === lastSavedUrl 
+
+  let framesParam: string | null;
+  let elementsParam: string | null;
+
+  if (shouldPreferSavedParams) {
+    framesParam = sessionParams.get(`frames.${currentPage}`);
+    elementsParam = sessionParams.get(`elements.${currentPage}`);
+
+    // Replace full URL with session version
+    const fullUrl = `${window.location.origin}${window.location.pathname}?${sessionParams.toString()}${window.location.hash}`;
+    window.history.replaceState(null, "", fullUrl);
+  } else {
+    framesParam = urlParams.get(`frames.${currentPage}`) || sessionParams.get(`frames.${currentPage}`);
+    elementsParam = urlParams.get(`elements.${currentPage}`) || sessionParams.get(`elements.${currentPage}`);
+
+    if (framesParam && elementsParam) {
+      sessionParams.set(`frames.${currentPage}`, framesParam);
+      sessionParams.set(`elements.${currentPage}`, elementsParam);
+      sessionStorage.setItem("savedPageParams", sessionParams.toString());
+    }
+  }
+
   if (!framesParam || !elementsParam) return;
 
   const parsedFrames = framesParam.split(",");
   const parsedMap: Record<string, FrameElement[]> = {};
-  let maxId = 0;
 
   for (const entry of elementsParam.split(";")) {
     const [frame, list] = entry.split(":");
     if (!frame) continue;
 
-    const elements: FrameElement[] = [];
+    const elementsList: FrameElement[] = [];
+
     for (const serializedItem of (list || "").split("|")) {
       if (!serializedItem) continue;
       const parts = serializedItem.split(",");
-      if (parts.length < 6) continue;        
-      const [
-        id,
-        componentName,
-        xString,
-        yString,
-        isFrameStr,
-        propsStr
-      ] = parts;
+      if (parts.length < 6) continue;
+
+      const [id, componentName, xString, yString, isFrameStr, propsStr] = parts;
       const xPercent = Number(xString) / 100;
       const yPercent = Number(yString) / 100;
       const isFrameOrContainer = isFrameStr === "true";
-      let neededProps: Record<string, any> = {};
+      let customProps: Record<string, any> = {};
       try {
-        neededProps = propsStr
-          ? JSON.parse(decodeURIComponent(propsStr))
-          : {};
-      } catch {
-      }
- 
-      elements.push({
+        customProps = propsStr ? JSON.parse(decodeURIComponent(propsStr)) : {};
+      } catch {}
+
+      elementsList.push({
         id,
         componentName,
         xPercent,
         yPercent,
         isFrameOrContainer,
-        customProps: neededProps
+        customProps,
       });
-
-      const suffix = parseInt(id.split("-").pop() || "0", 10);
-      if (!isNaN(suffix) && suffix > maxId) {
-        maxId = suffix;
-      }
     }
 
-    parsedMap[frame] = elements;
-    console.log(parsedMap[frame])
+    parsedMap[frame] = elementsList;
   }
 
   setFrameList(parsedFrames);
@@ -126,39 +189,89 @@ useEffect(() => {
 }, []);
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // save frames and elements to URL parameters
 useEffect(() => {
+  if (window.top !== window) return;
+
+  const currentPage = window.location.pathname.slice(1) || "HomePage";
   const serializedFrameNames = frameList.join(",");
-  const frameEntries = frameList.map(frameName => {
-    const elementEntries = (frameElementsMap[frameName] || []).map(
-      element => {
-        const roundedX = Math.round(element.xPercent * 100);
-        const roundedY = Math.round(element.yPercent * 100);
-        //custom props will be objects, we just serialize as string for now
-        const encodedProps = encodeURIComponent(
-          JSON.stringify(element.customProps || {})
-        );
-        return [
-          element.id,
-          element.componentName,
-          roundedX,
-          roundedY,
-          element.isFrameOrContainer,
-          encodedProps
-        ].join(",");
-      }
-    );
+
+  const frameEntries = frameList.map((frameName) => {
+    const elementEntries = (frameElementsMap[frameName] || []).map((element) => {
+      const roundedX = Math.round(element.xPercent * 100);
+      const roundedY = Math.round(element.yPercent * 100);
+      const encodedProps = encodeURIComponent(JSON.stringify(element.customProps || {}));
+      return [
+        element.id,
+        element.componentName,
+        roundedX,
+        roundedY,
+        element.isFrameOrContainer,
+        encodedProps,
+      ].join(",");
+    });
     return `${frameName}:${elementEntries.join("|")}`;
   });
+
   const serializedFrameElements = frameEntries.join(";");
-  const queryParameters = new URLSearchParams({
-    frames: serializedFrameNames,
-    elements: serializedFrameElements
-  });
-  const existingHash = window.location.hash;
-  const newUrl = `${window.location.origin}${window.location.pathname}?${queryParameters}${existingHash}`;
+
+  const currentParams = new URLSearchParams(window.location.search);
+  const savedRaw = sessionStorage.getItem("savedPageParams");
+  const sessionParams = new URLSearchParams(savedRaw || "");
+
+  for (const [key, value] of currentParams.entries()) {
+    sessionParams.set(key, value);
+  }
+
+  sessionParams.set(`frames.${currentPage}`, serializedFrameNames);
+  sessionParams.set(`elements.${currentPage}`, serializedFrameElements);
+  sessionStorage.setItem("savedPageParams", sessionParams.toString());
+
+  const newUrl = `${window.location.origin}${window.location.pathname}?${sessionParams.toString()}${window.location.hash}`;
   window.history.replaceState(null, "", newUrl);
 }, [frameList, frameElementsMap]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 function handleRemoveMessage(event: MessageEvent) {
@@ -313,6 +426,9 @@ function handleFrameAdded(event: MessageEvent) {
     return () => window.removeEventListener("message", handleFrameAdded);
   }, []);
 
+
+
+
   function replaceFrameElements(
     frameName: string,
     elements: FrameElement[]
@@ -367,6 +483,9 @@ function handleFrameAdded(event: MessageEvent) {
     const nextSuffix = suffixes.length ? Math.max(...suffixes)+1 : 1;
     const newId = `${componentName}-${nextSuffix}`;
     const newElement: FrameElement = { id:newId, componentName, xPercent:50, yPercent:50, isFrameOrContainer, customProps};
+
+    
+
     setFrameElementsMap(prev => {
       const curr = prev[currentFrame]||[];
       return { ...prev, [currentFrame]:[...curr,newElement] };

@@ -1,5 +1,5 @@
 import BuilderPage from "@/components/builderPage/BuilderPage";
-export default function Home() {
+export default function Page() {
 
   
   return (

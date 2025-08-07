@@ -5,7 +5,7 @@ export enum NavigationType {
   SPAReplace = "spa-replace",
 }
 
-export const ALL_NAVIGATION_TYPES: NavigationType[] = [
+export const NAVIGATION_TYPES: NavigationType[] = [
   NavigationType.Full,
   NavigationType.FullRedirect,
   NavigationType.SPA,
