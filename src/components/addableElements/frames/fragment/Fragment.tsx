@@ -67,6 +67,7 @@ export default function Fragment({
           position: "absolute",
           width: "100%",
           zIndex: 1,
+
         }}
       >
         {isExpanded ? `Hide ${savedName}` : `Show ${savedName}`}
@@ -85,6 +86,9 @@ export default function Fragment({
               fragmentType === "horizontal" ? "row" : "column",
             justifyContent: "center",
             alignItems: "center",
+            paddingTop: 15,
+            paddingLeft: 5,
+            
           }}
         >
           <ContainerBase
