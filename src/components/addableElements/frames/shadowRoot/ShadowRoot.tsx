@@ -18,11 +18,11 @@ export default function ShadowRoot({
   shadowRootType = 'open',
   savedName,
 }: ShadowRootProps) {
-  const { frameElementsMap, containerRefs } = useFrame();
+  const { frameElementsByFrameName, containerRefs } = useFrame();
   const shadowHostRef = useRef<HTMLDivElement>(null);
   const [shadowRootNode, setShadowRootNode] = useState<ShadowRoot | null>(null);
   const [emotionCache, setEmotionCache] = useState<any>(null);
-  const hasChildren = (frameElementsMap[savedName] || []).length > 0;
+  const hasChildren = (frameElementsByFrameName[savedName] || []).length > 0;
   const hasAttachedShadowRootRef = useRef(false);
 
   useEffect(() => {

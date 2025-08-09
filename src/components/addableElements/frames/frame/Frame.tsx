@@ -50,7 +50,7 @@ function getSyncPayload(
 }
 
 export default function Frame({ savedName, frameType }: FrameProps) {
-  const { containerRefs, registerFrame, frameElementsMap } = useFrame();
+  const { containerRefs, registerFrame, frameElementsByFrameName } = useFrame();
   const [iframeSize, setIframeSize] = useState({ width: 0, height: 0 });
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isIframeReady, setIsIframeReady] = useState(false);
@@ -90,7 +90,7 @@ const openPopup = () => {
       if (isPopup) {
         const popup = popupWindowRef.current;
         if (!popup) return;
-        const payload = getSyncPayload(savedName, frameElementsMap);
+        const payload = getSyncPayload(savedName, frameElementsByFrameName);
         if (POST_MESSAGE_LOG_ENABLED) {
           console.log(`[PostMessage Send] syncFrame → popup | frame: ${savedName}`, payload);
         }
@@ -103,13 +103,13 @@ const openPopup = () => {
 
     window.addEventListener('message', handleReady);
     return () => window.removeEventListener('message', handleReady);
-  }, [frameElementsMap, frameType, savedName]);
+  }, [frameElementsByFrameName, frameType, savedName]);
 
   useEffect(() => {
     if (!isPopup || !isIframeReady) return;
     const popup = popupWindowRef.current;
     if (!popup) return;
-    const payload = getSyncPayload(savedName, frameElementsMap);
+    const payload = getSyncPayload(savedName, frameElementsByFrameName);
     if (POST_MESSAGE_LOG_ENABLED) {
       console.log(`[PostMessage Send] syncFrame → popup | frame: ${savedName}`, payload);
     }
@@ -117,7 +117,7 @@ const openPopup = () => {
       { type: 'syncFrame', frameName: savedName, elements: payload },
       '*'
     );
-  }, [frameElementsMap, isIframeReady, isPopup, savedName]);
+  }, [frameElementsByFrameName, isIframeReady, isPopup, savedName]);
 
   useEffect(() => {
     if (!savedName) return;
@@ -154,7 +154,7 @@ const openPopup = () => {
     if (!isIframeReady) return;
     const childWindow = iframeRef.current?.contentWindow;
     if (!childWindow) return;
-    const payload = getSyncPayload(savedName, frameElementsMap);
+    const payload = getSyncPayload(savedName, frameElementsByFrameName);
     if (POST_MESSAGE_LOG_ENABLED) {
       console.log(`[PostMessage Send] syncFrame → iframe | frame: ${savedName}`, payload);
     }
@@ -162,7 +162,7 @@ const openPopup = () => {
       { type: 'syncFrame', frameName: savedName, elements: payload },
       '*'
     );
-  }, [isIframeReady, frameElementsMap, savedName]);
+  }, [isIframeReady, frameElementsByFrameName, savedName]);
 
   if (isPopup) {
     return (
@@ -188,16 +188,26 @@ const openPopup = () => {
     );
   }
 
-  return (
-    <Box ref={containerRefs[savedName]} id="iframeContainer" sx={{ border: 'dashed', display: 'flex' }}>
+
+
+return (
+  <Box>
+
+    <Box
+      ref={containerRefs[savedName]}
+      id="iframeContainer"
+      sx={{ border: "dashed", display: "flex" }}
+    >
       <iframe
         ref={iframeRef}
         name={savedName}
         src={iframeSrc}
         width={iframeSize.width}
         height={iframeSize.height}
-        style={{ border: 'none', flex: '0 0 auto' }}
+        style={{ border: "none", flex: "0 0 auto" }}
       />
     </Box>
-  );
+  </Box>
+);
+
 }

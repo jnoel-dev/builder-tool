@@ -14,20 +14,22 @@ export default function NavigationButton({
   navigationType,
 }: NavigationButtonProps) {
 const handleClick = () => {
-  sessionStorage.setItem("lastSavedUrl", window.location.href);
-  if (navigationType === NavigationType.Full) {
-    const protocol =
-      process.env.NODE_ENV === "development" ? "http://" : "https://";
+  const isTop = window.top === window;
+  if (isTop) sessionStorage.setItem("lastSavedUrl", window.location.href);
+  else sessionStorage.setItem(`lastSavedUrl.${window.name}`, window.location.href);
 
+  if (navigationType === NavigationType.Full) {
+    const protocol = process.env.NODE_ENV === "development" ? "http://" : "https://";
     const existingParams = window.location.search;
     const hash = window.location.hash;
     const destinationUrl = `${protocol}${destinationPage}${existingParams}${hash}`;
-    
-
     window.location.href = destinationUrl;
   }
-  sessionStorage.setItem("landedUrl", window.location.href);
+
+  if (isTop) sessionStorage.setItem("landedUrl", window.location.href);
+  else sessionStorage.setItem(`landedUrl.${window.name}`, window.location.href);
 };
+
 
 
   return (

@@ -15,8 +15,8 @@ export default function Container({
   containerType = "vertical",
   savedName,
 }: ContainerProps) {
-  const { frameElementsMap, containerRefs } = useFrame();
-  const hasChildren = frameElementsMap[savedName]?.length > 0;
+  const { frameElementsByFrameName, containerRefs } = useFrame();
+  const hasChildren = frameElementsByFrameName[savedName]?.length > 0;
 
   return (
     <Box

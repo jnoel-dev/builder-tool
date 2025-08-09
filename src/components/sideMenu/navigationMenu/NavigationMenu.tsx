@@ -76,11 +76,11 @@ function findOriginForFrameName(
 
 export default function NavigationMenu() {
   const {
-    currentFrame,
-    setCurrentFrame,
-    frameList,
+    currentFrameName,
+    setCurrentFrameName,
+    frameNameList,
     containerRefs,
-    frameElementsMap,
+    frameElementsByFrameName,
     addElementToCurrentFrame
   } = useFrame();
 
@@ -106,12 +106,12 @@ export default function NavigationMenu() {
   useEffect(() => {
     const allOriginUrls = Object.keys(pagesByOrigin);
     const computedDestination = findOriginForFrameName(
-      currentFrame,
+      currentFrameName,
       allOriginUrls,
-      frameElementsMap
+      frameElementsByFrameName
     );
     setDestinationOriginUrl(computedDestination);
-  }, [currentFrame, containerRefs, pagesByOrigin, frameElementsMap]);
+  }, [currentFrameName, containerRefs, pagesByOrigin, frameElementsByFrameName]);
 
   useEffect(() => {
     const pagesForDestination = pagesByOrigin[destinationOriginUrl] || [];
@@ -137,14 +137,22 @@ export default function NavigationMenu() {
     setSelectedPageName(newPageTitle);
   }
 
-  function handleAddNavigationButton(): void {
-    const isFrameOrContainer = false;
+function handleAddNavigationButton(): void {
+  const isFrameOrContainer = false;
+  const isHomePage = selectedPageName === "Home Page";
+  const pageSegment = isHomePage ? "" : encodeURIComponent(selectedPageName);
 
-    addElementToCurrentFrame("NavigationButton", isFrameOrContainer, {
-      destinationPage: destinationOriginUrl + selectedPageName,
-      navigationType: navigationMode,
-    });
-  }
+  const destinationPage =
+    currentFrameName === "TopFrame"
+      ? destinationOriginUrl + pageSegment
+      : destinationOriginUrl + currentFrameName + (isHomePage ? "" : "/" + pageSegment);
+
+  addElementToCurrentFrame("NavigationButton", isFrameOrContainer, {
+    destinationPage,
+    navigationType: navigationMode,
+  });
+}
+
 
   function removePage(originUrl: string, pageTitle: string): void {
     setPagesByOrigin(prevMap => ({
@@ -225,13 +233,13 @@ export default function NavigationMenu() {
       <FormControl size="small" fullWidth sx={{ mb: 1 }}>
         <FormHelperText>Select a Container</FormHelperText>
         <Select
-          value={currentFrame}
+          value={currentFrameName}
           onChange={(event: SelectChangeEvent<string>) =>
-            setCurrentFrame(event.target.value)
+            setCurrentFrameName(event.target.value)
           }
           sx={{ textAlign: "center" }}
         >
-          {frameList.map(frameName => (
+          {frameNameList.map(frameName => (
             <MenuItem key={frameName} value={frameName}>
               {frameName.replace(/([A-Z])/g, " $1").trim().toUpperCase()}
             </MenuItem>

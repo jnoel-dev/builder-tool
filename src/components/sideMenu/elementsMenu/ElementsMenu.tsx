@@ -49,7 +49,7 @@ function getTabProps(index: number) {
 
 export default function ElementsMenu() {
 	const [selectedTab, setTab] = React.useState(TabIndex.Frames);
-	const { currentFrame, setCurrentFrame, frameList } = useFrame();
+	const { currentFrameName, setCurrentFrameName, frameNameList } = useFrame();
 
 	const handleTabChange = (event: React.SyntheticEvent, tabIndex: number) => {
 		setTab(tabIndex);
@@ -57,7 +57,7 @@ export default function ElementsMenu() {
 
 	const handleFrameChange = (event: SelectChangeEvent) => {
 
-		setCurrentFrame(event.target.value as string);
+		setCurrentFrameName(event.target.value as string);
 	};
 
 	return (
@@ -68,11 +68,11 @@ export default function ElementsMenu() {
 					<Select
 						labelId="frame-select-label"
 						id="frame-select-label"
-						value={currentFrame}
+						value={currentFrameName}
 						onChange={handleFrameChange}
 						sx={{ textAlign: "center" }}
 					>
-						{frameList.map((frame) => {
+						{frameNameList.map((frame) => {
 							const displayName = frame
 								.replace(/([A-Z])/g, " $1")
 								.trim()
