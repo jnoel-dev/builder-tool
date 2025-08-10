@@ -36,6 +36,7 @@ import {
   collectDescendantFrameIds,
   removeFramesAcrossAllPages,
   rebuildIdCountersFromAllSessionPages,
+  getCurrentTopPageName,
 } from "./framePersistence";
 
 import {
@@ -85,7 +86,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
     [DEFAULT_FRAME_NAME]: createRef<HTMLDivElement | null>(),
   });
 
-  // Internal refs mutated by core modules; mirrored into React state after each change.
   const frameNameListRef = useRef<string[]>(frameNameList);
   const frameElementsByFrameNameRef = useRef<Record<string, FrameElement[]>>(
     frameElementsByFrameName
@@ -122,8 +122,15 @@ export function FrameManager({ children }: { children: ReactNode }) {
     setFrameElementsByFrameName({ ...frameElementsByFrameNameRef.current });
   }
 
+  function ensureActivePageIfMissing(frameName: string): void {
+    if (!framePageByFrameNameRef.current[frameName]) {
+      framePageByFrameNameRef.current[frameName] = getCurrentTopPageName();
+    }
+  }
+
   function registerFrame(frameName: string): void {
     registerFrameCore(frameName, stateRefs);
+    ensureActivePageIfMissing(frameName);
     setCurrentFrameName(frameName);
     syncReactStateFromRefs();
     saver.current?.trigger();
@@ -139,7 +146,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
     saver.current?.trigger();
   }
 
-  // Used when loading/syncing from storage; does not mark dirty.
   function replaceFrameElementsFromStorage(frameName: string, elements: FrameElement[]): void {
     frameElementsByFrameNameRef.current = {
       ...frameElementsByFrameNameRef.current,
@@ -160,6 +166,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
       customProps,
       stateRefs
     );
+    ensureActivePageIfMissing(currentFrameName);
     syncReactStateFromRefs();
     saver.current?.trigger();
     return newId;
@@ -195,7 +202,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
       frameElementsByFrameNameRef.current
     );
 
-    // Remove from in-memory registries/maps.
     frameNameListRef.current = frameNameListRef.current.filter(
       (registeredFrameName) => !frameIdsToRemove.has(registeredFrameName)
     );
@@ -225,36 +231,25 @@ export function FrameManager({ children }: { children: ReactNode }) {
 
     frameElementsByFrameNameRef.current = nextElementsByFrameName;
 
-    // Drop counters for component types no longer present.
-    (function resetMissingComponentCounters() {
-      const elementsByFrame = frameElementsByFrameNameRef.current;
-      const counters = idMaxSuffixByComponentRef.current;
-      if (!elementsByFrame || !counters) return;
-
-      const componentNamesInUse = new Set<string>();
-      for (const elementList of Object.values(elementsByFrame)) {
-        for (const element of elementList || []) {
-          componentNamesInUse.add(element.componentName);
-        }
+    const counters = idMaxSuffixByComponentRef.current;
+    const componentNamesInUse = new Set<string>();
+    for (const elementList of Object.values(nextElementsByFrameName)) {
+      for (const element of elementList || []) {
+        componentNamesInUse.add(element.componentName);
       }
-
-      for (const componentName of Object.keys(counters)) {
-        if (!componentNamesInUse.has(componentName)) {
-          delete counters[componentName];
-        }
+    }
+    for (const componentName of Object.keys(counters)) {
+      if (!componentNamesInUse.has(componentName)) {
+        delete counters[componentName];
       }
-    })();
+    }
 
     setCurrentFrameName(DEFAULT_FRAME_NAME);
     syncReactStateFromRefs();
-
-    // Remove from URL + sessionStorage immediately so the state can't resurrect.
     removeFramesAcrossAllPages(frameIdsToRemove);
-
     saver.current?.trigger();
   }
 
-  // Load on mount (top only)
   useEffect(function initializeFromPersistence() {
     if (window.top !== window) return;
 
@@ -282,7 +277,9 @@ export function FrameManager({ children }: { children: ReactNode }) {
       frameElementsByFrameNameRef.current = opts.elementsByFrame;
 
       for (const frameName of opts.frameNames) {
-        framePageByFrameNameRef.current[frameName] = opts.pageName;
+        if (!framePageByFrameNameRef.current[frameName]) {
+          framePageByFrameNameRef.current[frameName] = opts.pageName;
+        }
       }
     }
 
@@ -292,7 +289,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
         recordMaxSuffixFromElements(elements, idMaxSuffixByComponentRef),
     });
 
-    // Keep ID suffix counters aligned with any other pages present in session.
     rebuildIdCountersFromAllSessionPages((elements) =>
       recordMaxSuffixFromElements(elements, idMaxSuffixByComponentRef)
     );
@@ -303,13 +299,20 @@ export function FrameManager({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Save on state changes (top only). Debounced write consolidates rapid edits.
   useEffect(function persistWhenStateChanges() {
     if (window.top !== window) return;
     saver.current?.trigger();
   }, [frameNameList, frameElementsByFrameName]);
 
-  // Top window message dispatcher
+  function findChildContentWindowByName(name: string): Window | null {
+    const iframes = Array.from(document.querySelectorAll("iframe"));
+    for (const iframe of iframes) {
+      const n = (iframe.getAttribute("name") || iframe.name || iframe.id || "").trim();
+      if (n === name && iframe.contentWindow) return iframe.contentWindow;
+    }
+    return null;
+  }
+
   useEffect(function attachTopMessaging() {
     if (window.top !== window) return;
 
@@ -327,7 +330,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
         registerFrame(frameName);
       },
       onChildPageChanged: (frameName, pageName) => {
-        // Child navigated: update the page mapping for this frame and load elements for that page.
         framePageByFrameNameRef.current[frameName] = pageName;
 
         const mergedParams = new URLSearchParams(sessionStorage.getItem("savedPageParams") || "");
@@ -336,19 +338,17 @@ export function FrameManager({ children }: { children: ReactNode }) {
 
         const elementsParamForPage = mergedParams.get(`elements.${pageName}`);
         if (elementsParamForPage) {
-          const elementsByFrameName = parseElementsParam(elementsParamForPage);
-          const elementsForFrame = elementsByFrameName[frameName] || [];
-          recordMaxSuffixFromElements(elementsForFrame, idMaxSuffixByComponentRef);
-          replaceFrameElementsFromStorage(frameName, elementsForFrame);
+          const byFrame = parseElementsParam(elementsParamForPage);
+          const list = byFrame[frameName] || [];
+          recordMaxSuffixFromElements(list, idMaxSuffixByComponentRef);
+          replaceFrameElementsFromStorage(frameName, list);
         } else {
           replaceFrameElementsFromStorage(frameName, []);
         }
 
-        // Sync the updated elements back into the child iframe explicitly.
-        const iframeWindows = Array.from(window.frames) as Window[];
-        const targetChildWindow = iframeWindows.find((win) => (win as any).name === frameName);
-        if (targetChildWindow) {
-          postSyncFrame(targetChildWindow, frameName, {
+        const childWindow = findChildContentWindowByName(frameName);
+        if (childWindow) {
+          postSyncFrame(childWindow, frameName, {
             [frameName]: frameElementsByFrameNameRef.current[frameName] || [],
           });
         }
@@ -359,7 +359,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
     return () => detach();
   }, []);
 
-  // Child window: receive sync and announce ready
   useEffect(function attachChildMessaging() {
     const isChildWindow = window.parent !== window || Boolean(window.opener);
     if (!isChildWindow) return;
@@ -378,7 +377,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
     return () => detach();
   }, []);
 
-  // Child window: notify parent when internal page changes
   useEffect(function attachChildPageNotifier() {
     if (window.top === window) return;
 

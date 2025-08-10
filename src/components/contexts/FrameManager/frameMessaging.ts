@@ -178,18 +178,37 @@ export function attachChildPageChangeNotifier(getPageName: () => string): () => 
     window.parent.postMessage(message, "*");
   }
 
+  let lastPathname = window.location.pathname;
+
+  function notifyParentIfPathChanged(nextPathname?: string): void {
+    const path = nextPathname ?? window.location.pathname;
+    if (path === lastPathname) return;
+    lastPathname = path;
+    notifyParent();
+  }
+
   const originalPushState = history.pushState;
   const originalReplaceState = history.replaceState;
 
   function wrappedPushState(this: History, state: any, title: string, url?: string | URL | null) {
     const result = originalPushState.apply(this, [state, title, url as any]);
-    notifyParent();
+    if (url != null) {
+      const next = new URL(url as any, window.location.href).pathname;
+      notifyParentIfPathChanged(next);
+    } else {
+      notifyParentIfPathChanged();
+    }
     return result;
   }
 
   function wrappedReplaceState(this: History, state: any, title: string, url?: string | URL | null) {
     const result = originalReplaceState.apply(this, [state, title, url as any]);
-    notifyParent();
+    if (url != null) {
+      const next = new URL(url as any, window.location.href).pathname;
+      notifyParentIfPathChanged(next);
+    } else {
+      notifyParentIfPathChanged();
+    }
     return result;
   }
 
@@ -197,11 +216,12 @@ export function attachChildPageChangeNotifier(getPageName: () => string): () => 
   history.replaceState = wrappedReplaceState as typeof history.replaceState;
 
   function handlePopState(): void {
-    notifyParent();
+    notifyParentIfPathChanged();
   }
 
+  // Ignore hash-only navigation
   function handleHashChange(): void {
-    notifyParent();
+    // no-op: same-document nav; do not notify parent
   }
 
   // Initial notify so parent can load the correct page state on first paint.
@@ -217,6 +237,7 @@ export function attachChildPageChangeNotifier(getPageName: () => string): () => 
     window.removeEventListener("hashchange", handleHashChange);
   };
 }
+
 
 /* =========
    Parent → Child: send element state to a specific iframe window

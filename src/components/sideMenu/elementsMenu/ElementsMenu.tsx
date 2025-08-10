@@ -49,13 +49,12 @@ function getCurrentTopPageName(): string {
 
 export default function ElementsMenu() {
   const [selectedTab, setTab] = React.useState(TabIndex.Frames);
-
   const { currentFrameName, setCurrentFrameName, frameNameList } = useFrame();
 
   const [itemsOnThisPage, setItemsOnThisPage] = React.useState<DropdownItem[]>([]);
   const [itemsOnOtherPages, setItemsOnOtherPages] = React.useState<DropdownItem[]>([]);
 
-  function handleTabChange(event: React.SyntheticEvent, tabIndex: number) {
+  function handleTabChange(_: React.SyntheticEvent, tabIndex: number) {
     setTab(tabIndex);
   }
 
@@ -67,17 +66,37 @@ export default function ElementsMenu() {
     const savedParamsRaw = sessionStorage.getItem("savedPageParams") || "";
     const currentTopPageName = getCurrentTopPageName();
 
-    const { itemsOnThisPage, itemsOnOtherPages } = buildFrameDropdownSections({
+    const sections = buildFrameDropdownSections({
       savedParamsRaw,
       runtimeFrameIdsOnCurrentPage: frameNameList,
       currentTopPageName,
     });
 
-    setItemsOnThisPage(itemsOnThisPage);
-    setItemsOnOtherPages(itemsOnOtherPages);
+    setItemsOnThisPage(sections.itemsOnThisPage);
+    setItemsOnOtherPages(sections.itemsOnOtherPages);
   }
 
   React.useEffect(rebuildDropdown, [frameNameList]);
+
+  // Build a single array of children for <Select> (no Fragments)
+  const selectChildren: React.ReactNode[] = [
+    <ListSubheader key="this-header">Frames on this page</ListSubheader>,
+    ...itemsOnThisPage.map((item) => (
+      <MenuItem key={`this-${item.id}`} value={item.id} disabled={item.disabled}>
+        {item.label}
+      </MenuItem>
+    )),
+    ...(itemsOnOtherPages.length > 0
+      ? [
+          <ListSubheader key="other-header">Frames on other pages</ListSubheader>,
+          ...itemsOnOtherPages.map((item) => (
+            <MenuItem key={`other-${item.id}`} value={item.id} disabled>
+              {item.label}
+            </MenuItem>
+          )),
+        ]
+      : []),
+  ];
 
   return (
     <div>
@@ -91,19 +110,7 @@ export default function ElementsMenu() {
             onChange={handleFrameChange}
             sx={{ textAlign: "center" }}
           >
-            <ListSubheader>Frames on this page</ListSubheader>
-            {itemsOnThisPage.map((item) => (
-              <MenuItem key={`this-${item.id}`} value={item.id} disabled={item.disabled}>
-                {item.label}
-              </MenuItem>
-            ))}
-
-            <ListSubheader>Frames on other pages</ListSubheader>
-            {itemsOnOtherPages.map((item) => (
-              <MenuItem key={`other-${item.id}`} value={item.id} disabled>
-                {item.label}
-              </MenuItem>
-            ))}
+            {selectChildren}
           </Select>
         </FormControl>
       </Box>

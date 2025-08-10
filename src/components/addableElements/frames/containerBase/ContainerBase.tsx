@@ -17,7 +17,7 @@ interface ContainerBaseProps {
 }
 
 function CollapseWrapper({ children }: { children: ReactNode }) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
   useEffect(() => setOpen(true), []);
   return <Collapse in={open} timeout={200}>{children}</Collapse>;
 }
@@ -29,7 +29,7 @@ export default function ContainerBase({
   const { frameElementsByFrameName, containerRefs, registerFrame } = useFrame();
   const elements = frameElementsByFrameName[frameName] || [];
 
-  const [displayName, setDisplayName] = React.useState("");
+  const [displayName, setDisplayName] = useState("");
 
 
   useEffect(() => {
