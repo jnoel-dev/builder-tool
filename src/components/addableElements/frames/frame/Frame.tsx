@@ -65,7 +65,11 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     const popupHeight = topWindow.innerHeight;
     const popup = window.open(iframeSrc, savedName, `width=${popupWidth},height=${popupHeight}`);
     popupWindowRef.current = popup;
+
+    // NEW: force initial sync for this instance
+    lastPopupPayloadJsonRef.current = "";
   };
+
 
   const payload = useMemo(
     () => getSyncPayload(savedName, frameElementsByFrameName),
@@ -87,16 +91,15 @@ export default function Frame({ savedName, frameType }: FrameProps) {
         }
 
         if (isPopup) {
-          const popup = popupWindowRef.current;
-          if (!popup) return;
+          const target = (event.source as Window) || popupWindowRef.current;
+          if (!target) return;
+
           const json = JSON.stringify(payload);
-          if (json !== lastPopupPayloadJsonRef.current) {
-            lastPopupPayloadJsonRef.current = json;
-            if (POST_MESSAGE_LOG_ENABLED) {
-              console.log(`[PostMessage Send] syncFrame → popup | frame: ${savedName}`, payload);
-            }
-            popup.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
+          lastPopupPayloadJsonRef.current = json;
+          if (POST_MESSAGE_LOG_ENABLED) {
+            console.log(`[PostMessage Send] syncFrame → popup(handshake) | frame: ${savedName}`, payload);
           }
+          target.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
         }
       }
 
@@ -118,14 +121,17 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     if (!isPopup || !isIframeReadyMessage) return;
     const popup = popupWindowRef.current;
     if (!popup) return;
+
     const json = JSON.stringify(payload);
-    if (json === lastPopupPayloadJsonRef.current) return;
+    if (json === lastPopupPayloadJsonRef.current) return; // still fine for subsequent updates
+
     lastPopupPayloadJsonRef.current = json;
     if (POST_MESSAGE_LOG_ENABLED) {
-      console.log(`[PostMessage Send] syncFrame → popup | frame: ${savedName}`, payload);
+      console.log(`[PostMessage Send] syncFrame → popup(update) | frame: ${savedName}`, payload);
     }
     popup.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
   }, [payload, isIframeReadyMessage, isPopup, savedName]);
+
 
   useEffect(() => {
     if (!savedName) return;

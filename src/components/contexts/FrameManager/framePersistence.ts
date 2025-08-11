@@ -277,7 +277,7 @@ export function removeFramesAcrossAllPages(frameIdsToRemove: Set<string>): void 
       elementsByFrameName[frameName] = filteredElementList;
     }
 
-    const remainingFrameNames = Object.keys(elementsByFrameName);
+    let remainingFrameNames = Object.keys(elementsByFrameName);
 
     if (remainingFrameNames.length === 0) {
       params.delete(framesKey);
@@ -285,8 +285,18 @@ export function removeFramesAcrossAllPages(frameIdsToRemove: Set<string>): void 
       continue;
     }
 
+    if (
+      remainingFrameNames.length === 1 &&
+      remainingFrameNames[0] === DEFAULT_FRAME_NAME &&
+      (elementsByFrameName[DEFAULT_FRAME_NAME]?.length ?? 0) === 0
+    ) {
+      params.delete(framesKey);
+      params.delete(elementsKey);
+      continue;
+    }
+
     if (!remainingFrameNames.includes(DEFAULT_FRAME_NAME)) {
-      remainingFrameNames.unshift(DEFAULT_FRAME_NAME);
+      remainingFrameNames = [DEFAULT_FRAME_NAME, ...remainingFrameNames];
       if (!elementsByFrameName[DEFAULT_FRAME_NAME]) elementsByFrameName[DEFAULT_FRAME_NAME] = [];
     }
 
@@ -294,13 +304,13 @@ export function removeFramesAcrossAllPages(frameIdsToRemove: Set<string>): void 
     params.set(elementsKey, serializeElementsParam(elementsByFrameName));
   }
 
-  // Commit immediately so a stale URL/session doesn’t resurrect removed frames.
   const newUrl =
     `${window.location.origin}${window.location.pathname}?` +
     `${params.toString()}${window.location.hash}`;
   sessionStorage.setItem("savedPageParams", params.toString());
   window.history.replaceState(null, "", newUrl);
 }
+
 
 export function rebuildIdCountersFromAllSessionPages(
   recordMaxSuffix: (elements: FrameElement[]) => void

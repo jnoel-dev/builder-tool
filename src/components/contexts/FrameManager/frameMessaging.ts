@@ -92,6 +92,14 @@ function isTrustedChild(frameName: string, source: MessageEventSource | null): b
   return !!win && !!source && source === win;
 }
 
+function relayToParentIfPresent(message: FrameMessage): void {
+  // Relay only if this window is not the real top (covers iframes)
+  if (window.top !== window) {
+    window.parent?.postMessage(message, "*");
+  }
+}
+
+
 /* =========
    Top window: attach a single dispatcher
    ========= */
@@ -182,9 +190,21 @@ export function attachChildWindowMessaging(callbacks: ChildWindowMessagingCallba
     const data = event.data as FrameMessage | undefined;
     if (!data || typeof data !== "object") return;
 
+    // We only consume syncFrame here…
     if (data.type === "syncFrame") {
       if (data.frameName !== (window as any).name) return;
       callbacks.onApplySyncedElements(data.elements);
+      return;
+    }
+
+    // …but if a child-of-this-child sends control messages, bubble them up.
+    if (
+      data.type === "framePageChanged" ||
+      data.type === "frameAdded" ||
+      data.type === "removeElement" ||
+      data.type === "updateElementPosition"
+    ) {
+      relayToParentIfPresent(data);
     }
   }
 
@@ -192,12 +212,13 @@ export function attachChildWindowMessaging(callbacks: ChildWindowMessagingCallba
 
   const parentOrOpener = window.opener ?? window.parent;
   parentOrOpener?.postMessage(
-    { type: "iframeReady", frameName: (window as any).name } as IframeReadyMessage,
+    { type: "iframeReady", frameName: (window as any).name },
     "*"
   );
 
   return () => window.removeEventListener("message", handleMessage);
 }
+
 
 /* =========
    Child window: notify parent when page changes

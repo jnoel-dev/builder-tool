@@ -341,27 +341,38 @@ export function FrameManager({ children }: { children: ReactNode }) {
         for (const [key, value] of urlParams.entries()) mergedParams.set(key, value);
 
         const elementsParamForPage = mergedParams.get(`elements.${pageName}`);
-        if (elementsParamForPage) {
-          const byFrame = parseElementsParam(elementsParamForPage);
-          const list = byFrame[frameName] || [];
+        const byFrameForPage = elementsParamForPage ? parseElementsParam(elementsParamForPage) : {};
+
+
+        const childrenGraph = buildChildrenGraphAcrossAllPages(mergedParams);
+        const allowed = collectDescendantFrameIds(frameName, childrenGraph, frameElementsByFrameNameRef.current);
+        allowed.add(frameName);
+
+
+        const toSync: Record<string, FrameElement[]> = {};
+        let sawNavigatingFrame = false;
+
+        for (const [fname, list] of Object.entries(byFrameForPage)) {
+          if (fname === DEFAULT_FRAME_NAME) continue;
+          if (!allowed.has(fname)) continue;
           recordMaxSuffixFromElements(list, idMaxSuffixByComponentRef);
-          replaceFrameElementsFromStorage(frameName, list);
-        } else {
-          replaceFrameElementsFromStorage(frameName, []);
+          replaceFrameElementsFromStorage(fname, list);
+          toSync[fname] = list;
+          if (fname === frameName) sawNavigatingFrame = true;
         }
 
-        markFrameDirty(frameName);
-        markFrameDirty(DEFAULT_FRAME_NAME);
-        saver.current?.trigger();
+
+        if (!sawNavigatingFrame) {
+          replaceFrameElementsFromStorage(frameName, []);
+        }
 
         const childWindow =
           getKnownChildWindowByFrameName(frameName) || findChildContentWindowByName(frameName);
         if (childWindow) {
-          postSyncFrame(childWindow, frameName, {
-            [frameName]: frameElementsByFrameNameRef.current[frameName] || [],
-          });
+          postSyncFrame(childWindow, frameName, toSync);
         }
       },
+
     };
 
     const detach = attachTopWindowMessaging(callbacks);
