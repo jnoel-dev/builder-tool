@@ -1,15 +1,13 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
 
-import {
-  useFrame,
-  FrameElement,
-  POST_MESSAGE_LOG_ENABLED,
-} from '@/components/contexts/FrameManager/FrameManager';
+import { useFrame, POST_MESSAGE_LOG_ENABLED } from '@/components/contexts/FrameManager/FrameManager';
+import { FrameElement } from '@/components/contexts/FrameManager/frameUtils';
 
 interface FrameProps {
   savedName: string;
@@ -24,37 +22,34 @@ function getSyncPayload(
   startingFrame: string,
   allElements: Record<string, FrameElement[]>
 ): Record<string, FrameElement[]> {
-  function gatherFrames(
-    frameId: string,
-    visited = new Set<string>()
-  ): Record<string, FrameElement[]> {
+  function gatherFrames(frameId: string, visited = new Set<string>()): Record<string, FrameElement[]> {
     if (visited.has(frameId)) return {};
     visited.add(frameId);
     const elements = allElements[frameId] || [];
     const result: Record<string, FrameElement[]> = { [frameId]: elements };
     for (const element of elements) {
-      if (element.isFrameOrContainer) {
-        Object.assign(result, gatherFrames(element.id, visited));
-      }
+      if (element.isFrameOrContainer) Object.assign(result, gatherFrames(element.id, visited));
     }
     return result;
   }
 
-  const collectedFrames = gatherFrames(startingFrame);
-  const topLevelElements = collectedFrames[startingFrame] || [];
-  const nestedFrames: Record<string, FrameElement[]> = {};
-  for (const [frameId, elements] of Object.entries(collectedFrames)) {
-    if (frameId !== startingFrame) nestedFrames[frameId] = elements;
-  }
-  return { TopFrame: topLevelElements, ...nestedFrames };
+  const collected = gatherFrames(startingFrame);
+  const topLevel = collected[startingFrame] || [];
+  const nested: Record<string, FrameElement[]> = {};
+  for (const [id, els] of Object.entries(collected)) if (id !== startingFrame) nested[id] = els;
+  return { TopFrame: topLevel, ...nested };
 }
 
 export default function Frame({ savedName, frameType }: FrameProps) {
   const { containerRefs, registerFrame, frameElementsByFrameName } = useFrame();
   const [iframeSize, setIframeSize] = useState({ width: 0, height: 0 });
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [isIframeReady, setIsIframeReady] = useState(false);
   const popupWindowRef = useRef<Window | null>(null);
+  const [isIframeReadyMessage, setIsIframeReadyMessage] = useState(false);
+  const [isIframeDomLoaded, setIsIframeDomLoaded] = useState(false);
+  const lastIframePayloadJsonRef = useRef<string>('');
+  const lastPopupPayloadJsonRef = useRef<string>('');
+  const registeredFramesRef = useRef<Set<string>>(new Set());
   const isPopup = frameType === 'popupSameDomain' || frameType === 'popupCrossDomain';
   const isSameDomain = frameType === 'sameDomain' || frameType === 'popupSameDomain';
   const isDev = process.env.NODE_ENV === 'development';
@@ -64,65 +59,66 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     ? `${SAME_DOMAIN_PATH}${savedName}`
     : `${isDev ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN}${SAME_DOMAIN_PATH}${savedName}`;
 
-const openPopup = () => {
-  const topWindow = window.top ?? window;
-  const popupWidth = topWindow.innerWidth / 2;
-  const popupHeight = topWindow.innerHeight;
-  const popup = window.open(
-    iframeSrc,
-    savedName,
-    `width=${popupWidth},height=${popupHeight}`
-  );
-  popupWindowRef.current = popup;
-};
+  const openPopup = () => {
+    const topWindow = window.top ?? window;
+    const popupWidth = topWindow.innerWidth / 2;
+    const popupHeight = topWindow.innerHeight;
+    const popup = window.open(iframeSrc, savedName, `width=${popupWidth},height=${popupHeight}`);
+    popupWindowRef.current = popup;
+  };
 
+  const payload = useMemo(
+    () => getSyncPayload(savedName, frameElementsByFrameName),
+    [savedName, frameElementsByFrameName]
+  );
 
   useEffect(() => {
     function handleReady(event: MessageEvent) {
       if (event.data?.type !== 'iframeReady') return;
-      setIsIframeReady(true);
       if (POST_MESSAGE_LOG_ENABLED) {
         console.log(
           `[PostMessage Receive] iframeReady | frameName: ${event.data.frameName} | target: ${window.name || 'TopFrame'}`
         );
       }
+      if (event.data?.frameName === savedName) setIsIframeReadyMessage(true);
 
       if (isPopup) {
         const popup = popupWindowRef.current;
         if (!popup) return;
-        const payload = getSyncPayload(savedName, frameElementsByFrameName);
-        if (POST_MESSAGE_LOG_ENABLED) {
-          console.log(`[PostMessage Send] syncFrame → popup | frame: ${savedName}`, payload);
+        const json = JSON.stringify(payload);
+        if (json !== lastPopupPayloadJsonRef.current) {
+          lastPopupPayloadJsonRef.current = json;
+          if (POST_MESSAGE_LOG_ENABLED) {
+            console.log(`[PostMessage Send] syncFrame → popup | frame: ${savedName}`, payload);
+          }
+          popup.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
         }
-        popup.postMessage(
-          { type: 'syncFrame', frameName: savedName, elements: payload },
-          '*'
-        );
       }
     }
 
     window.addEventListener('message', handleReady);
     return () => window.removeEventListener('message', handleReady);
-  }, [frameElementsByFrameName, frameType, savedName]);
+  }, [payload, isPopup, savedName]);
 
   useEffect(() => {
-    if (!isPopup || !isIframeReady) return;
+    if (!isPopup || !isIframeReadyMessage) return;
     const popup = popupWindowRef.current;
     if (!popup) return;
-    const payload = getSyncPayload(savedName, frameElementsByFrameName);
+    const json = JSON.stringify(payload);
+    if (json === lastPopupPayloadJsonRef.current) return;
+    lastPopupPayloadJsonRef.current = json;
     if (POST_MESSAGE_LOG_ENABLED) {
       console.log(`[PostMessage Send] syncFrame → popup | frame: ${savedName}`, payload);
     }
-    popup.postMessage(
-      { type: 'syncFrame', frameName: savedName, elements: payload },
-      '*'
-    );
-  }, [frameElementsByFrameName, isIframeReady, isPopup, savedName]);
+    popup.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
+  }, [payload, isIframeReadyMessage, isPopup, savedName]);
 
   useEffect(() => {
     if (!savedName) return;
+    if (registeredFramesRef.current.has(savedName)) return;
+    registeredFramesRef.current.add(savedName);
     registerFrame(savedName);
-  }, [savedName]);
+  }, [savedName]); // intentionally not depending on registerFrame
 
   useEffect(() => {
     const targetWindow = window.opener ?? window.top;
@@ -132,10 +128,7 @@ const openPopup = () => {
         `[PostMessage Send] frameAdded | from: ${window.name || 'TopFrame'} | newFrame: ${savedName}`
       );
     }
-    targetWindow.postMessage(
-      { type: 'frameAdded', frameName: savedName },
-      '*'
-    );
+    targetWindow.postMessage({ type: 'frameAdded', frameName: savedName }, '*');
   }, [savedName]);
 
   useEffect(() => {
@@ -151,63 +144,81 @@ const openPopup = () => {
   }, [containerRefs]);
 
   useEffect(() => {
-    if (!isIframeReady) return;
+    if (!isIframeReadyMessage || !isIframeDomLoaded) return;
     const childWindow = iframeRef.current?.contentWindow;
     if (!childWindow) return;
-    const payload = getSyncPayload(savedName, frameElementsByFrameName);
+    const json = JSON.stringify(payload);
+    if (json === lastIframePayloadJsonRef.current) return;
+    lastIframePayloadJsonRef.current = json;
     if (POST_MESSAGE_LOG_ENABLED) {
       console.log(`[PostMessage Send] syncFrame → iframe | frame: ${savedName}`, payload);
     }
-    childWindow.postMessage(
-      { type: 'syncFrame', frameName: savedName, elements: payload },
-      '*'
-    );
-  }, [isIframeReady, frameElementsByFrameName, savedName]);
+    childWindow.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
+  }, [payload, isIframeReadyMessage, isIframeDomLoaded, savedName]);
+
+  useEffect(() => {
+    lastIframePayloadJsonRef.current = '';
+    lastPopupPayloadJsonRef.current = '';
+    setIsIframeDomLoaded(false);
+    setIsIframeReadyMessage(false);
+    registeredFramesRef.current.delete(savedName);
+  }, [savedName]);
 
   if (isPopup) {
     return (
-        <Box
-          sx={{
-            backgroundColor: theme.palette.primary.main,
-            color: theme.palette.text.primary,
-            padding: 2,
-          }}
+      <Box
+        sx={{
+          backgroundColor: theme.palette.primary.main,
+          color: theme.palette.text.primary,
+          padding: 2,
+        }}
+      >
+        <Button
+          variant="contained"
+          onClick={openPopup}
+          color="secondary"
+          sx={{ color: theme.palette.text.primary, width: '100%', px: 5 }}
         >
-         
-            
-            <Button
-              variant="contained"
-              onClick={openPopup}
-              color="secondary"
-              sx={{ color: theme.palette.text.primary, width: '100%', px: 5 }}
-            >
-              Open Popup Window
-            </Button>
-     
-        </Box>
+          Open Popup Window
+        </Button>
+      </Box>
     );
   }
 
+  const showSpinner = !(isIframeReadyMessage && isIframeDomLoaded);
 
-
-return (
-  <Box>
-
-    <Box
-      ref={containerRefs[savedName]}
-      id="iframeContainer"
-      sx={{ border: "dashed", display: "flex" }}
-    >
-      <iframe
-        ref={iframeRef}
-        name={savedName}
-        src={iframeSrc}
-        width={iframeSize.width}
-        height={iframeSize.height}
-        style={{ border: "none", flex: "0 0 auto" }}
-      />
+  return (
+    <Box>
+      <Box
+        ref={containerRefs[savedName]}
+        id="iframeContainer"
+        sx={{ border: 'dashed', display: 'flex', position: 'relative' }}
+      >
+        {showSpinner && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1,
+              background: 'rgba(0,0,0,0.04)',
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        )}
+        <iframe
+          ref={iframeRef}
+          name={savedName}
+          src={iframeSrc}
+          width={iframeSize.width}
+          height={iframeSize.height}
+          onLoad={() => setIsIframeDomLoaded(true)}
+          style={{ border: 'none', flex: '0 0 auto' }}
+        />
+      </Box>
     </Box>
-  </Box>
-);
-
+  );
 }

@@ -71,14 +71,19 @@ export interface ChildWindowMessagingCallbacks {
    Utilities
    ========= */
 
-/**
- * Relay same-origin messages to opener when top-level window is controlling a popup.
- * This keeps editor and popup in sync without duplicating logic elsewhere.
- */
 function relayToOpenerIfPresent(message: FrameMessage): void {
   if (window.opener && window.top === window) {
     window.opener.postMessage(message, window.location.origin);
   }
+}
+
+/* Maintain a handshake-based trust map of frameName -> Window */
+type FrameWindowMap = Record<string, Window>;
+let knownChildWindowsByFrameName: FrameWindowMap = {};
+
+function isTrustedChild(frameName: string, source: MessageEventSource | null): boolean {
+  const win = knownChildWindowsByFrameName[frameName];
+  return !!win && !!source && source === win;
 }
 
 /* =========
@@ -90,21 +95,27 @@ export function attachTopWindowMessaging(callbacks: TopWindowMessagingCallbacks)
     const data = event.data as FrameMessage | undefined;
     if (!data || typeof data !== "object") return;
 
-    // For actions that require state mutation or trust, enforce same-origin.
-    const requiresSameOrigin =
-      data.type === "removeElement" ||
-      data.type === "updateElementPosition" ||
-      data.type === "frameAdded";
+    if (data.type === "iframeReady") {
+      if (event.source && typeof (event.source as Window).postMessage === "function") {
+        knownChildWindowsByFrameName[data.frameName] = event.source as Window;
+      }
+      return;
+    }
 
-    if (requiresSameOrigin && !isSameOrigin(event)) return;
+    const sameOrigin = isSameOrigin(event);
+    const hasFrameName = "frameName" in data;
+    const trusted =
+      hasFrameName && (sameOrigin || isTrustedChild((data as any).frameName, event.source));
 
     switch (data.type) {
       case "removeElement": {
+        if (!trusted) return;
         callbacks.onRemoveElement(data.frameName, data.elementId, data.element);
         relayToOpenerIfPresent(data);
         break;
       }
       case "updateElementPosition": {
+        if (!trusted) return;
         callbacks.onUpdateElementPosition(
           data.frameName,
           data.elementId,
@@ -115,6 +126,7 @@ export function attachTopWindowMessaging(callbacks: TopWindowMessagingCallbacks)
         break;
       }
       case "frameAdded": {
+        if (!trusted) return;
         if (data.frameName !== "TopFrame") {
           callbacks.onRegisterFrame(data.frameName);
         }
@@ -122,14 +134,12 @@ export function attachTopWindowMessaging(callbacks: TopWindowMessagingCallbacks)
         break;
       }
       case "framePageChanged": {
-        // Child frames send this cross-origin. We accept and hand off to the app layer.
+        if (!trusted) return;
         callbacks.onChildPageChanged(data.frameName, data.pageName);
         break;
       }
       case "syncFrame":
-      case "iframeReady":
       default:
-        // Not handled at top window level.
         break;
     }
   }
@@ -219,12 +229,9 @@ export function attachChildPageChangeNotifier(getPageName: () => string): () => 
     notifyParentIfPathChanged();
   }
 
-  // Ignore hash-only navigation
   function handleHashChange(): void {
-    // no-op: same-document nav; do not notify parent
   }
 
-  // Initial notify so parent can load the correct page state on first paint.
   notifyParent();
 
   window.addEventListener("popstate", handlePopState);
@@ -237,7 +244,6 @@ export function attachChildPageChangeNotifier(getPageName: () => string): () => 
     window.removeEventListener("hashchange", handleHashChange);
   };
 }
-
 
 /* =========
    Parent → Child: send element state to a specific iframe window
@@ -253,6 +259,5 @@ export function postSyncFrame(
     frameName,
     elements: elementsByFrame,
   };
-  // Cross-domain safe on purpose: children may be on a different origin.
   targetWindow.postMessage(message, "*");
 }
