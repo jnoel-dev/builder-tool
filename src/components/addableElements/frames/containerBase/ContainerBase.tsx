@@ -31,6 +31,21 @@ export default function ContainerBase({
 
   const [displayName, setDisplayName] = useState("");
 
+  useEffect(() => {
+    function notifyParentNavStart() {
+      window.parent.postMessage(
+        { type: "frameNavStart", frameName: window.name },
+        "*"
+      );
+    }
+
+    window.addEventListener("beforeunload", notifyParentNavStart);
+
+    return () => {
+      window.removeEventListener("beforeunload", notifyParentNavStart);
+    };
+  }, []);
+
 
   useEffect(() => {
     if (frameName) registerFrame(frameName);

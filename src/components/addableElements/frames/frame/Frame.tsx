@@ -72,33 +72,47 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     [savedName, frameElementsByFrameName]
   );
 
-  useEffect(() => {
-    function handleReady(event: MessageEvent) {
-      if (event.data?.type !== 'iframeReady') return;
-      if (POST_MESSAGE_LOG_ENABLED) {
-        console.log(
-          `[PostMessage Receive] iframeReady | frameName: ${event.data.frameName} | target: ${window.name || 'TopFrame'}`
-        );
-      }
-      if (event.data?.frameName === savedName) setIsIframeReadyMessage(true);
+  
 
-      if (isPopup) {
-        const popup = popupWindowRef.current;
-        if (!popup) return;
-        const json = JSON.stringify(payload);
-        if (json !== lastPopupPayloadJsonRef.current) {
-          lastPopupPayloadJsonRef.current = json;
-          if (POST_MESSAGE_LOG_ENABLED) {
-            console.log(`[PostMessage Send] syncFrame → popup | frame: ${savedName}`, payload);
-          }
-          popup.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.data?.type === 'iframeReady') {
+        if (POST_MESSAGE_LOG_ENABLED) {
+          console.log(
+            `[PostMessage Receive] iframeReady | frameName: ${event.data.frameName} | target: ${window.name || 'TopFrame'}`
+          );
         }
+        if (event.data?.frameName === savedName) {
+          setIsIframeReadyMessage(true);
+        }
+
+        if (isPopup) {
+          const popup = popupWindowRef.current;
+          if (!popup) return;
+          const json = JSON.stringify(payload);
+          if (json !== lastPopupPayloadJsonRef.current) {
+            lastPopupPayloadJsonRef.current = json;
+            if (POST_MESSAGE_LOG_ENABLED) {
+              console.log(`[PostMessage Send] syncFrame → popup | frame: ${savedName}`, payload);
+            }
+            popup.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
+          }
+        }
+      }
+
+      if (event.data?.type === 'frameNavStart' && event.data?.frameName === savedName) {
+        if (POST_MESSAGE_LOG_ENABLED) {
+          console.log(`[PostMessage Receive] frameNavStart | frameName: ${event.data.frameName}`);
+        }
+        setIsIframeDomLoaded(false);
+        setIsIframeReadyMessage(false);
       }
     }
 
-    window.addEventListener('message', handleReady);
-    return () => window.removeEventListener('message', handleReady);
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, [payload, isPopup, savedName]);
+
 
   useEffect(() => {
     if (!isPopup || !isIframeReadyMessage) return;
@@ -164,6 +178,31 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     registeredFramesRef.current.delete(savedName);
   }, [savedName]);
 
+  // ⬇️ the ONLY change needed to show spinner during FULL page nav:
+  // add a beforeunload/pagehide hook on the iframe's window to flip flags to false
+  // (works without altering your messaging; safe for cross-origin; wrapped in try/catch)
+  const handleIframeLoad = () => {
+    setIsIframeDomLoaded(true);
+
+    const win = iframeRef.current?.contentWindow;
+    if (!win) return;
+
+    const startLoading = () => {
+      console.log("START LOADING")
+      setIsIframeDomLoaded(false);
+      setIsIframeReadyMessage(false);
+    };
+
+    try {
+      win.addEventListener('beforeunload', startLoading);
+      // Safari may prefer pagehide for bfcache navigations
+      win.addEventListener('pagehide', startLoading as any);
+    } catch {
+      /* accessing cross-origin window listeners is generally allowed,
+         but guard just in case a browser throws */
+    }
+  };
+
   if (isPopup) {
     return (
       <Box
@@ -215,7 +254,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
           src={iframeSrc}
           width={iframeSize.width}
           height={iframeSize.height}
-          onLoad={() => setIsIframeDomLoaded(true)}
+          onLoad={handleIframeLoad}
           style={{ border: 'none', flex: '0 0 auto' }}
         />
       </Box>
