@@ -132,7 +132,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     if (registeredFramesRef.current.has(savedName)) return;
     registeredFramesRef.current.add(savedName);
     registerFrame(savedName);
-  }, [savedName]); // intentionally not depending on registerFrame
+  }, [savedName]); 
 
   useEffect(() => {
     const targetWindow = window.opener ?? window.top;
@@ -178,9 +178,6 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     registeredFramesRef.current.delete(savedName);
   }, [savedName]);
 
-  // ⬇️ the ONLY change needed to show spinner during FULL page nav:
-  // add a beforeunload/pagehide hook on the iframe's window to flip flags to false
-  // (works without altering your messaging; safe for cross-origin; wrapped in try/catch)
   const handleIframeLoad = () => {
     setIsIframeDomLoaded(true);
 
@@ -195,11 +192,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
 
     try {
       win.addEventListener('beforeunload', startLoading);
-      // Safari may prefer pagehide for bfcache navigations
-      win.addEventListener('pagehide', startLoading as any);
     } catch {
-      /* accessing cross-origin window listeners is generally allowed,
-         but guard just in case a browser throws */
     }
   };
 
@@ -242,7 +235,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
               alignItems: 'center',
               justifyContent: 'center',
               zIndex: 1,
-              background: 'rgba(0,0,0,0.04)',
+              background: 'rgba(0,0,0,0.5)',
             }}
           >
             <CircularProgress />

@@ -41,12 +41,16 @@ function isIframe(name: string): boolean {
   return /iframe/i.test(name);
 }
 
+function isPopupWindow(name: string): boolean {
+  return /popup/i.test(name);
+}
+
 // Walk up to the nearest ancestor that is navigable (Iframe or TopFrame)
 function resolveNavTargetFrame(
   frameName: string,
   childMap: Record<string, { id: string }[]>
 ): string {
-  if (isTopFrame(frameName) || isIframe(frameName)) return frameName;
+  if (isTopFrame(frameName) || isIframe(frameName) || isPopupWindow(frameName)) return frameName;
 
   for (const parentName in childMap) {
     const children = childMap[parentName] || [];
@@ -74,7 +78,6 @@ function findOriginForFrameName(
   if (lower.includes("crossdomain")) {
     return originUrls.find(url => url.endsWith("/frame/") && url !== hostRoot + "frame/") || originUrls[0];
   }
-  // Fallback: inherit from parent
   for (const parentName in childMap) {
     if ((childMap[parentName] || []).some(child => child.id === frameName)) {
       return findOriginForFrameName(parentName, originUrls, childMap);
