@@ -46,6 +46,7 @@ import {
   postSyncFrame,
   TopWindowMessagingCallbacks,
   ChildWindowMessagingCallbacks,
+  getKnownChildWindowByFrameName,
 } from "./frameMessaging";
 
 export const POST_MESSAGE_LOG_ENABLED = true;
@@ -251,7 +252,8 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }
 
   useEffect(function initializeFromPersistence() {
-    if (window.top !== window) return;
+    const isRealTop = window.top === window && !window.opener;
+    if (!isRealTop) return;
 
     saver.current = new DebouncedSaver(
       {
@@ -300,7 +302,8 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(function persistWhenStateChanges() {
-    if (window.top !== window) return;
+    const isRealTop = window.top === window && !window.opener;
+    if (!isRealTop) return;
     saver.current?.trigger();
   }, [frameNameList, frameElementsByFrameName]);
 
@@ -314,7 +317,8 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }
 
   useEffect(function attachTopMessaging() {
-    if (window.top !== window) return;
+    const isRealTop = window.top === window && !window.opener;
+    if (!isRealTop) return;
 
     const callbacks: TopWindowMessagingCallbacks = {
       onRemoveElement: (frameName, elementId, removedElement) => {
@@ -346,7 +350,12 @@ export function FrameManager({ children }: { children: ReactNode }) {
           replaceFrameElementsFromStorage(frameName, []);
         }
 
-        const childWindow = findChildContentWindowByName(frameName);
+        markFrameDirty(frameName);
+        markFrameDirty(DEFAULT_FRAME_NAME);
+        saver.current?.trigger();
+
+        const childWindow =
+          getKnownChildWindowByFrameName(frameName) || findChildContentWindowByName(frameName);
         if (childWindow) {
           postSyncFrame(childWindow, frameName, {
             [frameName]: frameElementsByFrameNameRef.current[frameName] || [],
@@ -360,8 +369,8 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(function attachChildMessaging() {
-    const isChildWindow = window.parent !== window || Boolean(window.opener);
-    if (!isChildWindow) return;
+    const isChildOrPopup = window.parent !== window || Boolean(window.opener);
+    if (!isChildOrPopup) return;
 
     const callbacks: ChildWindowMessagingCallbacks = {
       onApplySyncedElements: (elementsByFrame) => {
@@ -378,7 +387,8 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(function attachChildPageNotifier() {
-    if (window.top === window) return;
+    const isChildOrPopup = window.parent !== window || Boolean(window.opener);
+    if (!isChildOrPopup) return;
 
     function getChildPageName(): string {
       const normalizedPath = window.location.pathname.replace(/\/+$/, "");

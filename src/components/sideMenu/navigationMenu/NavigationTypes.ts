@@ -1,13 +1,11 @@
 export enum NavigationType {
   Full = "full",
-  FullRedirect = "full-redirect",
   SPA = "spa",
-  SPAReplace = "spa-replace",
+  FullReplace = "full-replace",
 }
 
 export const NAVIGATION_TYPES: NavigationType[] = [
   NavigationType.Full,
-  NavigationType.FullRedirect,
   NavigationType.SPA,
-  NavigationType.SPAReplace,
+  NavigationType.FullReplace,
 ];

@@ -148,7 +148,7 @@ export default function NavigationMenu() {
     let destinationPage: string;
     if (isTopFrame(navTarget)) {
       destinationPage = destinationOriginUrl + pageSegment;
-    } else if (isIframe(navTarget)) {
+    } else if (isIframe(navTarget) || isPopupWindow(navTarget)) {
       destinationPage = destinationOriginUrl + navTarget + (isHome ? "" : "/" + pageSegment);
     } else {
       destinationPage = destinationOriginUrl + pageSegment;
@@ -264,12 +264,12 @@ export default function NavigationMenu() {
         >
           <FormControlLabel value={NavigationType.Full} control={<Radio />} label="Full Page Navigation" />
           <FormControlLabel
-            value={NavigationType.FullRedirect}
+            value={NavigationType.SPA}
             control={<Radio />}
-            label="Full Page Navigation + Redirect"
+            label="SPA Navigation"
           />
-          <FormControlLabel value={NavigationType.SPA} control={<Radio />} label="SPA Navigation" />
-          <FormControlLabel value={NavigationType.SPAReplace} control={<Radio />} label="SPA Navigation + Replace" />
+          <FormControlLabel value={NavigationType.FullReplace} control={<Radio />} label="Full Page + SPA Replace" />
+         
         </RadioGroup>
       </FormControl>
 

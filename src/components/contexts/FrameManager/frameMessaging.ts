@@ -1,7 +1,4 @@
-import {
-  FrameElement,
-  isSameOrigin,
-} from "./frameUtils";
+import { FrameElement, isSameOrigin } from "./frameUtils";
 
 /* =========
    Message Types
@@ -58,7 +55,12 @@ export type FrameMessage =
 
 export interface TopWindowMessagingCallbacks {
   onRemoveElement: (frameName: string, elementId: string, element?: FrameElement) => void;
-  onUpdateElementPosition: (frameName: string, elementId: string, xPercent: number, yPercent: number) => void;
+  onUpdateElementPosition: (
+    frameName: string,
+    elementId: string,
+    xPercent: number,
+    yPercent: number
+  ) => void;
   onRegisterFrame: (frameName: string) => void;
   onChildPageChanged: (frameName: string, pageName: string) => void;
 }
@@ -81,6 +83,10 @@ function relayToOpenerIfPresent(message: FrameMessage): void {
 type FrameWindowMap = Record<string, Window>;
 let knownChildWindowsByFrameName: FrameWindowMap = {};
 
+export function getKnownChildWindowByFrameName(frameName: string): Window | undefined {
+  return knownChildWindowsByFrameName[frameName];
+}
+
 function isTrustedChild(frameName: string, source: MessageEventSource | null): boolean {
   const win = knownChildWindowsByFrameName[frameName];
   return !!win && !!source && source === win;
@@ -94,6 +100,15 @@ export function attachTopWindowMessaging(callbacks: TopWindowMessagingCallbacks)
   function handleMessage(event: MessageEvent): void {
     const data = event.data as FrameMessage | undefined;
     if (!data || typeof data !== "object") return;
+
+    if ((window as any).POST_MESSAGE_LOG_ENABLED) {
+      const extra =
+        "frameName" in data
+          ? ` | frameName: ${ (data as any).frameName }`
+          : "";
+      console.log(`[PostMessage Receive] ${data.type}${extra}`);
+    }
+
 
     if (data.type === "iframeReady") {
       if (event.source && typeof (event.source as Window).postMessage === "function") {
@@ -126,13 +141,23 @@ export function attachTopWindowMessaging(callbacks: TopWindowMessagingCallbacks)
         break;
       }
       case "frameAdded": {
-        if (!trusted) return;
+
+        if (!trusted && event.source && typeof (event.source as Window).postMessage === "function") {
+          knownChildWindowsByFrameName[data.frameName] = event.source as Window;
+        }
+
+        const nowTrusted =
+          sameOrigin || isTrustedChild(data.frameName, event.source);
+
+        if (!nowTrusted) return;
+
         if (data.frameName !== "TopFrame") {
           callbacks.onRegisterFrame(data.frameName);
         }
         relayToOpenerIfPresent(data);
         break;
       }
+
       case "framePageChanged": {
         if (!trusted) return;
         callbacks.onChildPageChanged(data.frameName, data.pageName);
@@ -179,13 +204,15 @@ export function attachChildWindowMessaging(callbacks: ChildWindowMessagingCallba
    ========= */
 
 export function attachChildPageChangeNotifier(getPageName: () => string): () => void {
+  const targetWindow = (window.opener as Window) ?? window.parent;
+
   function notifyParent(): void {
     const message: FramePageChangedMessage = {
       type: "framePageChanged",
       frameName: (window as any).name,
       pageName: getPageName(),
     };
-    window.parent.postMessage(message, "*");
+    targetWindow?.postMessage(message, "*");
   }
 
   let lastPathname = window.location.pathname;
