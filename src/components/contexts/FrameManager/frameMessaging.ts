@@ -74,7 +74,9 @@ export interface ChildWindowMessagingCallbacks {
    ========= */
 
 function relayToOpenerIfPresent(message: FrameMessage): void {
+
   if (window.opener && window.top === window) {
+    console.log("FORWRDING")
     window.opener.postMessage(message, window.location.origin);
   }
 }
@@ -109,13 +111,13 @@ export function attachTopWindowMessaging(callbacks: TopWindowMessagingCallbacks)
     const data = event.data as FrameMessage | undefined;
     if (!data || typeof data !== "object") return;
 
-    if ((window as any).POST_MESSAGE_LOG_ENABLED) {
+
       const extra =
         "frameName" in data
           ? ` | frameName: ${ (data as any).frameName }`
           : "";
       console.log(`[PostMessage Receive] ${data.type}${extra}`);
-    }
+    
 
 
     if (data.type === "iframeReady") {
@@ -127,8 +129,18 @@ export function attachTopWindowMessaging(callbacks: TopWindowMessagingCallbacks)
 
     const sameOrigin = isSameOrigin(event);
     const hasFrameName = "frameName" in data;
+
+    const allowedOrigins = new Set<string>([
+      "http://localhost:3001",
+      "https://frame.jonnoel.dev",
+    ]);
+
+    const isAllowedOrigin = allowedOrigins.has(event.origin);
+
     const trusted =
-      hasFrameName && (sameOrigin || isTrustedChild((data as any).frameName, event.source));
+      hasFrameName &&
+      (sameOrigin || isTrustedChild((data as any).frameName, event.source) || isAllowedOrigin);
+
 
     switch (data.type) {
       case "removeElement": {
@@ -138,6 +150,7 @@ export function attachTopWindowMessaging(callbacks: TopWindowMessagingCallbacks)
         break;
       }
       case "updateElementPosition": {
+
         if (!trusted) return;
         callbacks.onUpdateElementPosition(
           data.frameName,
@@ -150,16 +163,8 @@ export function attachTopWindowMessaging(callbacks: TopWindowMessagingCallbacks)
       }
       case "frameAdded": {
 
-        if (!trusted && event.source && typeof (event.source as Window).postMessage === "function") {
-          knownChildWindowsByFrameName[data.frameName] = event.source as Window;
-        }
-
-        const nowTrusted =
-          sameOrigin || isTrustedChild(data.frameName, event.source);
-
-        if (!nowTrusted) return;
-
         if (data.frameName !== "TopFrame") {
+          console.log("TOP FRAME REGISTER")
           callbacks.onRegisterFrame(data.frameName);
         }
         relayToOpenerIfPresent(data);

@@ -58,6 +58,7 @@ function mergeUrlIntoSessionStorage(): URLSearchParams {
  * Ensures TopFrame exists and returns a clean, ready-to-apply snapshot.
  */
 export function loadFromUrlAndSession(callbacks: LoadCallbacks): void {
+  initSessionFromUrlIfEmpty();
   const pageName = getCurrentTopPageName();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -96,7 +97,9 @@ export function loadFromUrlAndSession(callbacks: LoadCallbacks): void {
     pageName,
   });
 
-  mergeUrlIntoSessionStorage();
+  // NEW: keep URL in sync with the canonical session snapshot
+  replaceUrlWithSessionSnapshot();
+
 }
 
 
@@ -370,24 +373,60 @@ export function getMaxSuffixForComponentAcrossAllPages(
 export function persistPagesByOrigin(pagesByOrigin: PagesByOrigin): void {
   if (typeof window === "undefined") return;
 
-  const originOrder = Object.keys(pagesByOrigin);
-  const params = new URLSearchParams(window.location.search);
+  const currentUrlParams = new URLSearchParams(window.location.search);
+  const savedParams = new URLSearchParams(sessionStorage.getItem("savedPageParams") || "");
 
-  for (const key of Array.from(params.keys())) {
-    if (key.startsWith("pages.") || key === "origins" || /^origin\d+$/.test(key)) params.delete(key);
+  const mergedParams = new URLSearchParams(savedParams.toString());
+  for (const [key, value] of currentUrlParams.entries()) mergedParams.set(key, value);
+
+  for (const key of Array.from(mergedParams.keys())) {
+    if (key.startsWith("pages.") || key === "origins" || /^origin\d+$/.test(key)) {
+      mergedParams.delete(key);
+    }
   }
 
-  originOrder.forEach((origin, index) => {
-    const allPages = pagesByOrigin[origin] || [];
+  const originKeysInOrder = Object.keys(pagesByOrigin);
+  originKeysInOrder.forEach((originName, index) => {
+    const allPages = pagesByOrigin[originName] || [];
     const extraPages = allPages.filter((name) => name !== "Home Page");
-    if (extraPages.length > 0) params.set(`origin${index}`, extraPages.join("|"));
+    if (extraPages.length > 0) {
+      mergedParams.set(`origin${index}`, extraPages.join("|"));
+    } else {
+      mergedParams.delete(`origin${index}`);
+    }
   });
 
-  const query = params.toString();
-  try { sessionStorage.setItem("savedPageParams", query); } catch {}
-  const newUrl = `${window.location.origin}${window.location.pathname}${query ? "?" + query : ""}${window.location.hash}`;
+  const finalQuery = mergedParams.toString();
+  try { sessionStorage.setItem("savedPageParams", finalQuery); } catch {}
+  const newUrl =
+    `${window.location.origin}${window.location.pathname}` +
+    `${finalQuery ? "?" + finalQuery : ""}` +
+    `${window.location.hash}`;
   window.history.replaceState({}, "", newUrl);
 }
+
+function replaceUrlWithSessionSnapshot(): void {
+  const saved = sessionStorage.getItem("savedPageParams") || "";
+  const params = new URLSearchParams(saved);
+  const query = params.toString();
+  const newUrl =
+    `${window.location.origin}${window.location.pathname}` +
+    `${query ? "?" + query : ""}` +
+    `${window.location.hash}`;
+  window.history.replaceState(null, "", newUrl);
+}
+
+function initSessionFromUrlIfEmpty(): void {
+  const hasSession = !!sessionStorage.getItem("savedPageParams");
+  if (hasSession) return;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  if (!urlParams.toString()) return;
+
+  // seed session with the entire URL (all pages)
+  sessionStorage.setItem("savedPageParams", urlParams.toString());
+}
+
 
 export function loadPagesByOriginWithDefaults(defaultPagesByOrigin: PagesByOrigin): PagesByOrigin {
   if (typeof window === "undefined") return { ...defaultPagesByOrigin };

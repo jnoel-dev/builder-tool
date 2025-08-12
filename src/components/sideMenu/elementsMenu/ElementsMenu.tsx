@@ -79,9 +79,7 @@ export default function ElementsMenu() {
   React.useEffect(rebuildDropdown, [frameNameList]);
 
   const selectChildren: React.ReactNode[] = [
-    <MenuItem key="placeholder" value="">
-      Select a frame
-    </MenuItem>,
+
     <ListSubheader key="this-header">Frames on this page</ListSubheader>,
     ...itemsOnThisPage.map((item) => (
       <MenuItem key={`this-${item.id}`} value={item.id} disabled={item.disabled}>

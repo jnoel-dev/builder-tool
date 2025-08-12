@@ -3,6 +3,7 @@
 import React from "react";
 import Button from "@mui/material/Button";
 import { NavigationType } from "../NavigationTypes";
+import { getKnownChildWindowByFrameName } from "@/components/contexts/FrameManager/frameMessaging";
 
 type NavigationTarget = {
   originIndex: number;
@@ -33,14 +34,50 @@ function buildUrlFromNavigationTarget(target: NavigationTarget): string {
   return encodedPage ? `${baseHostPath}${encodedPage}` : baseHostPath;
 }
 
+function spaNavigateTopFrame(target: NavigationTarget): boolean {
+  const origins = getKnownOrigins();
+  const targetHostRoot = origins[target.originIndex] ?? "";
+  const currentHostRoot = `${window.location.host}/`;
+
+  if (targetHostRoot !== currentHostRoot) return false;
+
+  const newPathname = target.pageName ? `/${encodeURIComponent(target.pageName)}` : `/`;
+  const newUrl = `${newPathname}${window.location.search}${window.location.hash}`;
+
+  window.history.pushState(null, "", newUrl);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+  return true;
+}
+
+function spaNavigateChildFrame(target: NavigationTarget): boolean {
+  if (!target.frameId) return false;
+
+  const childWindow = getKnownChildWindowByFrameName(target.frameId);
+  if (!childWindow) return false;
+
+  try {
+    const newPath = target.pageName ? `/${encodeURIComponent(target.pageName)}` : `/`;
+    childWindow.history.pushState(null, "", newPath);
+
+    const PopStateCtor =
+      (childWindow as any).PopStateEvent || (childWindow as any).Event;
+    const popstateEvent = new PopStateCtor("popstate");
+
+    childWindow.dispatchEvent(popstateEvent);
+    return true;
+  } catch {
+    return false; // likely cross-origin
+  }
+}
+
+
+
 export default function NavigationButton({
   navigationTarget,
   navigationType,
 }: NavigationButtonProps) {
   const handleClick = () => {
-    const isTopWindow = window.top === window;
-    const lastSavedKey = isTopWindow ? "lastSavedUrl" : `lastSavedUrl.${window.name}`;
-    sessionStorage.setItem(lastSavedKey, window.location.href);
+
 
     if (navigationType === NavigationType.Full) {
       const protocol = process.env.NODE_ENV === "development" ? "http://" : "https://";
@@ -51,10 +88,26 @@ export default function NavigationButton({
       const destinationUrl = `${protocol}${destinationHostPath}${currentQuery}${currentHash}`;
 
       window.location.href = destinationUrl;
+    } else if (navigationType === NavigationType.SPA) {
+      let handled = false;
+
+      if (navigationTarget.frameId) {
+        handled = spaNavigateChildFrame(navigationTarget);
+      } else {
+        handled = spaNavigateTopFrame(navigationTarget);
+      }
+
+      if (!handled) {
+        // Fallback to full navigation if SPA not possible (e.g., cross-origin iframe or different origin)
+        const protocol = process.env.NODE_ENV === "development" ? "http://" : "https://";
+        const currentQuery = window.location.search;
+        const currentHash = window.location.hash;
+        const destinationHostPath = buildUrlFromNavigationTarget(navigationTarget);
+        const destinationUrl = `${protocol}${destinationHostPath}${currentQuery}${currentHash}`;
+        window.location.href = destinationUrl;
+      }
     }
 
-    const landedKey = isTopWindow ? "landedUrl" : `landedUrl.${window.name}`;
-    sessionStorage.setItem(landedKey, window.location.href);
   };
 
   const prettyTarget = (() => {

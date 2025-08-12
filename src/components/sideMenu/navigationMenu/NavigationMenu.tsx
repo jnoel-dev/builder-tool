@@ -278,7 +278,6 @@ function handleAddNavigationButton(): void {
           displayEmpty
           sx={{ textAlign: "center" }}
         >
-          <MenuItem value="">Select a frame</MenuItem>
           {isMounted &&
             frameNameList.map((frameName) => (
               <MenuItem key={frameName} value={frameName}>

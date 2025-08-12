@@ -317,8 +317,8 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }
 
   useEffect(function attachTopMessaging() {
-    const isRealTop = window.top === window && !window.opener;
-    if (!isRealTop) return;
+    
+    if (window.top !== window) return;
 
     const callbacks: TopWindowMessagingCallbacks = {
       onRemoveElement: (frameName, elementId, removedElement) => {

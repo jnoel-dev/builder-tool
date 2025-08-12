@@ -8,10 +8,10 @@ import React, {
   CSSProperties,
 } from 'react';
 import {
-  FrameElement,
   useFrame,
   POST_MESSAGE_LOG_ENABLED,
 } from '@/components/contexts/FrameManager/FrameManager';
+import { FrameElement } from '@/components/contexts/FrameManager/frameUtils';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -52,17 +52,7 @@ export default function ElementController({
     y: elementToControl.yPercent,
   });
 
-function getTopAppWindow(): Window | null {
-  if (window.opener && window.top === window) {
-   
-    return window.opener;
-  }
 
-  if (window.top !== window) {
-    return window.top;
-  }
-  return null;
-}
 
 
 
@@ -138,7 +128,7 @@ function onDragEnd() {
     connectedFrameOrContainerName
   );
 
-  const targetWindow = getTopAppWindow();
+  const targetWindow = window.top;
 
   if (targetWindow) {
     if (POST_MESSAGE_LOG_ENABLED) {
@@ -153,7 +143,7 @@ function onDragEnd() {
     }
 
    
-
+    console.log("TARGET: ",targetWindow)
     targetWindow.postMessage(
       {
         type: 'updateElementPosition',
@@ -188,7 +178,7 @@ function onRemoveClick() {
     unregisterFrame(elementToControl);
   }
 
-  const targetWindow = getTopAppWindow();
+  const targetWindow = window.top;
 
   if (targetWindow) {
     if (POST_MESSAGE_LOG_ENABLED) {
