@@ -9,3 +9,4 @@ export const NAVIGATION_TYPES: NavigationType[] = [
   NavigationType.SPA,
   NavigationType.FullReplace,
 ];
+

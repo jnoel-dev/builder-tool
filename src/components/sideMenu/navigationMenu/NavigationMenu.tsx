@@ -181,27 +181,31 @@ export default function NavigationMenu() {
     setSelectedPageName(newPageTitle);
   }
 
-  function handleAddNavigationButton(): void {
-    const isFrameOrContainer = false;
-    const isHomePage = selectedPageName === "Home Page";
-    const pageSegment = isHomePage ? "" : encodeURIComponent(selectedPageName);
+function handleAddNavigationButton(): void {
+  const isFrameOrContainer = false;
 
-    const navTargetFrameName = resolveNavTargetFrame(currentFrameName, frameElementsByFrameName as any);
+  const knownOrigins = Object.keys(pagesByOrigin); // same order you persist with originN
+  const originIndex = Math.max(0, knownOrigins.indexOf(destinationOriginUrl));
 
-    let destinationPageUrl: string;
-    if (isTopFrame(navTargetFrameName)) {
-      destinationPageUrl = destinationOriginUrl + pageSegment;
-    } else if (isIframe(navTargetFrameName) || isPopupWindow(navTargetFrameName)) {
-      destinationPageUrl = destinationOriginUrl + navTargetFrameName + (isHomePage ? "" : "/" + pageSegment);
-    } else {
-      destinationPageUrl = destinationOriginUrl + pageSegment;
-    }
+  const isHomePage = selectedPageName === "Home Page";
+  const pageName = isHomePage ? undefined : selectedPageName;
 
-    addElementToCurrentFrame("NavigationButton", isFrameOrContainer, {
-      destinationPage: destinationPageUrl,
-      navigationType: navigationMode,
-    });
-  }
+  const navTargetFrameName = resolveNavTargetFrame(currentFrameName, frameElementsByFrameName as any);
+
+  const isTop = isTopFrame(navTargetFrameName);
+  const isChildFrame = isIframe(navTargetFrameName) || isPopupWindow(navTargetFrameName);
+
+  const navigationTarget = {
+    originIndex,
+    frameId: isChildFrame ? navTargetFrameName : undefined,
+    pageName,
+  };
+
+  addElementToCurrentFrame("NavigationButton", isFrameOrContainer, {
+    navigationTarget,
+    navigationType: navigationMode,
+  });
+}
 
   function removePage(originUrl: string, pageTitle: string): void {
     setPagesByOrigin((prev) => ({
