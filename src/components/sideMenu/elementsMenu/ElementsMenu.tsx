@@ -78,8 +78,10 @@ export default function ElementsMenu() {
 
   React.useEffect(rebuildDropdown, [frameNameList]);
 
-  // Build a single array of children for <Select> (no Fragments)
   const selectChildren: React.ReactNode[] = [
+    <MenuItem key="placeholder" value="">
+      Select a frame
+    </MenuItem>,
     <ListSubheader key="this-header">Frames on this page</ListSubheader>,
     ...itemsOnThisPage.map((item) => (
       <MenuItem key={`this-${item.id}`} value={item.id} disabled={item.disabled}>
@@ -106,7 +108,11 @@ export default function ElementsMenu() {
           <Select
             labelId="frame-select-label"
             id="frame-select-label"
-            value={currentFrameName}
+            value={
+              itemsOnThisPage.length + itemsOnOtherPages.length === 0
+                ? ""
+                : currentFrameName
+            }
             onChange={handleFrameChange}
             sx={{ textAlign: "center" }}
           >

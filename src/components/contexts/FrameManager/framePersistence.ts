@@ -27,6 +27,9 @@ export interface LoadCallbacks {
   recordMaxSuffixFromElements: (elements: FrameElement[]) => void;
 }
 
+export const PAGES_PARAM_PREFIX = "pages.";
+export type PagesByOrigin = Record<string, string[]>;
+
 /**
  * Read current page name from top window location. Kept here to keep all persistence path logic in one place.
  */
@@ -60,48 +63,42 @@ export function loadFromUrlAndSession(callbacks: LoadCallbacks): void {
   const urlParams = new URLSearchParams(window.location.search);
   const sessionParams = new URLSearchParams(sessionStorage.getItem("savedPageParams") || "");
 
-  const framesParam =
-    urlParams.get(`${FRAMES_PARAM_PREFIX}${pageName}`) ??
-    sessionParams.get(`${FRAMES_PARAM_PREFIX}${pageName}`);
+  const framesKey = `${FRAMES_PARAM_PREFIX}${pageName}`;
+  const elementsKey = `${ELEMENTS_PARAM_PREFIX}${pageName}`;
 
-  const elementsParam =
-    urlParams.get(`${ELEMENTS_PARAM_PREFIX}${pageName}`) ??
-    sessionParams.get(`${ELEMENTS_PARAM_PREFIX}${pageName}`);
+  const framesParam = urlParams.get(framesKey) ?? sessionParams.get(framesKey) ?? "";
+  const elementsParam = urlParams.get(elementsKey) ?? sessionParams.get(elementsKey) ?? "";
 
-  if (!framesParam || !elementsParam) {
-    // Nothing explicit in URL; unify and store so back/forward does not drop state.
-    mergeUrlIntoSessionStorage();
+  if (!framesParam && !elementsParam) {
+    callbacks.applyLoadedState({
+      frameNames: [DEFAULT_FRAME_NAME],
+      elementsByFrame: { [DEFAULT_FRAME_NAME]: [] },
+      currentFrameName: DEFAULT_FRAME_NAME,
+      pageName,
+    });
     return;
   }
 
-  const parsedFrameNames = framesParam.split(",").filter(Boolean);
-  const parsedElementsByFrame = parseElementsParam(elementsParam);
+  const parsedFrameNames = framesParam ? framesParam.split(",").filter(Boolean) : [DEFAULT_FRAME_NAME];
+  const parsedElementsByFrame = elementsParam ? parseElementsParam(elementsParam) : { [DEFAULT_FRAME_NAME]: [] };
 
-  if (!parsedFrameNames.includes(DEFAULT_FRAME_NAME)) {
-    parsedFrameNames.unshift(DEFAULT_FRAME_NAME);
-  }
-  if (!parsedElementsByFrame[DEFAULT_FRAME_NAME]) {
-    parsedElementsByFrame[DEFAULT_FRAME_NAME] = [];
-  }
+  if (!parsedFrameNames.includes(DEFAULT_FRAME_NAME)) parsedFrameNames.unshift(DEFAULT_FRAME_NAME);
+  if (!parsedElementsByFrame[DEFAULT_FRAME_NAME]) parsedElementsByFrame[DEFAULT_FRAME_NAME] = [];
 
-  // Keep ID suffix counters consistent across navigation.
   for (const frameName of Object.keys(parsedElementsByFrame)) {
     callbacks.recordMaxSuffixFromElements(parsedElementsByFrame[frameName] || []);
   }
 
   callbacks.applyLoadedState({
     frameNames: parsedFrameNames.length ? parsedFrameNames : [DEFAULT_FRAME_NAME],
-    elementsByFrame:
-      Object.keys(parsedElementsByFrame).length
-        ? parsedElementsByFrame
-        : { [DEFAULT_FRAME_NAME]: [] },
+    elementsByFrame: Object.keys(parsedElementsByFrame).length ? parsedElementsByFrame : { [DEFAULT_FRAME_NAME]: [] },
     currentFrameName: parsedFrameNames[0] || DEFAULT_FRAME_NAME,
     pageName,
   });
 
-  // Store a merged view so sessionStorage always has the full snapshot.
   mergeUrlIntoSessionStorage();
 }
+
 
 /**
  * Build a single params object containing all touched pages.
@@ -127,15 +124,16 @@ export function buildParamsToWrite(refs: PersistenceRefs): URLSearchParams {
     touchedPages.add(ownerPage);
   }
 
-  for (const pageName of touchedPages) {
-    const existingElementsRaw =
-      sessionBase.get(`${ELEMENTS_PARAM_PREFIX}${pageName}`) || "";
-    const unionElementsByFrameName: Record<string, FrameElement[]> = {
-      ...parseElementsParam(existingElementsRaw),
-    };
+for (const pageName of touchedPages) {
+  const framesKey = `${FRAMES_PARAM_PREFIX}${pageName}`;
+  const elementsKey = `${ELEMENTS_PARAM_PREFIX}${pageName}`;
+
+  const existingElementsRaw = sessionBase.get(elementsKey) || "";
+  const unionElementsByFrameName: Record<string, FrameElement[]> = {
+    ...parseElementsParam(existingElementsRaw),
+  };
 
     for (const frameName of frameNames) {
-      // IMPORTANT: fallback to pageName here, not getCurrentTopPageName()
       const ownerPage = ownerPageByFrameName[frameName] || pageName;
       if (ownerPage !== pageName) continue;
 
@@ -150,10 +148,21 @@ export function buildParamsToWrite(refs: PersistenceRefs): URLSearchParams {
       unionElementsByFrameName[DEFAULT_FRAME_NAME] = [];
     }
 
-    const frameNamesForPage = Object.keys(unionElementsByFrameName);
-    const hasTop = frameNamesForPage.includes(DEFAULT_FRAME_NAME);
-    if (!hasTop) {
-      frameNamesForPage.unshift(DEFAULT_FRAME_NAME);
+    let frameNamesForPage = Object.keys(unionElementsByFrameName);
+
+    const isDefault =
+      frameNamesForPage.length === 1 &&
+      frameNamesForPage[0] === DEFAULT_FRAME_NAME &&
+      (unionElementsByFrameName[DEFAULT_FRAME_NAME]?.length ?? 0) === 0;
+
+    if (isDefault) {
+      paramsToWrite.delete(framesKey);
+      paramsToWrite.delete(elementsKey);
+      continue;
+    }
+
+    if (!frameNamesForPage.includes(DEFAULT_FRAME_NAME)) {
+      frameNamesForPage = [DEFAULT_FRAME_NAME, ...frameNamesForPage];
     } else {
       const topIndex = frameNamesForPage.indexOf(DEFAULT_FRAME_NAME);
       if (topIndex > 0) {
@@ -162,12 +171,10 @@ export function buildParamsToWrite(refs: PersistenceRefs): URLSearchParams {
       }
     }
 
-    paramsToWrite.set(`${FRAMES_PARAM_PREFIX}${pageName}`, frameNamesForPage.join(","));
-    paramsToWrite.set(
-      `${ELEMENTS_PARAM_PREFIX}${pageName}`,
-      serializeElementsParam(unionElementsByFrameName)
-    );
+    paramsToWrite.set(framesKey, frameNamesForPage.join(","));
+    paramsToWrite.set(elementsKey, serializeElementsParam(unionElementsByFrameName));
   }
+
 
   return paramsToWrite;
 }
@@ -196,6 +203,7 @@ export function saveNow(refs: PersistenceRefs): void {
 }
 
 export function buildMergedParams(): URLSearchParams {
+  if (typeof window === "undefined") return new URLSearchParams();
   const sessionParams = new URLSearchParams(sessionStorage.getItem("savedPageParams") || "");
   const urlParams = new URLSearchParams(window.location.search);
   for (const [key, value] of urlParams.entries()) sessionParams.set(key, value);
@@ -358,6 +366,57 @@ export function getMaxSuffixForComponentAcrossAllPages(
 
   return maxSuffix;
 }
+
+export function persistPagesByOrigin(pagesByOrigin: PagesByOrigin): void {
+  if (typeof window === "undefined") return;
+
+  const originOrder = Object.keys(pagesByOrigin);
+  const params = new URLSearchParams(window.location.search);
+
+  for (const key of Array.from(params.keys())) {
+    if (key.startsWith("pages.") || key === "origins" || /^origin\d+$/.test(key)) params.delete(key);
+  }
+
+  originOrder.forEach((origin, index) => {
+    const allPages = pagesByOrigin[origin] || [];
+    const extraPages = allPages.filter((name) => name !== "Home Page");
+    if (extraPages.length > 0) params.set(`origin${index}`, extraPages.join("|"));
+  });
+
+  const query = params.toString();
+  try { sessionStorage.setItem("savedPageParams", query); } catch {}
+  const newUrl = `${window.location.origin}${window.location.pathname}${query ? "?" + query : ""}${window.location.hash}`;
+  window.history.replaceState({}, "", newUrl);
+}
+
+export function loadPagesByOriginWithDefaults(defaultPagesByOrigin: PagesByOrigin): PagesByOrigin {
+  if (typeof window === "undefined") return { ...defaultPagesByOrigin };
+
+  let params = new URLSearchParams(window.location.search);
+  if (!params.toString()) {
+    try {
+      const saved = sessionStorage.getItem("savedPageParams");
+      if (saved) params = new URLSearchParams(saved);
+    } catch {}
+  }
+
+  const originOrder = Object.keys(defaultPagesByOrigin);
+  const result: PagesByOrigin = {};
+
+  originOrder.forEach((origin, index) => {
+    const raw = params.get(`origin${index}`);
+    if (raw) {
+      const extras = raw.split("|").map((s) => s.trim()).filter(Boolean);
+      result[origin] = ["Home Page", ...extras];
+    } else {
+      const defaults = defaultPagesByOrigin[origin];
+      result[origin] = defaults && defaults.length ? [...defaults] : ["Home Page"];
+    }
+  });
+
+  return result;
+}
+
 
 /**
  * Debounced saver to prevent excessive writes during rapid edits.

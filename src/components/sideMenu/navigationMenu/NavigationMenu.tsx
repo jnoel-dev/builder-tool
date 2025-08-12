@@ -22,12 +22,21 @@ import CloseIcon from "@mui/icons-material/Close";
 import { SimpleTreeView } from "@mui/x-tree-view/SimpleTreeView";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
 import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
+import {
+  loadPagesByOriginWithDefaults,
+  persistPagesByOrigin,
+  PagesByOrigin,
+} from "@/components/contexts/FrameManager/framePersistence";
 
 const DEV_ORIGINS = ["localhost:3000/", "localhost:3000/frame/", "localhost:3001/frame/"];
 const PROD_ORIGINS = ["build.jonnoel.dev/", "build.jonnoel.dev/frame/", "frame.jonnoel.dev/frame/"];
 
+function getKnownOrigins(): string[] {
+  return process.env.NODE_ENV === "development" ? DEV_ORIGINS : PROD_ORIGINS;
+}
+
 function getInitialPagesByOrigin(): Record<string, string[]> {
-  const origins = process.env.NODE_ENV === "development" ? DEV_ORIGINS : PROD_ORIGINS;
+  const origins = getKnownOrigins();
   const pages: Record<string, string[]> = {};
   for (const origin of origins) pages[origin] = ["Home Page"];
   return pages;
@@ -36,27 +45,21 @@ function getInitialPagesByOrigin(): Record<string, string[]> {
 function isTopFrame(name: string): boolean {
   return /topframe/i.test(name);
 }
-
 function isIframe(name: string): boolean {
   return /iframe/i.test(name);
 }
-
 function isPopupWindow(name: string): boolean {
   return /popup/i.test(name);
 }
 
-// Walk up to the nearest ancestor that is navigable (Iframe or TopFrame)
 function resolveNavTargetFrame(
   frameName: string,
   childMap: Record<string, { id: string }[]>
 ): string {
   if (isTopFrame(frameName) || isIframe(frameName) || isPopupWindow(frameName)) return frameName;
-
   for (const parentName in childMap) {
     const children = childMap[parentName] || [];
-    if (children.some(child => child.id === frameName)) {
-      return resolveNavTargetFrame(parentName, childMap);
-    }
+    if (children.some((child) => child.id === frameName)) return resolveNavTargetFrame(parentName, childMap);
   }
   return "TopFrame";
 }
@@ -69,17 +72,14 @@ function findOriginForFrameName(
   const hostRoot = typeof window !== "undefined" ? `${window.location.host}/` : "";
   const lower = frameName.toLowerCase();
 
-  if (lower.includes("topframe")) {
-    return originUrls.find(url => url === hostRoot) || originUrls[0];
-  }
-  if (lower.includes("samedomain")) {
-    return originUrls.find(url => url.startsWith(hostRoot) && url.endsWith("/frame/")) || originUrls[0];
-  }
-  if (lower.includes("crossdomain")) {
-    return originUrls.find(url => url.endsWith("/frame/") && url !== hostRoot + "frame/") || originUrls[0];
-  }
+  if (lower.includes("topframe")) return originUrls.find((url) => url === hostRoot) || originUrls[0];
+  if (lower.includes("samedomain"))
+    return originUrls.find((url) => url.startsWith(hostRoot) && url.endsWith("/frame/")) || originUrls[0];
+  if (lower.includes("crossdomain"))
+    return originUrls.find((url) => url.endsWith("/frame/") && url !== hostRoot + "frame/") || originUrls[0];
+
   for (const parentName in childMap) {
-    if ((childMap[parentName] || []).some(child => child.id === frameName)) {
+    if ((childMap[parentName] || []).some((child) => child.id === frameName)) {
       return findOriginForFrameName(parentName, originUrls, childMap);
     }
   }
@@ -96,79 +96,123 @@ export default function NavigationMenu() {
     addElementToCurrentFrame,
   } = useFrame();
 
-  const initialPagesMap = getInitialPagesByOrigin();
+  const initialPagesByOrigin = getInitialPagesByOrigin();
 
-  const [pagesByOrigin, setPagesByOrigin] = useState(initialPagesMap);
-  const [selectedOriginUrl, setSelectedOriginUrl] = useState(Object.keys(initialPagesMap)[0]);
+  // Start with defaults on the server; load real values on the client after mount.
+  const [pagesByOrigin, setPagesByOrigin] = useState<PagesByOrigin>(initialPagesByOrigin);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setPagesByOrigin(loadPagesByOriginWithDefaults(initialPagesByOrigin));
+    setIsMounted(true);
+  }, []);
+
+  // Persist to URL/sessionStorage only after mount.
+  useEffect(() => {
+    if (!isMounted) return;
+    persistPagesByOrigin(pagesByOrigin);
+  }, [pagesByOrigin, isMounted]);
+
+  const [selectedOriginUrl, setSelectedOriginUrl] = useState(Object.keys(initialPagesByOrigin)[0]);
   const [selectedPageName, setSelectedPageName] = useState("Home Page");
   const [navigationMode, setNavigationMode] = useState<NavigationType>(NavigationType.Full);
 
-  const [expandedItemIds, setExpandedItemIds] = useState<string[]>(() =>
-    Object.entries(initialPagesMap).flatMap(([originUrl, pageTitles]) => [
+  // Expand the tree based on the currently loaded pages.
+  const [expandedItemIds, setExpandedItemIds] = useState<string[]>(
+    Object.entries(initialPagesByOrigin).flatMap(([originUrl, pageTitles]) => [
       originUrl,
-      ...pageTitles.map(pageTitle => `${originUrl}-${pageTitle}`),
+      ...pageTitles.map((pageTitle) => `${originUrl}-${pageTitle}`),
     ])
   );
-  const [destinationOriginUrl, setDestinationOriginUrl] = useState<string>(Object.keys(initialPagesMap)[0]);
 
-  // Compute destination origin based on the nearest navigable ancestor (TopFrame or Iframe)
+  // Keep the tree expansion and selected origin in sync with loaded data.
+  useEffect(() => {
+    if (!isMounted) return;
+    const allOriginUrls = Object.keys(pagesByOrigin);
+    if (allOriginUrls.length === 0) return;
+
+    if (!allOriginUrls.includes(selectedOriginUrl)) {
+      setSelectedOriginUrl(allOriginUrls[0]);
+    }
+
+    setExpandedItemIds(
+      allOriginUrls.flatMap((originUrl) => [
+        originUrl,
+        ...(pagesByOrigin[originUrl] || []).map((pageTitle) => `${originUrl}-${pageTitle}`),
+      ])
+    );
+  }, [pagesByOrigin, isMounted]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Compute the destination origin for the selected frame/container.
+  const [destinationOriginUrl, setDestinationOriginUrl] = useState<string>(Object.keys(initialPagesByOrigin)[0]);
+
   useEffect(() => {
     const allOriginUrls = Object.keys(pagesByOrigin);
-    const navTarget = resolveNavTargetFrame(currentFrameName, frameElementsByFrameName as any);
-    const computedDestination = findOriginForFrameName(navTarget, allOriginUrls, frameElementsByFrameName as any);
-    setDestinationOriginUrl(computedDestination);
+    const navTargetFrameName = resolveNavTargetFrame(currentFrameName, frameElementsByFrameName as any);
+    const computedDestinationOrigin = findOriginForFrameName(
+      navTargetFrameName,
+      allOriginUrls,
+      frameElementsByFrameName as any
+    );
+    setDestinationOriginUrl(computedDestinationOrigin);
   }, [currentFrameName, containerRefs, pagesByOrigin, frameElementsByFrameName]);
 
+  // If destination origin changes, default to its first page (or Home Page).
   useEffect(() => {
     const pagesForDestination = pagesByOrigin[destinationOriginUrl] || [];
     setSelectedPageName(pagesForDestination[0] || "Home Page");
   }, [destinationOriginUrl, pagesByOrigin]);
 
   function addNewPage(): void {
-    const baseName = "Page";
-    let counter = 1;
-    const existing = pagesByOrigin[selectedOriginUrl];
-    while (existing.includes(`${baseName}${counter}`)) counter++;
-    const newTitle = `${baseName}${counter}`;
-    setPagesByOrigin(prev => ({
+    const baseTitle = "Page";
+    let nextNumber = 1;
+    const currentOriginPages = pagesByOrigin[selectedOriginUrl];
+
+    while (currentOriginPages.includes(`${baseTitle}${nextNumber}`)) nextNumber++;
+
+    const newPageTitle = `${baseTitle}${nextNumber}`;
+
+    setPagesByOrigin((prev) => ({
       ...prev,
-      [selectedOriginUrl]: [...prev[selectedOriginUrl], newTitle],
+      [selectedOriginUrl]: [...prev[selectedOriginUrl], newPageTitle],
     }));
-    setExpandedItemIds(prev => [...prev, `${selectedOriginUrl}-${newTitle}`]);
-    setSelectedPageName(newTitle);
+
+    setExpandedItemIds((prev) => [...prev, `${selectedOriginUrl}-${newPageTitle}`]);
+    setSelectedPageName(newPageTitle);
   }
 
   function handleAddNavigationButton(): void {
     const isFrameOrContainer = false;
-    const isHome = selectedPageName === "Home Page";
-    const pageSegment = isHome ? "" : encodeURIComponent(selectedPageName);
+    const isHomePage = selectedPageName === "Home Page";
+    const pageSegment = isHomePage ? "" : encodeURIComponent(selectedPageName);
 
-    const navTarget = resolveNavTargetFrame(currentFrameName, frameElementsByFrameName as any);
+    const navTargetFrameName = resolveNavTargetFrame(currentFrameName, frameElementsByFrameName as any);
 
-    let destinationPage: string;
-    if (isTopFrame(navTarget)) {
-      destinationPage = destinationOriginUrl + pageSegment;
-    } else if (isIframe(navTarget) || isPopupWindow(navTarget)) {
-      destinationPage = destinationOriginUrl + navTarget + (isHome ? "" : "/" + pageSegment);
+    let destinationPageUrl: string;
+    if (isTopFrame(navTargetFrameName)) {
+      destinationPageUrl = destinationOriginUrl + pageSegment;
+    } else if (isIframe(navTargetFrameName) || isPopupWindow(navTargetFrameName)) {
+      destinationPageUrl = destinationOriginUrl + navTargetFrameName + (isHomePage ? "" : "/" + pageSegment);
     } else {
-      destinationPage = destinationOriginUrl + pageSegment;
+      destinationPageUrl = destinationOriginUrl + pageSegment;
     }
 
     addElementToCurrentFrame("NavigationButton", isFrameOrContainer, {
-      destinationPage,
+      destinationPage: destinationPageUrl,
       navigationType: navigationMode,
     });
   }
 
   function removePage(originUrl: string, pageTitle: string): void {
-    setPagesByOrigin(prev => ({
+    setPagesByOrigin((prev) => ({
       ...prev,
-      [originUrl]: prev[originUrl].filter(title => title !== pageTitle),
+      [originUrl]: prev[originUrl].filter((title) => title !== pageTitle),
     }));
     if (selectedPageName === pageTitle) setSelectedPageName("Home Page");
   }
 
-  const destinationPageOptions = pagesByOrigin[destinationOriginUrl] || ["Home Page"];
+  const availableDestinationPages = pagesByOrigin[destinationOriginUrl] || ["Home Page"];
+  const containerSelectValue = isMounted && frameNameList.includes(currentFrameName) ? currentFrameName : "";
 
   return (
     <Stack>
@@ -180,7 +224,7 @@ export default function NavigationMenu() {
         >
           {Object.entries(pagesByOrigin).map(([originUrl, pageTitles]) => (
             <TreeItem key={originUrl} itemId={originUrl} label={originUrl}>
-              {pageTitles.map(pageTitle => (
+              {pageTitles.map((pageTitle) => (
                 <TreeItem
                   key={pageTitle}
                   itemId={`${originUrl}-${pageTitle}`}
@@ -208,7 +252,7 @@ export default function NavigationMenu() {
           onChange={(event: SelectChangeEvent<string>) => setSelectedOriginUrl(event.target.value)}
           sx={{ textAlign: "center" }}
         >
-          {Object.keys(pagesByOrigin).map(originUrl => (
+          {Object.keys(pagesByOrigin).map((originUrl) => (
             <MenuItem key={originUrl} value={originUrl}>
               {originUrl}
             </MenuItem>
@@ -225,15 +269,18 @@ export default function NavigationMenu() {
       <FormControl size="small" fullWidth sx={{ mb: 1 }}>
         <FormHelperText>Select a Container</FormHelperText>
         <Select
-          value={currentFrameName}
+          value={containerSelectValue}
           onChange={(event: SelectChangeEvent<string>) => setCurrentFrameName(event.target.value)}
+          displayEmpty
           sx={{ textAlign: "center" }}
         >
-          {frameNameList.map(frameName => (
-            <MenuItem key={frameName} value={frameName}>
-              {frameName.replace(/([A-Z])/g, " $1").trim().toUpperCase()}
-            </MenuItem>
-          ))}
+          <MenuItem value="">Select a frame</MenuItem>
+          {isMounted &&
+            frameNameList.map((frameName) => (
+              <MenuItem key={frameName} value={frameName}>
+                {frameName.replace(/([A-Z])/g, " $1").trim().toUpperCase()}
+              </MenuItem>
+            ))}
         </Select>
       </FormControl>
 
@@ -246,7 +293,7 @@ export default function NavigationMenu() {
           onChange={(event: SelectChangeEvent<string>) => setSelectedPageName(event.target.value)}
           sx={{ textAlign: "center" }}
         >
-          {destinationPageOptions.map(pageOption => (
+          {availableDestinationPages.map((pageOption) => (
             <MenuItem key={pageOption} value={pageOption}>
               {pageOption.toUpperCase()}
             </MenuItem>
@@ -263,13 +310,8 @@ export default function NavigationMenu() {
           }
         >
           <FormControlLabel value={NavigationType.Full} control={<Radio />} label="Full Page Navigation" />
-          <FormControlLabel
-            value={NavigationType.SPA}
-            control={<Radio />}
-            label="SPA Navigation"
-          />
+          <FormControlLabel value={NavigationType.SPA} control={<Radio />} label="SPA Navigation" />
           <FormControlLabel value={NavigationType.FullReplace} control={<Radio />} label="Full Page + SPA Replace" />
-         
         </RadioGroup>
       </FormControl>
 

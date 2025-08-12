@@ -60,15 +60,14 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     : `${isDev ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN}${SAME_DOMAIN_PATH}${savedName}`;
 
   const openPopup = () => {
-    const topWindow = window.top ?? window;
-    const popupWidth = topWindow.innerWidth / 2;
-    const popupHeight = topWindow.innerHeight;
+    const popupWidth = window.innerWidth ;
+    const popupHeight = window.innerHeight;
     const popup = window.open(iframeSrc, savedName, `width=${popupWidth},height=${popupHeight}`);
     popupWindowRef.current = popup;
 
-    // NEW: force initial sync for this instance
     lastPopupPayloadJsonRef.current = "";
   };
+
 
 
   const payload = useMemo(
