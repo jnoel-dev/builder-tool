@@ -74,12 +74,13 @@ export interface ChildWindowMessagingCallbacks {
    ========= */
 
 function relayToOpenerIfPresent(message: FrameMessage): void {
-
   if (window.opener && window.top === window) {
-    console.log("FORWRDING")
-    window.opener.postMessage(message, window.location.origin);
+    const openerOrigin =
+      document.referrer ? new URL(document.referrer).origin : "*";
+    window.opener.postMessage(message, openerOrigin);
   }
 }
+
 
 /* Maintain a handshake-based trust map of frameName -> Window */
 type FrameWindowMap = Record<string, Window>;
