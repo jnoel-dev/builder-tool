@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -45,7 +45,6 @@ export default function Frame({ savedName, frameType }: FrameProps) {
   const [iframeSize, setIframeSize] = useState({ width: 0, height: 0 });
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const popupWindowRef = useRef<Window | null>(null);
-  const [isIframeReadyMessage, setIsIframeReadyMessage] = useState(false);
   const [isIframeDomLoaded, setIsIframeDomLoaded] = useState(false);
   const lastIframePayloadJsonRef = useRef<string>('');
   const lastPopupPayloadJsonRef = useRef<string>('');
@@ -60,94 +59,18 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     : `${isDev ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN}${SAME_DOMAIN_PATH}${savedName}`;
 
   const openPopup = () => {
-    const popupWidth = window.innerWidth /2 ;
-    const popupHeight = window.innerHeight /2;
+    const popupWidth = window.innerWidth / 2;
+    const popupHeight = window.innerHeight / 2;
     const popup = window.open(iframeSrc, savedName, `width=${popupWidth},height=${popupHeight}`);
     popupWindowRef.current = popup;
-
-    lastPopupPayloadJsonRef.current = "";
+    lastPopupPayloadJsonRef.current = '';
   };
-
-
-
-  const payload = useMemo(
-    () => getSyncPayload(savedName, frameElementsByFrameName),
-    [savedName, frameElementsByFrameName]
-  );
-
-  
-
-  useEffect(() => {
-    function handleMessage(event: MessageEvent) {
-      if (event.data?.type === 'iframeReady') {
-        if (POST_MESSAGE_LOG_ENABLED) {
-          console.log(
-            `[PostMessage Receive] iframeReady | frameName: ${event.data.frameName} | target: ${window.name || 'TopFrame'}`
-          );
-        }
-        if (event.data?.frameName === savedName) {
-          setIsIframeReadyMessage(true);
-        }
-
-        if (isPopup) {
-          const target = (event.source as Window) || popupWindowRef.current;
-          if (!target) return;
-
-          const json = JSON.stringify(payload);
-          lastPopupPayloadJsonRef.current = json;
-          if (POST_MESSAGE_LOG_ENABLED) {
-            console.log(`[PostMessage Send] syncFrame → popup(handshake) | frame: ${savedName}`, payload);
-          }
-          target.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
-        }
-      }
-
-      if (event.data?.type === 'frameNavStart' && event.data?.frameName === savedName) {
-        if (POST_MESSAGE_LOG_ENABLED) {
-          console.log(`[PostMessage Receive] frameNavStart | frameName: ${event.data.frameName}`);
-        }
-        setIsIframeDomLoaded(false);
-        setIsIframeReadyMessage(false);
-      }
-    }
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [payload, isPopup, savedName]);
-
-
-  useEffect(() => {
-    if (!isPopup || !isIframeReadyMessage) return;
-    const popup = popupWindowRef.current;
-    if (!popup) return;
-
-    const json = JSON.stringify(payload);
-    if (json === lastPopupPayloadJsonRef.current) return; // still fine for subsequent updates
-
-    lastPopupPayloadJsonRef.current = json;
-    if (POST_MESSAGE_LOG_ENABLED) {
-      console.log(`[PostMessage Send] syncFrame → popup(update) | frame: ${savedName}`, payload);
-    }
-    popup.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
-  }, [payload, isIframeReadyMessage, isPopup, savedName]);
-
 
   useEffect(() => {
     if (!savedName) return;
     if (registeredFramesRef.current.has(savedName)) return;
     registeredFramesRef.current.add(savedName);
     registerFrame(savedName);
-  }, [savedName]); 
-
-  useEffect(() => {
-    const targetWindow = window.opener ?? window.top;
-    if (targetWindow === window) return;
-    if (POST_MESSAGE_LOG_ENABLED) {
-      console.log(
-        `[PostMessage Send] frameAdded | from: ${window.name || 'TopFrame'} | newFrame: ${savedName}`
-      );
-    }
-    targetWindow.postMessage({ type: 'frameAdded', frameName: savedName }, '*');
   }, [savedName]);
 
   useEffect(() => {
@@ -163,23 +86,9 @@ export default function Frame({ savedName, frameType }: FrameProps) {
   }, [containerRefs]);
 
   useEffect(() => {
-    if (!isIframeReadyMessage || !isIframeDomLoaded) return;
-    const childWindow = iframeRef.current?.contentWindow;
-    if (!childWindow) return;
-    const json = JSON.stringify(payload);
-    if (json === lastIframePayloadJsonRef.current) return;
-    lastIframePayloadJsonRef.current = json;
-    if (POST_MESSAGE_LOG_ENABLED) {
-      console.log(`[PostMessage Send] syncFrame → iframe | frame: ${savedName}`, payload);
-    }
-    childWindow.postMessage({ type: 'syncFrame', frameName: savedName, elements: payload }, '*');
-  }, [payload, isIframeReadyMessage, isIframeDomLoaded, savedName]);
-
-  useEffect(() => {
     lastIframePayloadJsonRef.current = '';
     lastPopupPayloadJsonRef.current = '';
     setIsIframeDomLoaded(false);
-    setIsIframeReadyMessage(false);
     registeredFramesRef.current.delete(savedName);
   }, [savedName]);
 
@@ -190,15 +99,12 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     if (!win) return;
 
     const startLoading = () => {
-      console.log("START LOADING")
       setIsIframeDomLoaded(false);
-      setIsIframeReadyMessage(false);
     };
 
     try {
       win.addEventListener('beforeunload', startLoading);
-    } catch {
-    }
+    } catch {}
   };
 
   if (isPopup) {
@@ -222,7 +128,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     );
   }
 
-  const showSpinner = !(isIframeReadyMessage && isIframeDomLoaded);
+  const showSpinner = !isIframeDomLoaded;
 
   return (
     <Box>

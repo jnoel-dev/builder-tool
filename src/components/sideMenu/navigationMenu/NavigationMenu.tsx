@@ -98,7 +98,6 @@ export default function NavigationMenu() {
 
   const initialPagesByOrigin = getInitialPagesByOrigin();
 
-  // Start with defaults on the server; load real values on the client after mount.
   const [pagesByOrigin, setPagesByOrigin] = useState<PagesByOrigin>(initialPagesByOrigin);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -107,7 +106,6 @@ export default function NavigationMenu() {
     setIsMounted(true);
   }, []);
 
-  // Persist to URL/sessionStorage only after mount.
   useEffect(() => {
     if (!isMounted) return;
     persistPagesByOrigin(pagesByOrigin);
@@ -117,7 +115,6 @@ export default function NavigationMenu() {
   const [selectedPageName, setSelectedPageName] = useState("Home Page");
   const [navigationMode, setNavigationMode] = useState<NavigationType>(NavigationType.Full);
 
-  // Expand the tree based on the currently loaded pages.
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>(
     Object.entries(initialPagesByOrigin).flatMap(([originUrl, pageTitles]) => [
       originUrl,
@@ -125,7 +122,6 @@ export default function NavigationMenu() {
     ])
   );
 
-  // Keep the tree expansion and selected origin in sync with loaded data.
   useEffect(() => {
     if (!isMounted) return;
     const allOriginUrls = Object.keys(pagesByOrigin);
@@ -143,7 +139,6 @@ export default function NavigationMenu() {
     );
   }, [pagesByOrigin, isMounted]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Compute the destination origin for the selected frame/container.
   const [destinationOriginUrl, setDestinationOriginUrl] = useState<string>(Object.keys(initialPagesByOrigin)[0]);
 
   useEffect(() => {
@@ -157,7 +152,6 @@ export default function NavigationMenu() {
     setDestinationOriginUrl(computedDestinationOrigin);
   }, [currentFrameName, containerRefs, pagesByOrigin, frameElementsByFrameName]);
 
-  // If destination origin changes, default to its first page (or Home Page).
   useEffect(() => {
     const pagesForDestination = pagesByOrigin[destinationOriginUrl] || [];
     setSelectedPageName(pagesForDestination[0] || "Home Page");
@@ -181,31 +175,31 @@ export default function NavigationMenu() {
     setSelectedPageName(newPageTitle);
   }
 
-function handleAddNavigationButton(): void {
-  const isFrameOrContainer = false;
+  function handleAddNavigationButton(): void {
+    const isFrameOrContainer = false;
 
-  const knownOrigins = Object.keys(pagesByOrigin); // same order you persist with originN
-  const originIndex = Math.max(0, knownOrigins.indexOf(destinationOriginUrl));
+    const knownOrigins = Object.keys(pagesByOrigin);
+    const originIndex = Math.max(0, knownOrigins.indexOf(destinationOriginUrl));
 
-  const isHomePage = selectedPageName === "Home Page";
-  const pageName = isHomePage ? undefined : selectedPageName;
+    const isHomePage = selectedPageName === "Home Page";
+    const pageName = isHomePage ? undefined : selectedPageName;
 
-  const navTargetFrameName = resolveNavTargetFrame(currentFrameName, frameElementsByFrameName as any);
+    const navTargetFrameName = resolveNavTargetFrame(currentFrameName, frameElementsByFrameName as any);
 
-  const isTop = isTopFrame(navTargetFrameName);
-  const isChildFrame = isIframe(navTargetFrameName) || isPopupWindow(navTargetFrameName);
+    const isTop = isTopFrame(navTargetFrameName);
+    const isChildFrame = isIframe(navTargetFrameName) || isPopupWindow(navTargetFrameName);
 
-  const navigationTarget = {
-    originIndex,
-    frameId: isChildFrame ? navTargetFrameName : undefined,
-    pageName,
-  };
+    const navigationTarget = {
+      originIndex,
+      frameId: isChildFrame ? navTargetFrameName : undefined,
+      pageName,
+    };
 
-  addElementToCurrentFrame("NavigationButton", isFrameOrContainer, {
-    navigationTarget,
-    navigationType: navigationMode,
-  });
-}
+    addElementToCurrentFrame("NavigationButton", isFrameOrContainer, {
+      navigationTarget,
+      navigationType: navigationMode,
+    });
+  }
 
   function removePage(originUrl: string, pageTitle: string): void {
     setPagesByOrigin((prev) => ({

@@ -3,7 +3,7 @@
 import React from "react";
 import Button from "@mui/material/Button";
 import { NavigationType } from "../NavigationTypes";
-import { getKnownChildWindowByFrameName } from "@/components/contexts/FrameManager/frameMessaging";
+import { getKnownChildWindowInfoByFrameName } from "@/components/contexts/FrameManager/frameMessaging";
 
 type NavigationTarget = {
   originIndex: number;
@@ -52,7 +52,7 @@ function spaNavigateTopFrame(target: NavigationTarget): boolean {
 function spaNavigateChildFrame(target: NavigationTarget): boolean {
   if (!target.frameId) return false;
 
-  const childWindow = getKnownChildWindowByFrameName(target.frameId);
+  const childWindow = getKnownChildWindowInfoByFrameName(target.frameId)?.childWindow;
   if (!childWindow) return false;
 
   try {

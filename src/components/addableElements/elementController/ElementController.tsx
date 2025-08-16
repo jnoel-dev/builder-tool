@@ -11,7 +11,7 @@ import {
   useFrame,
   POST_MESSAGE_LOG_ENABLED,
 } from '@/components/contexts/FrameManager/FrameManager';
-import { FrameElement } from '@/components/contexts/FrameManager/frameUtils';
+import { FrameElement } from '@/components/contexts/FrameManager/FrameManager';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -40,7 +40,6 @@ export default function ElementController({
     updateElementPosition,
     removeElementFromFrame,
     unregisterFrame,
-    
   } = useFrame();
 
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -51,12 +50,6 @@ export default function ElementController({
     x: elementToControl.xPercent,
     y: elementToControl.yPercent,
   });
-
-
-
-
-
-
 
   useEffect(() => {
     setPositionPercent({
@@ -83,25 +76,21 @@ export default function ElementController({
       y: clickPercentY - positionPercent.y,
     };
 
-
     isDragging.current = true;
   }
 
   function onDragMove(event: MouseEvent) {
     if (!isDragging.current) return;
     const containerEl = containerRef.current;
-    
     if (!containerEl) return;
     const containerRect = containerEl.getBoundingClientRect();
 
     const wrapperEl = wrapperRef.current;
- 
     if (!wrapperEl) return;
     const wrapperRect = wrapperEl.getBoundingClientRect();
-    const widthPercent =
-      (wrapperRect.width / containerRect.width) * 100;
-    const heightPercent =
-      (wrapperRect.height / containerRect.height) * 100;
+
+    const widthPercent = (wrapperRect.width / containerRect.width) * 100;
+    const heightPercent = (wrapperRect.height / containerRect.height) * 100;
 
     const cursorPercentX =
       ((event.clientX - containerRect.left) / containerRect.width) * 100;
@@ -117,47 +106,47 @@ export default function ElementController({
     });
   }
 
-function onDragEnd() {
-  if (!isDragging.current) return;
-  isDragging.current = false;
+  function onDragEnd() {
+    if (!isDragging.current) return;
+    isDragging.current = false;
 
-  updateElementPosition(
-    elementToControl.id,
-    positionPercent.x,
-    positionPercent.y,
-    connectedFrameOrContainerName
-  );
-
-  const targetWindow = window.top;
-
-  if (targetWindow) {
-    if (POST_MESSAGE_LOG_ENABLED) {
-      console.log(
-        `[PostMessage Send] updateElementPosition` +
-          ` | from: ${window.name || 'TopFrame'}` +
-          ` | to: ${targetWindow === window.opener ? 'opener' : 'top'}` +
-          ` | element: ${elementToControl.id}` +
-          ` | x: ${positionPercent.x}` +
-          ` | y: ${positionPercent.y}`
-      );
-    }
-
-   
-    console.log("TARGET: ",targetWindow)
-    targetWindow.postMessage(
-      {
+    // If we're inside an iframe, send intent up to TopFrame.
+    if (window.top !== window) {
+      const frameNameForTop =
+        connectedFrameOrContainerName === 'TopFrame'
+          ? (window.name)
+          : connectedFrameOrContainerName;
+      
+      const segments = document.location.pathname.split("/").filter(Boolean);
+      const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");
+      const msg = {
         type: 'updateElementPosition',
-        frameName: window.name,
+        frameName: frameNameForTop,
         elementId: elementToControl.id,
         xPercent: positionPercent.x,
         yPercent: positionPercent.y,
-      },
-      '*'
+        pageName: pageName
+      };
+
+      if (POST_MESSAGE_LOG_ENABLED) {
+        console.log(
+          `[PostMessage Send] from "${window.name || 'ChildFrame'}" to "TopFrame" | type: updateElementPosition | content:`,
+          msg
+        );
+      }
+
+      if (frameNameForTop) window.top?.postMessage(msg, '*');
+
+    }
+
+    // Top window mutation
+    updateElementPosition(
+      elementToControl.id,
+      positionPercent.x,
+      positionPercent.y,
+      connectedFrameOrContainerName
     );
   }
-}
-
-
 
   useEffect(() => {
     document.addEventListener('mousemove', onDragMove);
@@ -168,45 +157,40 @@ function onDragEnd() {
     };
   }, [positionPercent]);
 
-function onRemoveClick() {
-  removeElementFromFrame(
-    elementToControl.id,
-    connectedFrameOrContainerName
-  );
+  function onRemoveClick() {
+    if (window.top !== window) {
+      const frameNameForTop =
+        connectedFrameOrContainerName === 'TopFrame'
+          ? (window.name)
+          : connectedFrameOrContainerName;
 
-  if (elementToControl.isFrameOrContainer) {
-    unregisterFrame(elementToControl);
-  }
+      const segments = document.location.pathname.split("/").filter(Boolean);
+      const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");
+      const msg = {
+        type: 'removeElement',
+        frameName: frameNameForTop,
+        elementId: elementToControl.id,
+        isFrameOrContainer: elementToControl.isFrameOrContainer,
+        pageName: pageName
+      };
 
-  const targetWindow = window.top;
+      if (POST_MESSAGE_LOG_ENABLED) {
+        console.log(
+          `[PostMessage Send] from "${window.name || 'ChildFrame'}" to "TopFrame" | type: removeElement | content:`,
+          msg
+        );
+      }
 
-  if (targetWindow) {
-    if (POST_MESSAGE_LOG_ENABLED) {
-      console.log(
-        `[PostMessage Send] removeElement` +
-          ` | from: ${window.name || 'TopFrame'}` +
-          ` | to: ${targetWindow === window.opener ? 'opener' : 'top'}` +
-          ` | element: ${elementToControl.id}`
-      );
+      if (frameNameForTop) window.top?.postMessage(msg, '*');
+
     }
 
-    targetWindow.postMessage(
-      {
-        type: 'removeElement',
-        elementId: elementToControl.id,
-        frameName:
-          connectedFrameOrContainerName === 'TopFrame'
-            ? window.name
-            : connectedFrameOrContainerName,
-        element: elementToControl,
-      },
-      '*'
-    );
+    // Top window mutation
+    removeElementFromFrame(elementToControl.id, connectedFrameOrContainerName);
+    if (elementToControl.isFrameOrContainer) {
+      unregisterFrame(elementToControl);
+    }
   }
-}
-
-
-
 
   const wrapperStyle: CSSProperties = controlsDisabled
     ? { position: 'relative', width: 'fit-content' }
@@ -217,46 +201,40 @@ function onRemoveClick() {
         transform: 'translate(-50%, -50%)',
       };
 
-
-
-
-return (
-  <div
-    id={elementToControl.id}
-    ref={wrapperRef}
-    style={{
-      ...wrapperStyle,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-end',
-      width: 'max-content',
-     
-    
-    }}
-  >
-    <Stack direction="row-reverse" sx={{ color: theme.palette.text.primary }}>
-      <IconButton size="small" onClick={onRemoveClick} sx={{ padding: 0 }}>
-        <CloseIcon />
-      </IconButton>
-      {!controlsDisabled && (
-        <IconButton
-          disableRipple
-          size="small"
-          onMouseDown={onDragStart}
-          sx={{
-            padding: 0,
-            cursor: 'grab',
-            '&:hover': { cursor: 'grab' },
-            '&:active': { cursor: 'grabbing' },
-          }}
-        >
-          <DragIndicatorIcon />
+  return (
+    <div
+      id={elementToControl.id}
+      ref={wrapperRef}
+      style={{
+        ...wrapperStyle,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        width: 'max-content',
+      }}
+    >
+      <Stack direction="row-reverse" sx={{ color: theme.palette.text.primary }}>
+        <IconButton size="small" onClick={onRemoveClick} sx={{ padding: 0 }}>
+          <CloseIcon />
         </IconButton>
-      )}
-      {elementToControl.id}
-    </Stack>
-    {children}
-  </div>
-);
-
+        {!controlsDisabled && (
+          <IconButton
+            disableRipple
+            size="small"
+            onMouseDown={onDragStart}
+            sx={{
+              padding: 0,
+              cursor: 'grab',
+              '&:hover': { cursor: 'grab' },
+              '&:active': { cursor: 'grabbing' },
+            }}
+          >
+            <DragIndicatorIcon />
+          </IconButton>
+        )}
+        {elementToControl.id}
+      </Stack>
+      {children}
+    </div>
+  );
 }

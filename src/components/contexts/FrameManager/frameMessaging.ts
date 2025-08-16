@@ -1,317 +1,137 @@
-import { FrameElement, isSameOrigin } from "./frameUtils";
+import { POST_MESSAGE_LOG_ENABLED } from "./FrameManager";
+import type { FrameElement } from "./FrameManager";
 
-/* =========
-   Message Types
-   ========= */
+type FramesByName = Record<string, FrameElement[]>;
 
-export type RemoveElementMessage = {
-  type: "removeElement";
-  elementId: string;
-  frameName: string;
-  element?: FrameElement;
-};
-
-export type UpdateElementPositionMessage = {
+type RequestSyncMessage = { type: "requestSync"; frameName: string; pageName?: string };
+type UpdatePositionMessage = {
   type: "updateElementPosition";
-  elementId: string;
   frameName: string;
+  elementId: string;
   xPercent: number;
   yPercent: number;
 };
-
-export type FrameAddedMessage = {
-  type: "frameAdded";
+type RemoveElementMessage = {
+  type: "removeElement";
   frameName: string;
+  elementId: string;
+  isFrameOrContainer: boolean;
 };
 
-export type FramePageChangedMessage = {
-  type: "framePageChanged";
-  frameName: string;
-  pageName: string;
-};
+type TopIncomingMessage =
+  | RequestSyncMessage
+  | UpdatePositionMessage
+  | RemoveElementMessage;
 
-export type SyncFrameMessage = {
-  type: "syncFrame";
-  frameName: string;
-  elements: Record<string, FrameElement[]>;
-};
-
-export type IframeReadyMessage = {
-  type: "iframeReady";
-  frameName: string;
-};
-
-export type FrameMessage =
-  | RemoveElementMessage
-  | UpdateElementPositionMessage
-  | FrameAddedMessage
-  | FramePageChangedMessage
-  | SyncFrameMessage
-  | IframeReadyMessage;
-
-/* =========
-   Callbacks expected by messaging
-   ========= */
-
-export interface TopWindowMessagingCallbacks {
-  onRemoveElement: (frameName: string, elementId: string, element?: FrameElement) => void;
-  onUpdateElementPosition: (
-    frameName: string,
-    elementId: string,
-    xPercent: number,
-    yPercent: number
-  ) => void;
-  onRegisterFrame: (frameName: string) => void;
-  onChildPageChanged: (frameName: string, pageName: string) => void;
+type ChildWindowInfo = {
+  childWindow: Window;
+  currentPage: string;
+  
 }
+const childWindowsByName = new Map<string, ChildWindowInfo>();
 
-export interface ChildWindowMessagingCallbacks {
-  onApplySyncedElements: (elementsByFrame: Record<string, FrameElement[]>) => void;
-}
-
-/* =========
-   Utilities
-   ========= */
-
-function relayToOpenerIfPresent(message: FrameMessage): void {
-  if (window.opener && window.top === window) {
-    const openerOrigin =
-      document.referrer ? new URL(document.referrer).origin : "*";
-    window.opener.postMessage(message, openerOrigin);
-  }
-}
-
-
-/* Maintain a handshake-based trust map of frameName -> Window */
-type FrameWindowMap = Record<string, Window>;
-let knownChildWindowsByFrameName: FrameWindowMap = {};
-
-export function getKnownChildWindowByFrameName(frameName: string): Window | undefined {
-  return knownChildWindowsByFrameName[frameName];
-}
-
-function isTrustedChild(frameName: string, source: MessageEventSource | null): boolean {
-  const win = knownChildWindowsByFrameName[frameName];
-  return !!win && !!source && source === win;
-}
-
-function relayToParentIfPresent(message: FrameMessage): void {
-  // Relay only if this window is not the real top (covers iframes)
-  if (window.top !== window) {
-    window.parent?.postMessage(message, "*");
-  }
-}
-
-
-/* =========
-   Top window: attach a single dispatcher
-   ========= */
-
-export function attachTopWindowMessaging(callbacks: TopWindowMessagingCallbacks): () => void {
-  function handleMessage(event: MessageEvent): void {
-    const data = event.data as FrameMessage | undefined;
-    if (!data || typeof data !== "object") return;
-
-
-      const extra =
-        "frameName" in data
-          ? ` | frameName: ${ (data as any).frameName }`
-          : "";
-      console.log(`[PostMessage Receive] ${data.type}${extra}`);
-    
-
-
-    if (data.type === "iframeReady") {
-      if (event.source && typeof (event.source as Window).postMessage === "function") {
-        knownChildWindowsByFrameName[data.frameName] = event.source as Window;
-      }
-      return;
-    }
-
-    const sameOrigin = isSameOrigin(event);
-    const hasFrameName = "frameName" in data;
-
-    const allowedOrigins = new Set<string>([
-      "http://localhost:3001",
-      "https://frame.jonnoel.dev",
-    ]);
-
-    const isAllowedOrigin = allowedOrigins.has(event.origin);
-
-    const trusted =
-      hasFrameName &&
-      (sameOrigin || isTrustedChild((data as any).frameName, event.source) || isAllowedOrigin);
-
-
-    switch (data.type) {
-      case "removeElement": {
-        if (!trusted) return;
-        callbacks.onRemoveElement(data.frameName, data.elementId, data.element);
-        relayToOpenerIfPresent(data);
-        break;
-      }
-      case "updateElementPosition": {
-
-        if (!trusted) return;
-        callbacks.onUpdateElementPosition(
-          data.frameName,
-          data.elementId,
-          data.xPercent,
-          data.yPercent
-        );
-        relayToOpenerIfPresent(data);
-        break;
-      }
-      case "frameAdded": {
-
-        if (data.frameName !== "TopFrame") {
-          console.log("TOP FRAME REGISTER")
-          callbacks.onRegisterFrame(data.frameName);
-        }
-        relayToOpenerIfPresent(data);
-        break;
-      }
-
-      case "framePageChanged": {
-        if (!trusted) return;
-        callbacks.onChildPageChanged(data.frameName, data.pageName);
-        break;
-      }
-      case "syncFrame":
-      default:
-        break;
-    }
-  }
-
-  window.addEventListener("message", handleMessage);
-  return () => window.removeEventListener("message", handleMessage);
-}
-
-/* =========
-   Child window: receive sync and announce readiness
-   ========= */
-
-export function attachChildWindowMessaging(callbacks: ChildWindowMessagingCallbacks): () => void {
-  function handleMessage(event: MessageEvent): void {
-    const data = event.data as FrameMessage | undefined;
-    if (!data || typeof data !== "object") return;
-
-    // We only consume syncFrame here…
-    if (data.type === "syncFrame") {
-      if (data.frameName !== (window as any).name) return;
-      callbacks.onApplySyncedElements(data.elements);
-      return;
-    }
-
-    // …but if a child-of-this-child sends control messages, bubble them up.
-    if (
-      data.type === "framePageChanged" ||
-      data.type === "frameAdded" ||
-      data.type === "removeElement" ||
-      data.type === "updateElementPosition"
-    ) {
-      relayToParentIfPresent(data);
-    }
-  }
-
-  window.addEventListener("message", handleMessage);
-
-  const parentOrOpener = window.opener ?? window.parent;
-  parentOrOpener?.postMessage(
-    { type: "iframeReady", frameName: (window as any).name },
-    "*"
-  );
-
-  return () => window.removeEventListener("message", handleMessage);
-}
-
-
-/* =========
-   Child window: notify parent when page changes
-   ========= */
-
-export function attachChildPageChangeNotifier(getPageName: () => string): () => void {
-  const targetWindow = (window.opener as Window) ?? window.parent;
-
-  function notifyParent(): void {
-    const message: FramePageChangedMessage = {
-      type: "framePageChanged",
-      frameName: (window as any).name,
-      pageName: getPageName(),
-    };
-    targetWindow?.postMessage(message, "*");
-  }
-
-  let lastPathname = window.location.pathname;
-
-  function notifyParentIfPathChanged(nextPathname?: string): void {
-    const path = nextPathname ?? window.location.pathname;
-    if (path === lastPathname) return;
-    lastPathname = path;
-    notifyParent();
-  }
-
-  const originalPushState = history.pushState;
-  const originalReplaceState = history.replaceState;
-
-  function wrappedPushState(this: History, state: any, title: string, url?: string | URL | null) {
-    const result = originalPushState.apply(this, [state, title, url as any]);
-    if (url != null) {
-      const next = new URL(url as any, window.location.href).pathname;
-      notifyParentIfPathChanged(next);
-    } else {
-      notifyParentIfPathChanged();
-    }
-    return result;
-  }
-
-  function wrappedReplaceState(this: History, state: any, title: string, url?: string | URL | null) {
-    const result = originalReplaceState.apply(this, [state, title, url as any]);
-    if (url != null) {
-      const next = new URL(url as any, window.location.href).pathname;
-      notifyParentIfPathChanged(next);
-    } else {
-      notifyParentIfPathChanged();
-    }
-    return result;
-  }
-
-  history.pushState = wrappedPushState as typeof history.pushState;
-  history.replaceState = wrappedReplaceState as typeof history.replaceState;
-
-  function handlePopState(): void {
-    notifyParentIfPathChanged();
-  }
-
-  function handleHashChange(): void {
-  }
-
-  notifyParent();
-
-  window.addEventListener("popstate", handlePopState);
-  window.addEventListener("hashchange", handleHashChange);
-
-  return () => {
-    history.pushState = originalPushState;
-    history.replaceState = originalReplaceState;
-    window.removeEventListener("popstate", handlePopState);
-    window.removeEventListener("hashchange", handleHashChange);
-  };
-}
-
-/* =========
-   Parent → Child: send element state to a specific iframe window
-   ========= */
-
-export function postSyncFrame(
-  targetWindow: Window,
-  frameName: string,
-  elementsByFrame: Record<string, FrameElement[]>
+export function sendSyncFrameToChild(
+  targetFrameName: string,
+  frames: FramesByName,
+  explicitTargetWindow?: Window | null
 ): void {
-  const message: SyncFrameMessage = {
-    type: "syncFrame",
-    frameName,
-    elements: elementsByFrame,
-  };
-  targetWindow.postMessage(message, "*");
+  if (!targetFrameName || targetFrameName === "TopFrame") return;
+
+  const resolvedTargetWindow = explicitTargetWindow ?? getKnownChildWindowInfoByFrameName(targetFrameName)?.childWindow;
+  if (!resolvedTargetWindow) {
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.warn(`[PostMessage Send] No contentWindow found for "${targetFrameName}"`);
+    }
+    return;
+  }
+
+  const payload = { type: "syncFrame", frameName: targetFrameName, frames } as const;
+
+  if (POST_MESSAGE_LOG_ENABLED) {
+    console.log(
+      `[PostMessage Send] from "${window.name || "TopFrame"}" to "${targetFrameName}" | type: syncFrame | content:`,
+      payload
+    );
+  }
+
+  try {
+    resolvedTargetWindow.postMessage(payload, "*");
+  } catch (sendError) {
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.warn(`[PostMessage Send] failed to post to "${targetFrameName}":`, sendError);
+    }
+  }
+}
+
+export function installTopMessageHandler(
+  getFramesForFrameName: (externalFrameName: string, requestedPageName?: string) => Record<string, FrameElement[]>,
+  registerFrameByName: (externalFrameName: string) => void,
+  updateElementPositionTop: (elementId: string, x: number, y: number, frameName: string) => void,
+  removeElementTop: (elementId: string, frameName: string) => void,
+  unregisterFrameById: (frameId: string) => void
+): () => void { 
+  if (window.top !== window) return () => {};
+
+  function onMessage(event: MessageEvent) {
+    const incoming = event.data as TopIncomingMessage | { type?: unknown };
+    if (!incoming || typeof (incoming as any).type !== "string") return;
+
+    const messageType = (incoming as any).type as TopIncomingMessage["type"];
+    if (
+      messageType !== "requestSync" &&
+      messageType !== "updateElementPosition" &&
+      messageType !== "removeElement" 
+    )
+      return;
+
+    const fromFrameName = (incoming as any).frameName ?? "Unknown";
+
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Receive] at "TopFrame" from "${fromFrameName}" | type: ${messageType} | content:`,
+        incoming
+      );
+    }
+
+    if ("frameName" in incoming && (incoming as any).frameName && event.source) {
+      registerChildWindow((incoming as any).frameName as string, event.source as Window,(incoming as any).pageName);
+    }
+
+    switch (messageType) {
+      case "requestSync": {
+        const { frameName, pageName } = incoming as RequestSyncMessage;
+        registerFrameByName(frameName);
+        
+        const frames = getFramesForFrameName(frameName, pageName);
+        sendSyncFrameToChild(frameName, frames, event.source as Window);
+        break;
+      }
+
+      case "updateElementPosition": {
+        const { frameName, elementId, xPercent, yPercent } = incoming as UpdatePositionMessage;
+        updateElementPositionTop(elementId, xPercent, yPercent, frameName);
+        break;
+      }
+      case "removeElement": {
+        const { frameName, elementId, isFrameOrContainer } = incoming as RemoveElementMessage;
+        if (isFrameOrContainer) unregisterFrameById(elementId);
+        removeElementTop(elementId, frameName);
+        break;
+      }
+    }
+  }
+
+  window.addEventListener("message", onMessage);
+  return () => window.removeEventListener("message", onMessage);
+}
+
+export function registerChildWindow(frameName: string, childWindow: Window, currentPage: string) {
+  childWindowsByName.set(frameName, {
+    childWindow: childWindow,
+    currentPage: currentPage
+  });
+}
+
+export function getKnownChildWindowInfoByFrameName(frameName: string): ChildWindowInfo | undefined {
+return childWindowsByName.get(frameName);
 }

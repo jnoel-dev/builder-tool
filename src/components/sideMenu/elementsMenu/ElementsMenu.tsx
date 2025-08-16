@@ -11,7 +11,6 @@ import FormControl from "@mui/material/FormControl";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import { FormHelperText, ListSubheader } from "@mui/material";
 import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
-import { buildFrameDropdownSections } from "./frameOriginResolver";
 
 enum TabIndex {
   Frames,
@@ -20,13 +19,14 @@ enum TabIndex {
   Dialogs,
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
+type DropdownItem = { id: string; label: string; disabled: boolean };
 
-function CustomTabPanel(props: TabPanelProps) {
+type DropdownSections = {
+  itemsOnThisPage: DropdownItem[];
+  itemsOnOtherPages: DropdownItem[];
+};
+
+function CustomTabPanel(props: { children?: React.ReactNode; index: number; value: number }) {
   const { children, value, index, ...other } = props;
   return (
     <div role="tabpanel" hidden={value !== index} id={`simple-tabpanel-${index}`} {...other}>
@@ -39,23 +39,58 @@ function getTabProps(index: number) {
   return { id: `simple-tab-${index}` };
 }
 
-type DropdownItem = { id: string; label: string; disabled: boolean };
+/**
+ * Classify by createdOnPage for user-created frames.
+ * defaultFrameName (TopFrame) is special: always "on this page" and labeled with the current page.
+ */
+function buildFrameDropdownSections(
+  currentRootPageName: string,
+  orderedFrameNames: string[],
+  getCreatedOnPage: (name: string) => string,
+  defaultFrameName: string
+): DropdownSections {
+  const itemsOnThisPage: DropdownItem[] = [];
+  const itemsOnOtherPages: DropdownItem[] = [];
 
-function getCurrentTopPageName(): string {
-  const path = window.location.pathname.replace(/\/+$/, "");
-  const page = path.slice(1);
-  return page || "HomePage";
+  for (const frameName of orderedFrameNames) {
+    if (frameName === defaultFrameName) {
+      itemsOnThisPage.push({
+        id: frameName,
+        label: `${frameName} — ${currentRootPageName}`,
+        disabled: false,
+      });
+      continue;
+    }
+
+    const createdOnPage = getCreatedOnPage(frameName);
+    const isOnThisPage = createdOnPage === currentRootPageName;
+
+    if (isOnThisPage) {
+      itemsOnThisPage.push({ id: frameName, label: `${frameName} — ${createdOnPage}`, disabled: false });
+    } else {
+      itemsOnOtherPages.push({ id: frameName, label: `${frameName} — ${createdOnPage}`, disabled: true });
+    }
+  }
+
+  return { itemsOnThisPage, itemsOnOtherPages };
 }
 
 export default function ElementsMenu() {
-  const [selectedTab, setTab] = React.useState(TabIndex.Frames);
-  const { currentFrameName, setCurrentFrameName, frameNameList } = useFrame();
+  const [selectedTab, setSelectedTab] = React.useState(TabIndex.Frames);
+  const {
+    currentFrameName,
+    setCurrentFrameName,
+    frameNameList,
+    rootPageName,
+    getFrameCreatedOnPage,
+    defaultFrameName,
+  } = useFrame();
 
   const [itemsOnThisPage, setItemsOnThisPage] = React.useState<DropdownItem[]>([]);
   const [itemsOnOtherPages, setItemsOnOtherPages] = React.useState<DropdownItem[]>([]);
 
   function handleTabChange(_: React.SyntheticEvent, tabIndex: number) {
-    setTab(tabIndex);
+    setSelectedTab(tabIndex);
   }
 
   function handleFrameChange(event: SelectChangeEvent) {
@@ -63,23 +98,42 @@ export default function ElementsMenu() {
   }
 
   function rebuildDropdown(): void {
-    const savedParamsRaw = sessionStorage.getItem("savedPageParams") || "";
-    const currentTopPageName = getCurrentTopPageName();
-
-    const sections = buildFrameDropdownSections({
-      savedParamsRaw,
-      runtimeFrameIdsOnCurrentPage: frameNameList,
-      currentTopPageName,
-    });
-
+    const sections = buildFrameDropdownSections(
+      rootPageName,
+      frameNameList,
+      getFrameCreatedOnPage,
+      defaultFrameName
+    );
     setItemsOnThisPage(sections.itemsOnThisPage);
     setItemsOnOtherPages(sections.itemsOnOtherPages);
   }
 
-  React.useEffect(rebuildDropdown, [frameNameList]);
+  React.useEffect(rebuildDropdown, [
+    frameNameList,
+    rootPageName,
+    getFrameCreatedOnPage,
+    defaultFrameName,
+  ]);
+
+
+
+  // 2) Auto-select a newly added frame (only when frame list grows).
+  const previousFrameNamesRef = React.useRef<string[]>([]);
+  React.useEffect(() => {
+    const prev = previousFrameNamesRef.current;
+    if (prev.length === 0) {
+      previousFrameNamesRef.current = frameNameList;
+      return;
+    }
+    if (frameNameList.length > prev.length) {
+      const prevSet = new Set(prev);
+      const added = frameNameList.find((name) => !prevSet.has(name));
+      if (added) setCurrentFrameName(added);
+    }
+    previousFrameNamesRef.current = frameNameList;
+  }, [frameNameList, setCurrentFrameName]);
 
   const selectChildren: React.ReactNode[] = [
-
     <ListSubheader key="this-header">Frames on this page</ListSubheader>,
     ...itemsOnThisPage.map((item) => (
       <MenuItem key={`this-${item.id}`} value={item.id} disabled={item.disabled}>
@@ -106,11 +160,7 @@ export default function ElementsMenu() {
           <Select
             labelId="frame-select-label"
             id="frame-select-label"
-            value={
-              itemsOnThisPage.length + itemsOnOtherPages.length === 0
-                ? ""
-                : currentFrameName
-            }
+            value={itemsOnThisPage.length + itemsOnOtherPages.length === 0 ? "" : currentFrameName}
             onChange={handleFrameChange}
             sx={{ textAlign: "center" }}
           >
