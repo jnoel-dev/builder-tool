@@ -1,7 +1,6 @@
 "use client";
 
-import React,
-{
+import React, {
   createContext,
   useContext,
   useRef,
@@ -15,31 +14,21 @@ import React,
 import { installTopMessageHandler, sendSyncFrameToChild, getKnownChildWindowInfoByFrameName } from "./frameMessaging";
 import { loadInitialState, persistStateToUrlAndSession } from "./framePersistence";
 
+import {
+  AppState,
+  FrameElement,
+  PageState,
+  FrameNode,
+  DEFAULT_FRAME_NAME,
+  DEFAULT_PAGE_NAME,
+  getMaxSuffixFromId,
+  rebuildIdCountersFromState,
+  pageNameFromPath,
+  getElementsForFrame,
+  getCurrentPageFromFrameName,
+} from "./frameUtils";
+
 export const POST_MESSAGE_LOG_ENABLED = true;
-
-export type FrameElement = {
-  id: string;
-  componentName: string;
-  xPercent: number;
-  yPercent: number;
-  isFrameOrContainer: boolean;
-  customProps?: Record<string, any>;
-};
-
-export type PageState = { elements: FrameElement[] };
-
-export type FrameNode = {
-  name: string;
-  pages: Record<string, PageState>;
-  createdOnPage: string;
-};
-
-export type AppState = {
-  rootPage: string;
-  frames: Record<string, FrameNode>;
-  frameOrder: string[];
-  currentFrame: string;
-};
 
 export interface FrameContextValue {
   currentFrameName: string;
@@ -68,42 +57,7 @@ export interface FrameContextValue {
   defaultFrameName: string;
 }
 
-const DEFAULT_FRAME_NAME = "TopFrame";
-const DEFAULT_PAGE_NAME = "HomePage";
-
 const FrameContext = createContext<FrameContextValue | undefined>(undefined);
-
-function getMaxSuffixFromId(idValue: string): number {
-  const parts = idValue.split("-");
-  const lastPart = parts[parts.length - 1] || "";
-  const parsed = parseInt(lastPart, 10);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function rebuildIdCountersFromState(appState: AppState): Record<string, number> {
-  const counters: Record<string, number> = {};
-  for (const frameName of Object.keys(appState.frames)) {
-    const frameNode = appState.frames[frameName];
-    for (const pageName of Object.keys(frameNode.pages || {})) {
-      const elements = frameNode.pages[pageName]?.elements || [];
-      for (const element of elements) {
-        const current = counters[element.componentName] || 0;
-        const suffix = getMaxSuffixFromId(element.id);
-        counters[element.componentName] = Math.max(current, suffix);
-      }
-    }
-  }
-  return counters;
-}
-
-function pageNameFromPath(pathname: string): string {
-  const segments = pathname.split("/").filter(Boolean);
-  if (segments[0] === "frame") return segments[2] || DEFAULT_PAGE_NAME;
-  return segments[0] || DEFAULT_PAGE_NAME;
-}
-
-
-
 
 export function FrameManager({ children }: { children: ReactNode }) {
   const isTopWindow = typeof window !== "undefined" && window.top === window && !window.opener;
@@ -213,8 +167,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }
 
   function setElementsForFrameAndCurrentPage(prev: AppState, frameName: string, elements: FrameElement[]): AppState {
-    
-    const pageKey = getCurrentPageFromFrameName(frameName)
+    const pageKey = getCurrentPageFromFrameName(frameName);
     const source = prev.frames[frameName] || { name: frameName, pages: {}, createdOnPage: pageKey };
     const nextPages = { ...source.pages, [pageKey]: { elements } };
     const nextFrame: FrameNode = { ...source, pages: nextPages };
@@ -250,7 +203,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
         element.id === elementId ? { ...element, xPercent, yPercent } : element
       );
       const nextState = setElementsForFrameAndCurrentPage(prev, frameName, updated);
-      // sendSyncFrameToChild(frameName, buildFramePayloadForChild(frameName));
       return nextState;
     });
   }
@@ -260,7 +212,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
       const current = getElementsForFrame(prev, frameName);
       const remaining = current.filter((element) => element.id !== elementId);
       const nextState = setElementsForFrameAndCurrentPage(prev, frameName, remaining);
-      // sendSyncFrameToChild(frameName, buildFramePayloadForChild(frameName));
       return nextState;
     });
   }
@@ -326,12 +277,11 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    
     if (window.top !== window || window.top.opener) return;
 
     function getFramesForFrameName(externalFrameName: string, requestedPageName?: string) {
       if (requestedPageName) lastRequestedPageByFrameRef.current[externalFrameName] = requestedPageName;
-      return buildFramePayloadForChild(externalFrameName,applicationState);
+      return buildFramePayloadForChild(externalFrameName, applicationState);
     }
 
     function registerFrameByName(externalFrameName: string) {
@@ -358,13 +308,11 @@ export function FrameManager({ children }: { children: ReactNode }) {
 
   function replaceFrameElements(frameName: string, elements: FrameElement[]): void {
     setApplicationState((prev) => setElementsForFrameAndCurrentPage(prev, frameName, [...elements]));
-    // sendSyncFrameToChild(frameName, buildFramePayloadForChild(frameName));
   }
 
   function registerFrame(frameName: string): void {
     setApplicationState((prev) => {
       const next = ensureFrameExists(prev, frameName);
-      // sendSyncFrameToChild(frameName, buildFramePayloadForChild(frameName));
       return { ...next, currentFrame: frameName };
     });
   }
@@ -417,42 +365,12 @@ export function FrameManager({ children }: { children: ReactNode }) {
     return node ? node.createdOnPage : DEFAULT_PAGE_NAME;
   }
 
-function getElementsForFrame(appState: AppState, frameName: string): FrameElement[] {
-  const frameNode = appState.frames[frameName];
-  if (!frameNode) return [];
-
-  const pageKey = getCurrentPageFromFrameName(frameName)
-  const pageState = frameNode.pages[pageKey] || { elements: [] };
-  return pageState.elements || [];
-}
-
-function getCurrentPageFromFrameName(frameName: string): string {
-    if (typeof window === "undefined") {
-    return "HomePage";
-    } else if (frameName === "TopFrame") {
-      return pageNameFromPath(window.location.pathname);
-    } else {
-      return getKnownChildWindowInfoByFrameName(frameName)?.currentPage || "HomePage";
-    }
-}
-
-
   const frameNameList = applicationState.frameOrder;
   const currentFrameName = applicationState.currentFrame;
   const frameElementsByFrameName: Record<string, FrameElement[]> = {};
   for (const frameName of frameNameList) {
     frameElementsByFrameName[frameName] = getElementsForFrame(applicationState, frameName);
   }
-
-  // useEffect(() => {
-
-      
-  // for (const frameName of frameNameList) {
-  //   frameElementsByFrameName[frameName] = getElementsForFrame(applicationState, frameName);
-  // }
-
-  // }, [applicationState]);
-
 
   const containerRefs = containerRefsRef.current;
 

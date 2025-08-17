@@ -1,5 +1,5 @@
 import { POST_MESSAGE_LOG_ENABLED } from "./FrameManager";
-import type { FrameElement } from "./FrameManager";
+import type { FrameElement } from "./frameUtils";
 
 type FramesByName = Record<string, FrameElement[]>;
 

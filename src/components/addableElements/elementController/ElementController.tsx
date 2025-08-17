@@ -11,7 +11,7 @@ import {
   useFrame,
   POST_MESSAGE_LOG_ENABLED,
 } from '@/components/contexts/FrameManager/FrameManager';
-import { FrameElement } from '@/components/contexts/FrameManager/FrameManager';
+import { FrameElement } from '@/components/contexts/FrameManager/frameUtils';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';

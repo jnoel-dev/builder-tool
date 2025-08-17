@@ -1,0 +1,75 @@
+import { getKnownChildWindowInfoByFrameName } from "./frameMessaging";
+
+export const DEFAULT_FRAME_NAME = "TopFrame";
+export const DEFAULT_PAGE_NAME = "HomePage";
+
+export type FrameElement = {
+  id: string;
+  componentName: string;
+  xPercent: number;
+  yPercent: number;
+  isFrameOrContainer: boolean;
+  customProps?: Record<string, any>;
+};
+
+export type PageState = { elements: FrameElement[] };
+
+export type FrameNode = {
+  name: string;
+  pages: Record<string, PageState>;
+  createdOnPage: string;
+};
+
+export type AppState = {
+  rootPage: string;
+  frames: Record<string, FrameNode>;
+  frameOrder: string[];
+  currentFrame: string;
+};
+
+export function getMaxSuffixFromId(idValue: string): number {
+  const parts = idValue.split("-");
+  const lastPart = parts[parts.length - 1] || "";
+  const parsed = parseInt(lastPart, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function rebuildIdCountersFromState(appState: AppState): Record<string, number> {
+  const counters: Record<string, number> = {};
+  for (const frameName of Object.keys(appState.frames)) {
+    const frameNode = appState.frames[frameName];
+    for (const pageName of Object.keys(frameNode.pages || {})) {
+      const elements = frameNode.pages[pageName]?.elements || [];
+      for (const element of elements) {
+        const current = counters[element.componentName] || 0;
+        const suffix = getMaxSuffixFromId(element.id);
+        counters[element.componentName] = Math.max(current, suffix);
+      }
+    }
+  }
+  return counters;
+}
+
+export function pageNameFromPath(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] === "frame") return segments[2] || DEFAULT_PAGE_NAME;
+  return segments[0] || DEFAULT_PAGE_NAME;
+}
+
+export function getCurrentPageFromFrameName(frameName: string): string {
+  if (typeof window === "undefined") {
+    return "HomePage";
+  } else if (frameName === "TopFrame") {
+    return pageNameFromPath(window.location.pathname);
+  } else {
+    return getKnownChildWindowInfoByFrameName(frameName)?.currentPage || "HomePage";
+  }
+}
+
+export function getElementsForFrame(appState: AppState, frameName: string): FrameElement[] {
+  const frameNode = appState.frames[frameName];
+  if (!frameNode) return [];
+  const pageKey = getCurrentPageFromFrameName(frameName);
+  const pageState = frameNode.pages[pageKey] || { elements: [] };
+  return pageState.elements || [];
+}
