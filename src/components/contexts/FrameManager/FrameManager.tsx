@@ -326,8 +326,8 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    const isTop = typeof window !== "undefined" && window.top === window && !window.opener;
-    if (!isTop) return;
+    
+    if (window.top !== window || window.top.opener) return;
 
     function getFramesForFrameName(externalFrameName: string, requestedPageName?: string) {
       if (requestedPageName) lastRequestedPageByFrameRef.current[externalFrameName] = requestedPageName;

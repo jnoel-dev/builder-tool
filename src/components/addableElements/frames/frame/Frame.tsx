@@ -7,7 +7,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
 
 import { useFrame, POST_MESSAGE_LOG_ENABLED } from '@/components/contexts/FrameManager/FrameManager';
-import { FrameElement } from '@/components/contexts/FrameManager/frameUtils';
+import { FrameElement } from '@/components/contexts/FrameManager/FrameManager';
 
 interface FrameProps {
   savedName: string;
@@ -18,27 +18,7 @@ const LOCAL_CROSS_DOMAIN_ORIGIN = 'http://localhost:3001';
 const PROD_CROSS_DOMAIN_ORIGIN = 'https://frame.jonnoel.dev';
 const SAME_DOMAIN_PATH = '/frame/';
 
-function getSyncPayload(
-  startingFrame: string,
-  allElements: Record<string, FrameElement[]>
-): Record<string, FrameElement[]> {
-  function gatherFrames(frameId: string, visited = new Set<string>()): Record<string, FrameElement[]> {
-    if (visited.has(frameId)) return {};
-    visited.add(frameId);
-    const elements = allElements[frameId] || [];
-    const result: Record<string, FrameElement[]> = { [frameId]: elements };
-    for (const element of elements) {
-      if (element.isFrameOrContainer) Object.assign(result, gatherFrames(element.id, visited));
-    }
-    return result;
-  }
 
-  const collected = gatherFrames(startingFrame);
-  const topLevel = collected[startingFrame] || [];
-  const nested: Record<string, FrameElement[]> = {};
-  for (const [id, els] of Object.entries(collected)) if (id !== startingFrame) nested[id] = els;
-  return { TopFrame: topLevel, ...nested };
-}
 
 export default function Frame({ savedName, frameType }: FrameProps) {
   const { containerRefs, registerFrame, frameElementsByFrameName } = useFrame();

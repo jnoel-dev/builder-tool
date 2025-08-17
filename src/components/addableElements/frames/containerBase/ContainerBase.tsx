@@ -50,13 +50,17 @@ export default function ContainerBase({
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
-      if (event.source !== window.top) return;
+      if (event.source !== window.top && event.source !== window.top?.opener) return;
+      let sourceWindow = "TopFrame";
+      if (event.source === window.top?.opener){
+        sourceWindow = "Main Window";
+      }
       const data = event.data as { type?: string; frames?: Record<string, any[]> };
       if (!data || data.type !== "syncFrame" || !data.frames) return;
 
       if (POST_MESSAGE_LOG_ENABLED) {
         console.log(
-          `[PostMessage Receive] at "${window.name || "ChildFrame"}" from "TopFrame" | type: syncFrame | content:`,
+          `[PostMessage Receive] at "${window.name}" from "${sourceWindow}" | type: syncFrame | content:`,
           data
         );
       }
@@ -75,7 +79,7 @@ export default function ContainerBase({
 
   useEffect(() => {
     if (!window.name) return;
-    const targetWindow = window.top;
+    const targetWindow = window.top?.opener ? window.top.opener : window.top;
     const nameForTop = frameName === "TopFrame" ? window.name : frameName;
     const segments = document.location.pathname.split("/").filter(Boolean);
     const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");

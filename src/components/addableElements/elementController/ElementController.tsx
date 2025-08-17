@@ -110,13 +110,12 @@ export default function ElementController({
     if (!isDragging.current) return;
     isDragging.current = false;
 
-    // If we're inside an iframe, send intent up to TopFrame.
-    if (window.top !== window) {
+    if (window.top !== window || window.top.opener) {
       const frameNameForTop =
         connectedFrameOrContainerName === 'TopFrame'
           ? (window.name)
           : connectedFrameOrContainerName;
-      
+      const targetWindow = window.top?.opener ? window.top.opener : window.top;
       const segments = document.location.pathname.split("/").filter(Boolean);
       const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");
       const msg = {
@@ -130,12 +129,12 @@ export default function ElementController({
 
       if (POST_MESSAGE_LOG_ENABLED) {
         console.log(
-          `[PostMessage Send] from "${window.name || 'ChildFrame'}" to "TopFrame" | type: updateElementPosition | content:`,
+          `[PostMessage Send] from "${window.name}" to "TopFrame" | type: updateElementPosition | content:`,
           msg
         );
       }
 
-      if (frameNameForTop) window.top?.postMessage(msg, '*');
+      targetWindow.postMessage(msg, '*');
 
     }
 
@@ -158,12 +157,13 @@ export default function ElementController({
   }, [positionPercent]);
 
   function onRemoveClick() {
-    if (window.top !== window) {
+    if (window.top !== window || window.top.opener) {
       const frameNameForTop =
         connectedFrameOrContainerName === 'TopFrame'
           ? (window.name)
           : connectedFrameOrContainerName;
 
+      const targetWindow = window.top?.opener ? window.top.opener : window.top;
       const segments = document.location.pathname.split("/").filter(Boolean);
       const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");
       const msg = {
@@ -176,12 +176,12 @@ export default function ElementController({
 
       if (POST_MESSAGE_LOG_ENABLED) {
         console.log(
-          `[PostMessage Send] from "${window.name || 'ChildFrame'}" to "TopFrame" | type: removeElement | content:`,
+          `[PostMessage Send] from "${window.name}" to "TopFrame" | type: removeElement | content:`,
           msg
         );
       }
 
-      if (frameNameForTop) window.top?.postMessage(msg, '*');
+      targetWindow.postMessage(msg, '*');
 
     }
 

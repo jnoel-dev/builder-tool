@@ -18,10 +18,11 @@ type RemoveElementMessage = {
   isFrameOrContainer: boolean;
 };
 
+
 type TopIncomingMessage =
   | RequestSyncMessage
   | UpdatePositionMessage
-  | RemoveElementMessage;
+  | RemoveElementMessage
 
 type ChildWindowInfo = {
   childWindow: Window;
@@ -74,6 +75,10 @@ export function installTopMessageHandler(
 
   function onMessage(event: MessageEvent) {
     const incoming = event.data as TopIncomingMessage | { type?: unknown };
+
+
+
+
     if (!incoming || typeof (incoming as any).type !== "string") return;
 
     const messageType = (incoming as any).type as TopIncomingMessage["type"];
@@ -92,7 +97,7 @@ export function installTopMessageHandler(
         incoming
       );
     }
-
+    
     if ("frameName" in incoming && (incoming as any).frameName && event.source) {
       registerChildWindow((incoming as any).frameName as string, event.source as Window,(incoming as any).pageName);
     }
