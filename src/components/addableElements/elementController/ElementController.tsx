@@ -122,8 +122,8 @@ export default function ElementController({
         type: 'updateElementPosition',
         frameName: frameNameForTop,
         elementId: elementToControl.id,
-        xPercent: positionPercent.x,
-        yPercent: positionPercent.y,
+        xPercent: Math.round(positionPercent.x * 100) / 100,
+        yPercent: Math.round(positionPercent.y * 100) / 100,
         pageName: pageName
       };
 
@@ -141,8 +141,8 @@ export default function ElementController({
     // Top window mutation
     updateElementPosition(
       elementToControl.id,
-      positionPercent.x,
-      positionPercent.y,
+      Math.round(positionPercent.x * 100) / 100,
+      Math.round(positionPercent.y * 100) / 100,
       connectedFrameOrContainerName
     );
   }
