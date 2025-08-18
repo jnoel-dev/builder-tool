@@ -105,6 +105,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }, [isTopWindow, applicationState]);
 
   useEffect(() => {
+    if (window !== window.top) return;
     const onLocationChange = () => {
       const nextPage = pageNameFromPath(window.location.pathname);
       setApplicationState((prev) => {

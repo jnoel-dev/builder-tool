@@ -7,16 +7,18 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
 
 import { useFrame, POST_MESSAGE_LOG_ENABLED } from '@/components/contexts/FrameManager/FrameManager';
-import { FrameElement } from '@/components/contexts/FrameManager/FrameManager';
+import { FrameElement } from '@/components/contexts/FrameManager/frameUtils';
 
 interface FrameProps {
   savedName: string;
   frameType: 'sameDomain' | 'crossDomain' | 'popupSameDomain' | 'popupCrossDomain';
 }
 
+const LOCAL_SAME_DOMAIN_ORIGIN = 'http://localhost:3000';
+const PROD_SAME_DOMAIN_ORIGIN = 'https://build.jonnoel.dev';
 const LOCAL_CROSS_DOMAIN_ORIGIN = 'http://localhost:3001';
 const PROD_CROSS_DOMAIN_ORIGIN = 'https://frame.jonnoel.dev';
-const SAME_DOMAIN_PATH = '/frame/';
+const FRAME_PATH = '/frame/';
 
 
 
@@ -35,8 +37,8 @@ export default function Frame({ savedName, frameType }: FrameProps) {
   const theme = useTheme();
 
   const iframeSrc = isSameDomain
-    ? `${SAME_DOMAIN_PATH}${savedName}`
-    : `${isDev ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN}${SAME_DOMAIN_PATH}${savedName}`;
+    ? `${isDev ? LOCAL_SAME_DOMAIN_ORIGIN : PROD_SAME_DOMAIN_ORIGIN}${FRAME_PATH}${savedName}`
+    : `${isDev ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN}${FRAME_PATH}${savedName}`;
 
   const openPopup = () => {
     const popupWidth = window.innerWidth / 2;

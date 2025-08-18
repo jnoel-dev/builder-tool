@@ -34,41 +34,7 @@ function buildUrlFromNavigationTarget(target: NavigationTarget): string {
   return encodedPage ? `${baseHostPath}${encodedPage}` : baseHostPath;
 }
 
-function spaNavigateTopFrame(target: NavigationTarget): boolean {
-  const origins = getKnownOrigins();
-  const targetHostRoot = origins[target.originIndex] ?? "";
-  const currentHostRoot = `${window.location.host}/`;
 
-  if (targetHostRoot !== currentHostRoot) return false;
-
-  const newPathname = target.pageName ? `/${encodeURIComponent(target.pageName)}` : `/`;
-  const newUrl = `${newPathname}${window.location.search}${window.location.hash}`;
-
-  window.history.pushState(null, "", newUrl);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-  return true;
-}
-
-function spaNavigateChildFrame(target: NavigationTarget): boolean {
-  if (!target.frameId) return false;
-
-  const childWindow = getKnownChildWindowInfoByFrameName(target.frameId)?.childWindow;
-  if (!childWindow) return false;
-
-  try {
-    const newPath = target.pageName ? `/${encodeURIComponent(target.pageName)}` : `/`;
-    childWindow.history.pushState(null, "", newPath);
-
-    const PopStateCtor =
-      (childWindow as any).PopStateEvent || (childWindow as any).Event;
-    const popstateEvent = new PopStateCtor("popstate");
-
-    childWindow.dispatchEvent(popstateEvent);
-    return true;
-  } catch {
-    return false; // likely cross-origin
-  }
-}
 
 
 
@@ -78,35 +44,26 @@ export default function NavigationButton({
 }: NavigationButtonProps) {
   const handleClick = () => {
 
+    const protocol = process.env.NODE_ENV === "development" ? "http://" : "https://";
+    const currentQuery = window.location.search;
+    const currentHash = window.location.hash;
 
-    if (navigationType === NavigationType.Full) {
-      const protocol = process.env.NODE_ENV === "development" ? "http://" : "https://";
-      const currentQuery = window.location.search;
-      const currentHash = window.location.hash;
+    const destinationHostPath = buildUrlFromNavigationTarget(navigationTarget);
+    const destinationUrl = `${protocol}${destinationHostPath}${currentQuery}${currentHash}`;
+    console.log(navigationType)
 
-      const destinationHostPath = buildUrlFromNavigationTarget(navigationTarget);
-      const destinationUrl = `${protocol}${destinationHostPath}${currentQuery}${currentHash}`;
+    switch (navigationType) {
 
-      window.location.href = destinationUrl;
-    } else if (navigationType === NavigationType.SPA) {
-      let handled = false;
-
-      if (navigationTarget.frameId) {
-        handled = spaNavigateChildFrame(navigationTarget);
-      } else {
-        handled = spaNavigateTopFrame(navigationTarget);
-      }
-
-      if (!handled) {
-        // Fallback to full navigation if SPA not possible (e.g., cross-origin iframe or different origin)
-        const protocol = process.env.NODE_ENV === "development" ? "http://" : "https://";
-        const currentQuery = window.location.search;
-        const currentHash = window.location.hash;
-        const destinationHostPath = buildUrlFromNavigationTarget(navigationTarget);
-        const destinationUrl = `${protocol}${destinationHostPath}${currentQuery}${currentHash}`;
+      case NavigationType.Full:
         window.location.href = destinationUrl;
-      }
-    }
+        break;
+
+      case NavigationType.SPA:
+        window.history.pushState(null, "", destinationUrl);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+        break;
+      
+    } 
 
   };
 

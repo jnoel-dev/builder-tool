@@ -186,7 +186,6 @@ export default function NavigationMenu() {
 
     const navTargetFrameName = resolveNavTargetFrame(currentFrameName, frameElementsByFrameName as any);
 
-    const isTop = isTopFrame(navTargetFrameName);
     const isChildFrame = isIframe(navTargetFrameName) || isPopupWindow(navTargetFrameName);
 
     const navigationTarget = {

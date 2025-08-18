@@ -77,14 +77,15 @@ export default function ContainerBase({
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
-  useEffect(() => {
-    if (!window.name) return;
+useEffect(() => {
+  if (!window.name) return;
+
+  function sendRequest() {
     const targetWindow = window.top?.opener ? window.top.opener : window.top;
     const nameForTop = frameName === "TopFrame" ? window.name : frameName;
     const segments = document.location.pathname.split("/").filter(Boolean);
     const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");
     const message = { type: "requestSync", frameName: nameForTop, pageName };
-
 
     if (POST_MESSAGE_LOG_ENABLED) {
       console.log(
@@ -94,7 +95,22 @@ export default function ContainerBase({
     }
 
     targetWindow?.postMessage(message, "*");
-  }, [frameName]);
+  }
+
+  sendRequest();
+
+  const handleNav = () => sendRequest();
+  window.addEventListener("popstate", handleNav);
+  window.addEventListener("locationchange", handleNav);
+
+
+  return () => {
+    window.removeEventListener("popstate", handleNav);
+    window.removeEventListener("locationchange", handleNav);
+ 
+  };
+}, [frameName]);
+
 
   return (
     <>
