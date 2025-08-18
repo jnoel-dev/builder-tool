@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useEffect } from "react";
 import Button from "@mui/material/Button";
 import { NavigationType } from "../NavigationTypes";
 import { getKnownChildWindowInfoByFrameName } from "@/components/contexts/FrameManager/frameMessaging";
@@ -42,14 +43,17 @@ export default function NavigationButton({
   navigationTarget,
   navigationType,
 }: NavigationButtonProps) {
+
+  const protocol = process.env.NODE_ENV === "development" ? "http://" : "https://";
+  const currentQuery = window.location.search;
+  const currentHash = window.location.hash;
+
+  const destinationHostPath = buildUrlFromNavigationTarget(navigationTarget);
+  const destinationUrl = `${protocol}${destinationHostPath}${currentQuery}${currentHash}`;
+
   const handleClick = () => {
 
-    const protocol = process.env.NODE_ENV === "development" ? "http://" : "https://";
-    const currentQuery = window.location.search;
-    const currentHash = window.location.hash;
 
-    const destinationHostPath = buildUrlFromNavigationTarget(navigationTarget);
-    const destinationUrl = `${protocol}${destinationHostPath}${currentQuery}${currentHash}`;
     console.log(navigationType)
 
     switch (navigationType) {
@@ -63,9 +67,22 @@ export default function NavigationButton({
         window.dispatchEvent(new PopStateEvent("popstate"));
         break;
       
+      case NavigationType.FullReplace:
+        sessionStorage.setItem(
+          "navigation:SPAreplace",
+          JSON.stringify({
+            url: destinationUrl,
+            windowName: window.name,
+          })
+        );
+        window.location.reload();
+        break;
+      
     } 
 
   };
+
+
 
   const prettyTarget = (() => {
     const origins = getKnownOrigins();

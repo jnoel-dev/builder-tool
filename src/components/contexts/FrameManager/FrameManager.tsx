@@ -105,7 +105,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }, [isTopWindow, applicationState]);
 
   useEffect(() => {
-    if (window !== window.top) return;
+    if (window !== window.top ) return;
     const onLocationChange = () => {
       const nextPage = pageNameFromPath(window.location.pathname);
       setApplicationState((prev) => {
@@ -142,11 +142,31 @@ export function FrameManager({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+      
+    const storedJson = sessionStorage.getItem("navigation:SPAreplace");
+    if (storedJson) {
+      try {
+        const stored = JSON.parse(storedJson) as { url: string; windowName?: string };
+        
+        const namesMatch = (stored.windowName ?? "") === (window.name ?? "");
+        const sameOrigin = new URL(stored.url, window.location.href).origin === window.location.origin;
+        if (stored.url && namesMatch && sameOrigin) {
+          sessionStorage.removeItem("navigation:SPAreplace");
+          history.replaceState(null, "", stored.url);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+       
+        }
+      } catch {}
+    }
+ 
+  
     setApplicationState((prev) => {
       if (prev.currentFrame !== DEFAULT_FRAME_NAME) return { ...prev, currentFrame: DEFAULT_FRAME_NAME };
       return prev;
     });
   }, [applicationState.rootPage]);
+
+
 
   function ensureFrameExists(prev: AppState, frameName: string): AppState {
     if (prev.frames[frameName]) return prev;
