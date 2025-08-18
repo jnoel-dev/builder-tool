@@ -27,6 +27,7 @@ import {
   persistPagesByOrigin,
   PagesByOrigin,
 } from "@/components/contexts/FrameManager/framePersistence";
+import ContainerSelector from "../elementsMenu/containerSelector/ContainerSelector";
 
 const DEV_ORIGINS = ["localhost:3000/", "localhost:3000/frame/", "localhost:3001/frame/"];
 const PROD_ORIGINS = ["build.jonnoel.dev/", "build.jonnoel.dev/frame/", "frame.jonnoel.dev/frame/"];
@@ -263,26 +264,11 @@ export default function NavigationMenu() {
 
       <Divider sx={{ my: 2 }} />
 
-      <FormControl size="small" fullWidth sx={{ mb: 1 }}>
-        <FormHelperText>Select a Container</FormHelperText>
-        <Select
-          value={containerSelectValue}
-          onChange={(event: SelectChangeEvent<string>) => setCurrentFrameName(event.target.value)}
-          displayEmpty
-          sx={{ textAlign: "center" }}
-        >
-          {isMounted &&
-            frameNameList.map((frameName) => (
-              <MenuItem key={frameName} value={frameName}>
-                {frameName.replace(/([A-Z])/g, " $1").trim().toUpperCase()}
-              </MenuItem>
-            ))}
-        </Select>
-      </FormControl>
+      <ContainerSelector/>
 
       <FormControl size="small" fullWidth sx={{ mb: 1 }}>
         <FormHelperText>
-          Select destination (<strong>{destinationOriginUrl}</strong>)
+          Select destination ({destinationOriginUrl})
         </FormHelperText>
         <Select
           value={selectedPageName}
