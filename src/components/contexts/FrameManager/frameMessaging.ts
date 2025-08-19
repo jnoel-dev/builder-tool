@@ -1,5 +1,6 @@
 import { POST_MESSAGE_LOG_ENABLED } from "./FrameManager";
 import type { FrameElement } from "./frameUtils";
+import { SAME_ORIGIN_TARGET, CROSS_ORIGIN_TARGET } from "./framePersistence";
 
 type FramesByName = Record<string, FrameElement[]>;
 
@@ -31,6 +32,17 @@ type ChildWindowInfo = {
 }
 const childWindowsByName = new Map<string, ChildWindowInfo>();
 
+export function getTargetOrigin(win: Window | null | undefined): string {
+ 
+  try {
+    void win?.location.origin;
+    return SAME_ORIGIN_TARGET;
+  } catch {
+    return CROSS_ORIGIN_TARGET;
+  }
+}
+
+
 export function sendSyncFrameToChild(
   targetFrameName: string,
   frames: FramesByName,
@@ -55,8 +67,9 @@ export function sendSyncFrameToChild(
     );
   }
 
+  console.log("ORIGIN: ",getTargetOrigin(resolvedTargetWindow))
   try {
-    resolvedTargetWindow.postMessage(payload, "*");
+    resolvedTargetWindow.postMessage(payload, getTargetOrigin(resolvedTargetWindow));
   } catch (sendError) {
     if (POST_MESSAGE_LOG_ENABLED) {
       console.warn(`[PostMessage Send] failed to post to "${targetFrameName}":`, sendError);

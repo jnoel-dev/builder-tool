@@ -5,9 +5,8 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
+import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
 
-import { useFrame, POST_MESSAGE_LOG_ENABLED } from '@/components/contexts/FrameManager/FrameManager';
-import { FrameElement } from '@/components/contexts/FrameManager/frameUtils';
 
 interface FrameProps {
   savedName: string;

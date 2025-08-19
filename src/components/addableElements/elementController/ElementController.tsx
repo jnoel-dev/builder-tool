@@ -17,6 +17,8 @@ import Stack from '@mui/material/Stack';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTheme } from '@mui/material';
+import { SAME_ORIGIN_TARGET } from '@/components/contexts/FrameManager/framePersistence';
+
 
 interface ElementControllerProps {
   elementToControl: FrameElement;
@@ -134,7 +136,7 @@ export default function ElementController({
         );
       }
 
-      targetWindow.postMessage(msg, '*');
+      targetWindow.postMessage(msg, SAME_ORIGIN_TARGET);
 
     }
 
@@ -181,7 +183,7 @@ export default function ElementController({
         );
       }
 
-      targetWindow.postMessage(msg, '*');
+      targetWindow.postMessage(msg, SAME_ORIGIN_TARGET);
 
     }
 

@@ -7,6 +7,7 @@ import Typography from "@mui/material/Typography";
 import { useFrame, POST_MESSAGE_LOG_ENABLED } from "@/components/contexts/FrameManager/FrameManager";
 import componentRegistry from "@/components/contexts/FrameManager/componentRegistry";
 import ElementController from "../../elementController/ElementController";
+import { SAME_ORIGIN_TARGET } from "@/components/contexts/FrameManager/framePersistence";
 
 interface ContainerBaseProps {
   frameName: string;
@@ -94,7 +95,7 @@ useEffect(() => {
       );
     }
 
-    targetWindow?.postMessage(message, "*");
+    targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
   }
 
   sendRequest();

@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { useEffect } from "react";
 import Button from "@mui/material/Button";
 import { NavigationType } from "../NavigationTypes";
-import { getKnownChildWindowInfoByFrameName } from "@/components/contexts/FrameManager/frameMessaging";
+import { DEV_ORIGINS } from "@/components/contexts/FrameManager/framePersistence";
+import { PROD_ORIGINS } from "@/components/contexts/FrameManager/framePersistence";
 
 type NavigationTarget = {
   originIndex: number;
@@ -16,9 +16,6 @@ export interface NavigationButtonProps {
   navigationTarget: NavigationTarget;
   navigationType: NavigationType;
 }
-
-const DEV_ORIGINS = ["localhost:3000/", "localhost:3000/frame/", "localhost:3001/frame/"];
-const PROD_ORIGINS = ["build.jonnoel.dev/", "build.jonnoel.dev/frame/", "frame.jonnoel.dev/frame/"];
 
 function getKnownOrigins(): string[] {
   return process.env.NODE_ENV === "development" ? DEV_ORIGINS : PROD_ORIGINS;

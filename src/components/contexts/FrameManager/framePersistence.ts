@@ -1,6 +1,6 @@
 "use client";
 
-import { AppState } from "./FrameManager";
+import { AppState } from "./frameUtils";
 
 export type PagesByOrigin = Record<string, string[]>;
 type CombinedState = AppState & { pagesByOrigin?: PagesByOrigin };
@@ -10,8 +10,19 @@ const SESSION_KEY_STATE = "SB_STATE";
 const SESSION_KEY_LAST_URL_STATE = "SB_LAST_URL_STATE";
 const URL_PARAM_STATE = "state";
 
-const DEV_ORIGINS = ["localhost:3000/", "localhost:3000/frame/", "localhost:3001/frame/"];
-const PROD_ORIGINS = ["build.jonnoel.dev/", "build.jonnoel.dev/frame/", "frame.jonnoel.dev/frame/"];
+export const DEV_ORIGINS = ["localhost:3000/", "localhost:3000/frame/", "localhost:3001/frame/"];
+export const PROD_ORIGINS = ["build.jonnoel.dev/", "build.jonnoel.dev/frame/", "frame.jonnoel.dev/frame/"];
+
+export const SAME_ORIGIN_TARGET =
+  process.env.NODE_ENV === 'production'
+    ? 'https://build.jonnoel.dev/'
+    : 'http://localhost:3000/';
+
+export const CROSS_ORIGIN_TARGET =
+  process.env.NODE_ENV === 'production'
+    ? 'https://frame.jonnoel.dev/'
+    : 'http://localhost:3001/';
+
 
 function getKnownOrigins(): string[] {
   const isDev = typeof process !== "undefined" && process.env.NODE_ENV === "development";

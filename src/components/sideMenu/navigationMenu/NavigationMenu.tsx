@@ -28,9 +28,8 @@ import {
   PagesByOrigin,
 } from "@/components/contexts/FrameManager/framePersistence";
 import ContainerSelector from "../elementsMenu/containerSelector/ContainerSelector";
-
-const DEV_ORIGINS = ["localhost:3000/", "localhost:3000/frame/", "localhost:3001/frame/"];
-const PROD_ORIGINS = ["build.jonnoel.dev/", "build.jonnoel.dev/frame/", "frame.jonnoel.dev/frame/"];
+import { DEV_ORIGINS } from "@/components/contexts/FrameManager/framePersistence";
+import { PROD_ORIGINS } from "@/components/contexts/FrameManager/framePersistence";
 
 function getKnownOrigins(): string[] {
   return process.env.NODE_ENV === "development" ? DEV_ORIGINS : PROD_ORIGINS;
