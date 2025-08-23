@@ -24,17 +24,26 @@ function getKnownOrigins(): [string, string, string] {
   return [originList[0], originList[1], originList[2]];
 }
 
+function getSerializedMapping() {
+  const [originMain, originSame, originCross] = getKnownOrigins();
+  return [
+    { serializedKey: "OriginMain" as const, originKey: originMain },
+    { serializedKey: "OriginSame" as const, originKey: originSame },
+    { serializedKey: "OriginCross" as const, originKey: originCross },
+  ];
+}
+
 function isSerializedPagesByOrigin(value: unknown): value is SerializedPagesByOrigin {
   if (!value || typeof value !== "object") return false;
   const providedKeys = Object.keys(value as object);
-  return ["OriginMain", "OriginSame", "OriginCross"].some(serializedKey => providedKeys.includes(serializedKey));
+  return ["OriginMain", "OriginSame", "OriginCross"].some(k => providedKeys.includes(k));
 }
 
 function cleanPageList(pageNames: string[]): string[] {
   const seenPages = new Set<string>();
   const cleanedList: string[] = [];
   for (const pageName of pageNames) {
-    if (!pageName || pageName.trim() === "" || pageName === "Home Page" || seenPages.has(pageName)) continue;
+    if (!pageName || pageName.trim() === "" || seenPages.has(pageName)) continue;
     seenPages.add(pageName);
     cleanedList.push(pageName);
   }
@@ -42,13 +51,7 @@ function cleanPageList(pageNames: string[]): string[] {
 }
 
 function mapSerializedToRuntime(serialized: SerializedPagesByOrigin): PagesByOrigin {
-  const [originMain, originSame, originCross] = getKnownOrigins();
-  const mapping = [
-    { serializedKey: "OriginMain", originKey: originMain },
-    { serializedKey: "OriginSame", originKey: originSame },
-    { serializedKey: "OriginCross", originKey: originCross },
-  ] as const;
-
+  const mapping = getSerializedMapping();
   const runtime: PagesByOrigin = {};
   for (const { serializedKey, originKey } of mapping) {
     const serializedPages = serialized[serializedKey];
@@ -61,13 +64,7 @@ function mapSerializedToRuntime(serialized: SerializedPagesByOrigin): PagesByOri
 }
 
 function mapRuntimeToSerialized(runtime: PagesByOrigin): SerializedPagesByOrigin | undefined {
-  const [originMain, originSame, originCross] = getKnownOrigins();
-  const mapping = [
-    { serializedKey: "OriginMain", originKey: originMain },
-    { serializedKey: "OriginSame", originKey: originSame },
-    { serializedKey: "OriginCross", originKey: originCross },
-  ] as const;
-
+  const mapping = getSerializedMapping();
   const serializedOutput: SerializedPagesByOrigin = {};
   for (const { serializedKey, originKey } of mapping) {
     const runtimePages = cleanPageList(runtime[originKey] || []);
@@ -113,17 +110,18 @@ function readSessionStrict(): ExtendedAppState | null {
   return parsed && hasValidCoreShape(parsed) ? (parsed as ExtendedAppState) : null;
 }
 
+function toSerializableState(stateToPersist: any): any {
+  const hasPagesKey = stateToPersist && typeof stateToPersist === "object" && "pagesByOrigin" in stateToPersist;
+  if (!hasPagesKey) return stateToPersist;
+  const serialized = mapRuntimeToSerialized(stateToPersist.pagesByOrigin as PagesByOrigin);
+  if (serialized) return { ...stateToPersist, pagesByOrigin: serialized };
+  const { pagesByOrigin, ...rest } = stateToPersist;
+  return rest;
+}
+
 function writeSession(stateToPersist: any): void {
   try {
-    const hasPagesKey = stateToPersist && typeof stateToPersist === "object" && "pagesByOrigin" in stateToPersist;
-    if (hasPagesKey) {
-      const serialized = mapRuntimeToSerialized(stateToPersist.pagesByOrigin as PagesByOrigin);
-      const valueToStore =
-        serialized ? { ...stateToPersist, pagesByOrigin: serialized } : (({ pagesByOrigin, ...rest }) => rest)(stateToPersist);
-      sessionStorage.setItem(SESSION_KEY_STATE, JSON.stringify(valueToStore));
-    } else {
-      sessionStorage.setItem(SESSION_KEY_STATE, JSON.stringify(stateToPersist));
-    }
+    sessionStorage.setItem(SESSION_KEY_STATE, JSON.stringify(toSerializableState(stateToPersist)));
   } catch {}
 }
 
@@ -195,7 +193,6 @@ export function loadPagesByOriginWithDefaults(defaultPagesByOrigin: PagesByOrigi
 
   return mergedPagesByOrigin;
 }
-
 
 export function persistPagesByOrigin(pagesByOrigin: PagesByOrigin): void {
   if (typeof window === "undefined") return;

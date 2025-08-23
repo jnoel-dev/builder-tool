@@ -12,8 +12,13 @@ import React, {
 } from "react";
 
 import { installTopMessageHandler, sendSyncFrameToChild, getKnownChildWindowInfoByFrameName } from "./frameMessaging";
-import { loadInitialState, persistStateToSession } from "./framePersistence";
+import { loadInitialState, persistStateToSession, SAME_ORIGIN_TARGET } from "./framePersistence";
 import { usePathname } from "next/navigation";
+import { doc,getDoc } from "firebase/firestore";
+import { firestoreDatabase } from "./firebaseConfig";
+import { Snackbar, Alert } from '@mui/material';
+
+
 import {
   AppState,
   FrameElement,
@@ -80,28 +85,65 @@ export function FrameManager({ children }: { children: ReactNode }) {
     [DEFAULT_FRAME_NAME]: createRef<HTMLDivElement | null>(),
   });
   const lastRequestedPageByFrameRef = useRef<Record<string, string>>({});
+  const hasHydratedRef = useRef(false);
+  const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
 
-  useEffect(() => {
-    if (!isTopWindow) return;
 
-    async function loadAndHydrate() {
-      const loadedState = await loadInitialState(DEFAULT_FRAME_NAME, DEFAULT_PAGE_NAME);
-      const initialState = loadedState || applicationState;
-      const derivedRootPage = pageNameFromPath(window.location.pathname);
-      const initialWithPage: AppState = { ...initialState, rootPage: derivedRootPage, currentFrame: DEFAULT_FRAME_NAME };
-      setApplicationState(initialWithPage);
-      idCountersByComponentRef.current = rebuildIdCountersFromState(initialWithPage);
-      for (const frameName of Object.keys(initialWithPage.frames)) {
-        if (!containerRefsRef.current[frameName]) {
-          containerRefsRef.current[frameName] = createRef<HTMLDivElement | null>();
+
+useEffect(() => {
+  if (!isTopWindow) return;
+
+  let cancelled = false;
+
+  (async () => {
+    const firstSegment = window.location.pathname.split("/").filter(Boolean)[0] ?? "";
+    if (/^[A-Za-z0-9]{20}$/.test(firstSegment)) {
+      try {
+        const snapshot = await getDoc(doc(firestoreDatabase, "sbStates", firstSegment));
+        if (snapshot.exists() && !cancelled) {
+          const data = snapshot.data() as { stateJson?: string };
+          const stateJson = data?.stateJson ?? "";
+          if (stateJson) {
+            sessionStorage.setItem("SB_STATE", stateJson);
+            history.replaceState(null, "", SAME_ORIGIN_TARGET);
+            setShareNoticeOpen(true);
+          }
+
         }
-      }
+      } catch {}
     }
 
-    loadAndHydrate();
-  }, []);
+    const loadedState = await loadInitialState(DEFAULT_FRAME_NAME, DEFAULT_PAGE_NAME);
+    const initialState = loadedState || applicationState;
+    const derivedRootPage = pageNameFromPath(window.location.pathname);
+    const initialWithPage: AppState = { ...initialState, rootPage: derivedRootPage, currentFrame: DEFAULT_FRAME_NAME };
+    if (cancelled) return;
 
-  useEffect(() => { if (!isTopWindow) return; persistStateToSession(applicationState); }, [isTopWindow, applicationState]);
+    setApplicationState(initialWithPage);
+    idCountersByComponentRef.current = rebuildIdCountersFromState(initialWithPage);
+    for (const frameName of Object.keys(initialWithPage.frames)) {
+      if (!containerRefsRef.current[frameName]) {
+        containerRefsRef.current[frameName] = createRef<HTMLDivElement | null>();
+      }
+    }
+    hasHydratedRef.current = true;
+  })();
+
+  return () => {
+    cancelled = true;
+  };
+}, [isTopWindow]);
+
+
+
+
+
+useEffect(() => {
+  if (!isTopWindow) return;
+  if (!hasHydratedRef.current) return;
+  persistStateToSession(applicationState);
+}, [isTopWindow, applicationState]);
+
 
 useEffect(() => {
   if (window !== window.top) return;
@@ -369,8 +411,20 @@ useEffect(() => {
         getFrameCreatedOnPage,
         defaultFrameName: DEFAULT_FRAME_NAME,
       }}
-    >
+    > 
+
       {children}
+      <Snackbar
+  open={shareNoticeOpen}
+  autoHideDuration={3000}
+  onClose={() => setShareNoticeOpen(false)}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+>
+  <Alert onClose={() => setShareNoticeOpen(false)} severity="success" variant="filled">
+    Successfully loaded!
+  </Alert>
+</Snackbar>
+
     </FrameContext.Provider>
   );
 }
