@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useEffect } from "react";
 import Box from "@mui/material/Box";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
@@ -75,7 +76,7 @@ export default function ContainerSelector() {
     setItemsOnOtherPages(sections.itemsOnOtherPages);
   }
 
-  React.useEffect(rebuildDropdown, [
+  useEffect(rebuildDropdown, [
     frameNameList,
     rootPageName,
     getFrameCreatedOnPage,
@@ -83,16 +84,11 @@ export default function ContainerSelector() {
   ]);
 
   const previousFrameNamesRef = React.useRef<string[]>([]);
-  React.useEffect(() => {
+  useEffect(() => {
     const prev = previousFrameNamesRef.current;
     if (prev.length === 0) {
       previousFrameNamesRef.current = frameNameList;
       return;
-    }
-    if (frameNameList.length > prev.length) {
-      const prevSet = new Set(prev);
-      const added = frameNameList.find((name) => !prevSet.has(name));
-      if (added) setCurrentFrameName(added);
     }
     previousFrameNamesRef.current = frameNameList;
   }, [frameNameList, setCurrentFrameName]);
@@ -116,6 +112,19 @@ export default function ContainerSelector() {
       : []),
   ];
 
+  const allItems = React.useMemo(
+    () => [...itemsOnThisPage, ...itemsOnOtherPages],
+    [itemsOnThisPage, itemsOnOtherPages]
+  );
+
+  const allowedIds = React.useMemo(() => new Set(allItems.map((i) => i.id)), [allItems]);
+
+  const selectValue = allowedIds.has(currentFrameName)
+    ? currentFrameName
+    : allowedIds.has(defaultFrameName)
+    ? defaultFrameName
+    : "";
+
   return (
     <Box display="flex" width="100%" alignItems="center">
       <FormControl size="small" sx={{ flex: 1, paddingTop: "4px" }}>
@@ -123,9 +132,10 @@ export default function ContainerSelector() {
         <Select
           labelId="frame-select-label"
           id="frame-select-label"
-          value={itemsOnThisPage.length + itemsOnOtherPages.length === 0 ? "" : currentFrameName}
+          value={selectValue}
           onChange={handleFrameChange}
           sx={{ textAlign: "center" }}
+          displayEmpty
         >
           {selectChildren}
         </Select>

@@ -6,7 +6,7 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
 import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
-
+import { POST_MESSAGE_LOG_ENABLED } from '@/components/contexts/FrameManager/FrameManager';
 
 interface FrameProps {
   savedName: string;
@@ -19,31 +19,35 @@ const LOCAL_CROSS_DOMAIN_ORIGIN = 'http://localhost:3001';
 const PROD_CROSS_DOMAIN_ORIGIN = 'https://frame.jonnoel.dev';
 const FRAME_PATH = '/frame/';
 
-
+const MESSAGE_CHILD_READY = 'child:ready';
+const MESSAGE_CHILD_NAVIGATING = 'child:navigating';
 
 export default function Frame({ savedName, frameType }: FrameProps) {
-  const { containerRefs, registerFrame, frameElementsByFrameName } = useFrame();
+  const { containerRefs, registerFrame } = useFrame();
   const [iframeSize, setIframeSize] = useState({ width: 0, height: 0 });
+  const [isIframeReady, setIsIframeReady] = useState(false);
+
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const popupWindowRef = useRef<Window | null>(null);
-  const [isIframeDomLoaded, setIsIframeDomLoaded] = useState(false);
-  const lastIframePayloadJsonRef = useRef<string>('');
   const lastPopupPayloadJsonRef = useRef<string>('');
   const registeredFramesRef = useRef<Set<string>>(new Set());
+
   const isPopup = frameType === 'popupSameDomain' || frameType === 'popupCrossDomain';
   const isSameDomain = frameType === 'sameDomain' || frameType === 'popupSameDomain';
-  const isDev = process.env.NODE_ENV === 'development';
+  const isDevelopment = process.env.NODE_ENV === 'development';
   const theme = useTheme();
 
-  const iframeSrc = isSameDomain
-    ? `${isDev ? LOCAL_SAME_DOMAIN_ORIGIN : PROD_SAME_DOMAIN_ORIGIN}${FRAME_PATH}${savedName}`
-    : `${isDev ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN}${FRAME_PATH}${savedName}`;
+  const childOrigin = isSameDomain
+    ? (isDevelopment ? LOCAL_SAME_DOMAIN_ORIGIN : PROD_SAME_DOMAIN_ORIGIN)
+    : (isDevelopment ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN);
+
+  const iframeSrc = `${childOrigin}${FRAME_PATH}${savedName}`;
 
   const openPopup = () => {
     const popupWidth = window.innerWidth / 2;
     const popupHeight = window.innerHeight / 2;
     const popup = window.open(iframeSrc, savedName, `width=${popupWidth},height=${popupHeight}`);
-    popupWindowRef.current = popup;
+    popupWindowRef.current = popup || null;
     lastPopupPayloadJsonRef.current = '';
   };
 
@@ -66,37 +70,51 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     return () => window.removeEventListener('resize', updateSize);
   }, [containerRefs]);
 
-  useEffect(() => {
-    lastIframePayloadJsonRef.current = '';
-    lastPopupPayloadJsonRef.current = '';
-    setIsIframeDomLoaded(false);
-    registeredFramesRef.current.delete(savedName);
-  }, [savedName]);
 
-  const handleIframeLoad = () => {
-    setIsIframeDomLoaded(true);
 
-    const win = iframeRef.current?.contentWindow;
-    if (!win) return;
+useEffect(() => {
+  function handleChildMessage(messageEvent: MessageEvent) {
+    const isFromIframeWindow =
+      iframeRef.current?.contentWindow &&
+      messageEvent.source === iframeRef.current.contentWindow;
+    if (!isFromIframeWindow) return;
+    if (messageEvent.origin !== childOrigin) return;
 
-    const startLoading = () => {
-      setIsIframeDomLoaded(false);
-    };
+    const receivedMessage = messageEvent.data as { type?: string; frameName?: string };
+    const messageType = receivedMessage?.type;
+    const messageFrameName = receivedMessage?.frameName;
 
-    try {
-      win.addEventListener('beforeunload', startLoading);
-    } catch {}
-  };
+    const isLoadingMessage =
+      messageType === MESSAGE_CHILD_READY || messageType === MESSAGE_CHILD_NAVIGATING;
+    if (!isLoadingMessage) return;
+
+    if (messageFrameName !== savedName) return;
+
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Receive] at "Parent" from "Iframe" | type: ${messageType} | content:`,
+        receivedMessage
+      );
+    }
+
+    if (messageType === MESSAGE_CHILD_READY) {
+      setIsIframeReady(true);
+    } else {
+      setIsIframeReady(false);
+
+    }
+  }
+
+  window.addEventListener("message", handleChildMessage);
+  return () => window.removeEventListener("message", handleChildMessage);
+}, []);
+
+
+
 
   if (isPopup) {
     return (
-      <Box
-        sx={{
-          backgroundColor: theme.palette.primary.main,
-          color: theme.palette.text.primary,
-          padding: 2,
-        }}
-      >
+      <Box sx={{ backgroundColor: theme.palette.primary.main, color: theme.palette.text.primary, padding: 2 }}>
         <Button
           variant="contained"
           onClick={openPopup}
@@ -109,7 +127,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     );
   }
 
-  const showSpinner = !isIframeDomLoaded;
+  const showSpinner = !isIframeReady;
 
   return (
     <Box>
@@ -139,7 +157,6 @@ export default function Frame({ savedName, frameType }: FrameProps) {
           src={iframeSrc}
           width={iframeSize.width}
           height={iframeSize.height}
-          onLoad={handleIframeLoad}
           style={{ border: 'none', flex: '0 0 auto' }}
         />
       </Box>

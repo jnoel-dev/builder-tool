@@ -8,6 +8,7 @@ import { useFrame, POST_MESSAGE_LOG_ENABLED } from "@/components/contexts/FrameM
 import componentRegistry from "@/components/contexts/FrameManager/componentRegistry";
 import ElementController from "../../elementController/ElementController";
 import { SAME_ORIGIN_TARGET } from "@/components/contexts/FrameManager/framePersistence";
+import { usePathname } from "next/navigation";
 
 interface ContainerBaseProps {
   frameName: string;
@@ -24,7 +25,7 @@ export default function ContainerBase({
   frameName,
   disableElementControlsForChildren = false,
 }: ContainerBaseProps) {
-  const { frameElementsByFrameName, containerRefs, registerFrame, replaceFrameElements } = useFrame();
+  const { frameElementsByFrameName, containerRefs, registerFrame, replaceFrameElements} = useFrame();
   const elementListForFrame = frameElementsByFrameName[frameName] || [];
   const fallbackRef = useRef<HTMLDivElement | null>(null);
   const containerRefForFrame = containerRefs[frameName] ?? fallbackRef;
@@ -32,6 +33,7 @@ export default function ContainerBase({
   const [pageDisplayName, setPageDisplayName] = useState("");
 
   const replaceFrameElementsRef = useRef(replaceFrameElements);
+  const pathname = usePathname();
   useEffect(() => {
     replaceFrameElementsRef.current = replaceFrameElements;
   }, [replaceFrameElements]);
@@ -78,39 +80,60 @@ export default function ContainerBase({
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
+function sendRequestSync(frameName: string) {
+  const targetWindow = window.top?.opener ? window.top.opener : window.top;
+  const nameForTop = frameName === "TopFrame" ? window.name : frameName;
+  const segments = document.location.pathname.split("/").filter(Boolean);
+  const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");
+  const message = { type: "requestSync", frameName: nameForTop, pageName };
+
+  if (POST_MESSAGE_LOG_ENABLED) {
+    console.log(
+      `[PostMessage Send] from "${window.name}" to "TopFrame" | type: requestSync | content:`,
+      message
+    );
+  }
+  targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
+}
+
 useEffect(() => {
   if (!window.name) return;
 
-  function sendRequest() {
-    const targetWindow = window.top?.opener ? window.top.opener : window.top;
-    const nameForTop = frameName === "TopFrame" ? window.name : frameName;
-    const segments = document.location.pathname.split("/").filter(Boolean);
-    const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");
-    const message = { type: "requestSync", frameName: nameForTop, pageName };
+  const onPopState = () => {
+    if (sessionStorage.getItem("navigation:SPAreplace")) return;
+    sendRequestSync(frameName);
+  };
 
+  window.addEventListener("popstate", onPopState);
+  return () => window.removeEventListener("popstate", onPopState);
+}, [frameName]);
+
+useEffect(() => {
+  if (!window.name) return;
+  if (sessionStorage.getItem("navigation:SPAreplace")) return;
+  sendRequestSync(frameName);
+}, [pathname, frameName]);
+
+useEffect(() => {
+  if (!window.name) return;
+
+  const parentWindow = window.parent;
+
+  const sendChildReady = () => {
+    const readyPayload = { type: "child:ready", frameName: window.name };
     if (POST_MESSAGE_LOG_ENABLED) {
       console.log(
-        `[PostMessage Send] from "${window.name}" to "TopFrame" | type: requestSync | content:`,
-        message
+        `[PostMessage Send] from "${window.name}" to "Parent" | type: child:ready | content:`,
+        readyPayload
       );
     }
-
-    targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
-  }
-
-  sendRequest();
-
-  const handleNav = () => sendRequest();
-  window.addEventListener("popstate", handleNav);
-  window.addEventListener("locationchange", handleNav);
-
-
-  return () => {
-    window.removeEventListener("popstate", handleNav);
-    window.removeEventListener("locationchange", handleNav);
- 
+    parentWindow?.postMessage(readyPayload, SAME_ORIGIN_TARGET);
   };
-}, [frameName]);
+
+
+  sendChildReady();
+
+}, [pathname]);
 
 
   return (

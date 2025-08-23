@@ -13,7 +13,7 @@ import React, {
 
 import { installTopMessageHandler, sendSyncFrameToChild, getKnownChildWindowInfoByFrameName } from "./frameMessaging";
 import { loadInitialState, persistStateToSession } from "./framePersistence";
-
+import { usePathname } from "next/navigation";
 import {
   AppState,
   FrameElement,
@@ -61,7 +61,7 @@ const FrameContext = createContext<FrameContextValue | undefined>(undefined);
 
 export function FrameManager({ children }: { children: ReactNode }) {
   const isTopWindow = typeof window !== "undefined" && window.top === window && !window.opener;
-
+  const pathname = usePathname();
   const [applicationState, setApplicationState] = useState<AppState>({
     rootPage: DEFAULT_PAGE_NAME,
     frames: {
@@ -101,45 +101,17 @@ export function FrameManager({ children }: { children: ReactNode }) {
     loadAndHydrate();
   }, []);
 
-  useEffect(() => {
-    if (window !== window.top) return;
+  useEffect(() => { if (!isTopWindow) return; persistStateToSession(applicationState); }, [isTopWindow, applicationState]);
 
-    function onLocationChange() {
-      const nextRootPageName = pageNameFromPath(window.location.pathname);
-      setApplicationState((previousState) => {
-        if (previousState.rootPage === nextRootPageName) return previousState;
-        return { ...previousState, rootPage: nextRootPageName, currentFrame: DEFAULT_FRAME_NAME };
-      });
-    }
-
-    function overrideHistoryMethod(methodName: "pushState" | "replaceState") {
-      const originalMethod = window.history[methodName];
-      (window.history as any)[methodName] = function overriddenHistoryMethod(
-        stateValue: any,
-        titleValue: string,
-        urlValue?: string
-      ) {
-        const result = (originalMethod as any).apply(this, [stateValue, titleValue, urlValue]);
-        window.dispatchEvent(new Event("locationchange"));
-        return result;
-      };
-      return originalMethod;
-    }
-
-    const originalPushState = overrideHistoryMethod("pushState");
-    const originalReplaceState = overrideHistoryMethod("replaceState");
-
-    window.addEventListener("popstate", onLocationChange);
-    window.addEventListener("locationchange", onLocationChange);
-    onLocationChange();
-
-    return () => {
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
-      window.removeEventListener("popstate", onLocationChange);
-      window.removeEventListener("locationchange", onLocationChange);
-    };
-  }, []);
+useEffect(() => {
+  if (window !== window.top) return;
+  const nextRootPageName = pageNameFromPath(pathname);
+  setApplicationState(prev =>
+    prev.rootPage === nextRootPageName
+      ? prev
+      : { ...prev, rootPage: nextRootPageName, currentFrame: DEFAULT_FRAME_NAME }
+  );
+}, [pathname]);
 
   function ensureFrameExists(previousState: AppState, frameName: string): AppState {
     if (previousState.frames[frameName]) return previousState;
@@ -192,7 +164,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
         element.id === elementId ? { ...element, xPercent, yPercent } : element
       );
       const nextState = setElementsForFrameAndCurrentPage(previousState, frameName, updatedElements);
-      if (isTopWindow) persistStateToSession(nextState);
+
       return nextState;
     });
   }
@@ -202,7 +174,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
       const currentElements = getElementsForFrame(previousState, frameName);
       const remainingElements = currentElements.filter((element) => element.id !== elementId);
       const nextState = setElementsForFrameAndCurrentPage(previousState, frameName, remainingElements);
-      if (isTopWindow) persistStateToSession(nextState);
+
       return nextState;
     });
   }
@@ -250,7 +222,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
       }
 
       idCountersByComponentRef.current = rebuildIdCountersFromState(nextState);
-      if (isTopWindow) persistStateToSession(nextState);
+
       return nextState;
     });
   }
@@ -267,13 +239,14 @@ export function FrameManager({ children }: { children: ReactNode }) {
           history.replaceState(null, "", stored.url);
           window.dispatchEvent(new PopStateEvent("popstate"));
         }
+        setApplicationState((previousState) => {
+          if (previousState.currentFrame !== DEFAULT_FRAME_NAME) return { ...previousState, currentFrame: DEFAULT_FRAME_NAME };
+          return previousState;
+        });
       } catch {}
     }
 
-    setApplicationState((previousState) => {
-      if (previousState.currentFrame !== DEFAULT_FRAME_NAME) return { ...previousState, currentFrame: DEFAULT_FRAME_NAME };
-      return previousState;
-    });
+
   }, [applicationState.rootPage]);
 
   useEffect(() => {
@@ -285,7 +258,10 @@ export function FrameManager({ children }: { children: ReactNode }) {
     }
 
     function registerFrameByName(externalFrameName: string) {
-      setApplicationState((previousState) => ensureFrameExists(previousState, externalFrameName));
+          setApplicationState((previousState) => {
+      const nextState = ensureFrameExists(previousState, externalFrameName);
+      return { ...nextState, currentFrame: externalFrameName };
+    });
     }
 
     function unregisterFrameById(frameIdentifier: string) {
@@ -343,7 +319,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
       };
       const nextState = setElementsForFrameAndCurrentPage(previousState, frameName, [...currentElements, createdElement]);
       sendSyncFrameToChild(frameName, buildFramePayloadForChild(frameName, nextState));
-      if (isTopWindow) persistStateToSession(nextState);
+  
       return nextState;
     });
     return newElementId;
