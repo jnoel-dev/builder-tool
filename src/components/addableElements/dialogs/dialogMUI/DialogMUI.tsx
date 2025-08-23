@@ -18,12 +18,12 @@ export default function DialogMUI({ shouldFocus = false }: DialogMUIProps) {
 
   return (
     <>
-      <Box sx={{ backgroundColor: theme.palette.primary.main, padding: 2}}>
+      <Box sx={{ backgroundColor: theme.palette.primary.main, padding: 2 }}>
         <Button
           variant="contained"
           onClick={openDialog}
           color="secondary"
-          sx={{ color: theme.palette.text.primary, width:'100%', px:4}}
+          sx={{ color: theme.palette.text.primary, width: '100%', px: 4 }}
         >
           Open Dialog
         </Button>
@@ -32,8 +32,7 @@ export default function DialogMUI({ shouldFocus = false }: DialogMUIProps) {
       <Dialog
         open={isDialogOpen}
         onClose={closeDialog}
-        disableEnforceFocus={!shouldFocus}
-        disableRestoreFocus={!shouldFocus}
+        {...(!shouldFocus ? { disableEnforceFocus: true, disableRestoreFocus: true } : {})}
       >
         <Box
           sx={{
