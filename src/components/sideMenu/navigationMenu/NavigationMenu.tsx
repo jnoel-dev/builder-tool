@@ -209,7 +209,7 @@ export default function NavigationMenu() {
   }
 
   const availableDestinationPages = pagesByOrigin[destinationOriginUrl] || ["Home Page"];
-  const containerSelectValue = isMounted && frameNameList.includes(currentFrameName) ? currentFrameName : "";
+
 
   return (
     <Stack>
