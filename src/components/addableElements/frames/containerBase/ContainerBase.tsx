@@ -11,8 +11,9 @@ import { SAME_ORIGIN_TARGET } from "@/components/contexts/FrameManager/framePers
 import { usePathname } from "next/navigation";
 
 interface ContainerBaseProps {
-  frameName: string;
+  connectedFrameName: string;
   disableElementControlsForChildren?: boolean;
+  hasOwnWindowObject?: boolean;
 }
 
 function CollapseWrapper({ children }: { children: ReactNode }) {
@@ -22,15 +23,16 @@ function CollapseWrapper({ children }: { children: ReactNode }) {
 }
 
 export default function ContainerBase({
-  frameName,
+  connectedFrameName,
   disableElementControlsForChildren = false,
+  hasOwnWindowObject = false
 }: ContainerBaseProps) {
   const { frameElementsByFrameName, containerRefs, registerFrame, replaceFrameElements} = useFrame();
-  const elementListForFrame = frameElementsByFrameName[frameName] || [];
+  const elementListForFrame = frameElementsByFrameName[connectedFrameName] || [];
   const fallbackRef = useRef<HTMLDivElement | null>(null);
-  const containerRefForFrame = containerRefs[frameName] ?? fallbackRef;
+  const containerRefForFrame = containerRefs[connectedFrameName] ?? fallbackRef;
 
-  const [pageDisplayName, setPageDisplayName] = useState("");
+ 
 
   const replaceFrameElementsRef = useRef(replaceFrameElements);
   const pathname = usePathname();
@@ -38,22 +40,17 @@ export default function ContainerBase({
     replaceFrameElementsRef.current = replaceFrameElements;
   }, [replaceFrameElements]);
 
-  useEffect(() => {
-    const segments = document.location.pathname.split("/").filter(Boolean);
-    let pageName = "Home";
-    if (segments[0] !== "frame") pageName = segments[0] || "";
-    if (segments[0] === "frame") pageName = segments[2] || "";
-    setPageDisplayName(pageName.charAt(0).toUpperCase() + pageName.slice(1));
-  }, []);
+
 
   useEffect(() => {
-    if (!frameName) return;
-    registerFrame(frameName);
-  }, [frameName]);
+    if (!connectedFrameName) return;
+    registerFrame(connectedFrameName);
+  }, [connectedFrameName]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (event.source !== window.top && event.source !== window.top?.opener) return;
+      if (!hasOwnWindowObject) return;
       let sourceWindow = "TopFrame";
       if (event.source === window.top?.opener){
         sourceWindow = "Main Window";
@@ -98,25 +95,27 @@ function sendRequestSync(frameName: string) {
 
 useEffect(() => {
   if (!window.name) return;
+  if (!hasOwnWindowObject) return;
 
   const onPopState = () => {
     if (sessionStorage.getItem("navigation:SPAreplace")) return;
-    sendRequestSync(frameName);
+    sendRequestSync(connectedFrameName);
   };
 
   window.addEventListener("popstate", onPopState);
   return () => window.removeEventListener("popstate", onPopState);
-}, [frameName]);
+}, [connectedFrameName]);
 
 useEffect(() => {
   if (!window.name) return;
+  if (!hasOwnWindowObject) return;
   if (sessionStorage.getItem("navigation:SPAreplace")) return;
-  sendRequestSync(frameName);
-}, [pathname, frameName]);
+  sendRequestSync(connectedFrameName);
+}, [pathname, connectedFrameName]);
 
 useEffect(() => {
   if (!window.name) return;
-
+  if (!hasOwnWindowObject) return;
   const parentWindow = window.parent;
 
   const sendChildReady = () => {
@@ -138,11 +137,6 @@ useEffect(() => {
 
   return (
     <>
-      <Box sx={{ mb: 1 }}>
-        <Typography variant="h6" fontWeight="bold">
-          {pageDisplayName}
-        </Typography>
-      </Box>
 
       {elementListForFrame.map((element) => {
         const registryEntry = componentRegistry[element.componentName];
@@ -159,7 +153,7 @@ useEffect(() => {
             controlsDisabled={disableElementControlsForChildren}
             shouldShowName={element.isFrameOrContainer}
             containerRef={containerRefForFrame}
-            connectedFrameOrContainerName={frameName}
+            connectedFrameOrContainerName={connectedFrameName}
           >
             <CollapseWrapper>
               <Component

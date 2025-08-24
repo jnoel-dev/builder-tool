@@ -55,7 +55,7 @@ export default function ShadowRoot({
         padding: '10px',
       }}
     >
-      <ContainerBase frameName={savedName} disableElementControlsForChildren />
+      <ContainerBase connectedFrameName={savedName} disableElementControlsForChildren />
       {!hasChildren && (
         <Box
           sx={{

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Link, Typography } from '@mui/material';
+import { Fab, Button, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Link, Typography } from '@mui/material';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firestoreDatabase } from '@/components/contexts/FrameManager/firebaseConfig';
 import { SAME_ORIGIN_TARGET } from '@/components/contexts/FrameManager/framePersistence';
@@ -27,6 +27,9 @@ export default function ShareButton({ buttonText = 'Share' }: ShareButtonProps) 
 
   const handleShareClick = useCallback(async () => {
     if (isSaving) return;
+    setCopied(false);
+    setShareUrl('');
+    openDialog();
     setIsSaving(true);
     try {
       const stateJson = sessionStorage.getItem('SB_STATE') ?? '';
@@ -36,7 +39,6 @@ export default function ShareButton({ buttonText = 'Share' }: ShareButtonProps) 
       });
       const urlObject = new URL(`${docRef.id}`, SAME_ORIGIN_TARGET);
       setShareUrl(urlObject.toString());
-      openDialog();
     } finally {
       setIsSaving(false);
     }
@@ -52,18 +54,10 @@ export default function ShareButton({ buttonText = 'Share' }: ShareButtonProps) 
 
   return (
     <>
-      <Button
-        variant="contained"
-        size="large"
+      <Fab
         onClick={handleShareClick}
         disabled={isSaving}
-        startIcon={
-          isSaving ? (
-            <CircularProgress size={20} sx={{ display: 'block' }} />
-          ) : (
-            <LinkIcon fontSize="medium" />
-          )
-        }
+        aria-label="Share link"
         sx={{
           backgroundColor: theme.palette.background.paper,
           color: theme.palette.text.primary,
@@ -77,8 +71,8 @@ export default function ShareButton({ buttonText = 'Share' }: ShareButtonProps) 
           minHeight: 48,
         }}
       >
-        {buttonText}
-      </Button>
+        <LinkIcon fontSize="medium" />
+      </Fab>
 
       <Dialog
         open={isDialogOpen}
@@ -94,7 +88,9 @@ export default function ShareButton({ buttonText = 'Share' }: ShareButtonProps) 
       >
         <DialogTitle>Share Link</DialogTitle>
         <DialogContent>
-          {shareUrl ? (
+          {isSaving ? (
+            <CircularProgress size={24} sx={{ display: 'block' }} />
+          ) : shareUrl ? (
             <Typography>
               <Link href={shareUrl} target="_blank" rel="noopener noreferrer" color="inherit">
                 {shareUrl}
@@ -105,7 +101,7 @@ export default function ShareButton({ buttonText = 'Share' }: ShareButtonProps) 
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCopyClick} disabled={!shareUrl}>{copied ? 'Copied' : 'Copy'}</Button>
+          {!isSaving && shareUrl ? <Button onClick={handleCopyClick}>{copied ? 'Copied' : 'Copy'}</Button> : null}
           <Button onClick={closeDialog}>Close</Button>
         </DialogActions>
       </Dialog>

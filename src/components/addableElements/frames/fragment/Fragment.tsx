@@ -118,7 +118,7 @@ export default function Fragment({
           }}
         >
           <ContainerBase
-            frameName={savedName}
+            connectedFrameName={savedName}
             disableElementControlsForChildren={true}
           />
         </Box>

@@ -45,7 +45,7 @@ export default function TopFrame(){
           color: theme.palette.secondary.main,
         }}
       >
-        <ContainerBase frameName='TopFrame'/>
+        <ContainerBase connectedFrameName='TopFrame' hasOwnWindowObject={true} />
       </Box>
     </div>
   );

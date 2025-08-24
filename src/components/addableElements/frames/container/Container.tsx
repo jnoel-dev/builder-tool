@@ -29,7 +29,7 @@ export default function Container({
         padding: '10px',
       }}
     >
-      <ContainerBase frameName={savedName} disableElementControlsForChildren={true}/>
+      <ContainerBase connectedFrameName={savedName} disableElementControlsForChildren={true}/>
       {!hasChildren && (
         <Box
           sx={{
