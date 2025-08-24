@@ -6,6 +6,7 @@ import SectionHeader from "../sectionHeader/SectionHeader";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import List from "@mui/material/List";
 
+
 interface MenuBaseProps {
   menuName: string;
   menuComponent: ComponentType<any>;
@@ -13,22 +14,21 @@ interface MenuBaseProps {
   setExpanded: React.Dispatch<React.SetStateAction<string | false>>;
 }
 
-
 const Accordion = styled((props: AccordionProps) => (
-    <MuiAccordion disableGutters elevation={0} square {...props} />
+  <MuiAccordion disableGutters elevation={0} square {...props} />
 ))(({ theme }) => ({
-    border: `1px solid ${theme.palette.divider}`,
-    "&:not(:last-child)": {
-        borderBottom: 0,
-    },
-    "&::before": {
-        display: "none",
-    },
+  border: `1px solid ${theme.palette.divider}`,
+  "&:not(:last-child)": {
+    borderBottom: 0,
+  },
+  "&::before": {
+    display: "none",
+  },
 }));
 
 const listStyle = {
-    py: 0,
-    width: "100%",
+  py: 0,
+  width: "100%",
 };
 
 export default function MenuBase({ menuName, menuComponent, expanded, setExpanded }: MenuBaseProps) {
@@ -48,15 +48,14 @@ export default function MenuBase({ menuName, menuComponent, expanded, setExpande
       >
         <SectionHeader sectionName={menuName} />
         <AccordionDetails
-        sx={{
-            backgroundColor: theme => theme.palette.background.default,
-        }}
+          sx={{
+            backgroundColor: (theme) => theme.palette.background.default,
+          }}
         >
-        <List sx={listStyle}>
-            <MenuComponent />
-        </List>
+          <List sx={listStyle}>
+            <MenuComponent expanded={expanded === menuName} />
+          </List>
         </AccordionDetails>
-
       </Accordion>
     </div>
   );

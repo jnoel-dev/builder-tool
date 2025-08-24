@@ -137,7 +137,7 @@ export default function NavigationMenu() {
         ...(pagesByOrigin[originUrl] || []).map((pageTitle) => `${originUrl}-${pageTitle}`),
       ])
     );
-  }, [pagesByOrigin, isMounted]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pagesByOrigin, isMounted]); 
 
   const [destinationOriginUrl, setDestinationOriginUrl] = useState<string>(Object.keys(initialPagesByOrigin)[0]);
 

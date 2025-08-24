@@ -1,13 +1,14 @@
 "use client";
 
-import * as React from "react";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import { FormHelperText, ListSubheader } from "@mui/material";
 import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
+import componentRegistry from "@/components/contexts/FrameManager/componentRegistry";
+import Frame from "@/components/addableElements/frames/frame/Frame";
 
 type DropdownItem = { id: string; label: string; disabled: boolean };
 
@@ -34,10 +35,8 @@ function buildFrameDropdownSections(
       });
       continue;
     }
-
     const createdOnPage = getCreatedOnPage(frameName);
     const isOnThisPage = createdOnPage === currentRootPageName;
-
     if (isOnThisPage) {
       itemsOnThisPage.push({ id: frameName, label: `${frameName} — ${createdOnPage}`, disabled: false });
     } else {
@@ -48,7 +47,19 @@ function buildFrameDropdownSections(
   return { itemsOnThisPage, itemsOnOtherPages };
 }
 
-export default function ContainerSelector() {
+function isTrueFrameByName(frameName: string, defaultFrameName: string): boolean {
+  if (frameName === defaultFrameName) return true;
+  const baseName = frameName.replace(/-\d+$/, "");
+  const entry = (componentRegistry as Record<string, { component?: React.ComponentType<any> }>)[baseName];
+  if (!entry || !entry.component) return false;
+  return entry.component === Frame;
+}
+
+type ContainerSelectorProps = {
+  listTrueFramesOnly?: boolean;
+};
+
+export default function ContainerSelector({ listTrueFramesOnly = false }: ContainerSelectorProps) {
   const {
     currentFrameName,
     setCurrentFrameName,
@@ -58,8 +69,8 @@ export default function ContainerSelector() {
     defaultFrameName,
   } = useFrame();
 
-  const [itemsOnThisPage, setItemsOnThisPage] = React.useState<DropdownItem[]>([]);
-  const [itemsOnOtherPages, setItemsOnOtherPages] = React.useState<DropdownItem[]>([]);
+  const [itemsOnThisPage, setItemsOnThisPage] = useState<DropdownItem[]>([]);
+  const [itemsOnOtherPages, setItemsOnOtherPages] = useState<DropdownItem[]>([]);
 
   function handleFrameChange(event: SelectChangeEvent) {
     setCurrentFrameName(event.target.value as string);
@@ -76,54 +87,78 @@ export default function ContainerSelector() {
     setItemsOnOtherPages(sections.itemsOnOtherPages);
   }
 
-  useEffect(rebuildDropdown, [
-    frameNameList,
-    rootPageName,
-    getFrameCreatedOnPage,
-    defaultFrameName,
-  ]);
+  useEffect(rebuildDropdown, [frameNameList, rootPageName, getFrameCreatedOnPage, defaultFrameName]);
 
-  const previousFrameNamesRef = React.useRef<string[]>([]);
-  useEffect(() => {
-    const prev = previousFrameNamesRef.current;
-    if (prev.length === 0) {
-      previousFrameNamesRef.current = frameNameList;
-      return;
+  function filterVisible(list: DropdownItem[]): DropdownItem[] {
+    if (!listTrueFramesOnly) return list;
+    const visible: DropdownItem[] = [];
+    for (const item of list) {
+      if (item.id === defaultFrameName || isTrueFrameByName(item.id, defaultFrameName)) {
+        visible.push(item);
+      }
     }
-    previousFrameNamesRef.current = frameNameList;
-  }, [frameNameList, setCurrentFrameName]);
+    return visible;
+  }
 
-  const selectChildren: React.ReactNode[] = [
-    <ListSubheader key="this-header">Frames on this page</ListSubheader>,
-    ...itemsOnThisPage.map((item) => (
+  function ensureDefaultEnabled(list: DropdownItem[]): DropdownItem[] {
+    const adjusted: DropdownItem[] = [];
+    for (const item of list) {
+      if (item.id === defaultFrameName) {
+        adjusted.push({ ...item, disabled: false });
+      } else {
+        adjusted.push(item);
+      }
+    }
+    return adjusted;
+  }
+
+  const visibleItemsOnThisPage = useMemo(() => {
+    const filtered = filterVisible(itemsOnThisPage);
+    return ensureDefaultEnabled(filtered);
+  }, [itemsOnThisPage, listTrueFramesOnly, defaultFrameName]);
+
+  const visibleItemsOnOtherPages = useMemo(() => {
+    const filtered = filterVisible(itemsOnOtherPages);
+    return ensureDefaultEnabled(filtered);
+  }, [itemsOnOtherPages, listTrueFramesOnly, defaultFrameName]);
+
+  const allVisibleItems = useMemo(
+    () => [...visibleItemsOnThisPage, ...visibleItemsOnOtherPages],
+    [visibleItemsOnThisPage, visibleItemsOnOtherPages]
+  );
+
+  const allowedFrameIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of allVisibleItems) set.add(item.id);
+    return set;
+  }, [allVisibleItems]);
+
+  let selectedFrameValue = "";
+  if (allowedFrameIds.has(currentFrameName)) {
+    selectedFrameValue = currentFrameName;
+  } else if (allowedFrameIds.has(defaultFrameName)) {
+    selectedFrameValue = defaultFrameName;
+  }
+
+  const menuItems: React.ReactNode[] = [];
+  menuItems.push(<ListSubheader key="this-header">Frames on this page</ListSubheader>);
+  for (const item of visibleItemsOnThisPage) {
+    menuItems.push(
       <MenuItem key={`this-${item.id}`} value={item.id} disabled={item.disabled}>
         {item.label}
       </MenuItem>
-    )),
-    ...(itemsOnOtherPages.length > 0
-      ? [
-          <ListSubheader key="other-header">Frames on other pages</ListSubheader>,
-          ...itemsOnOtherPages.map((item) => (
-            <MenuItem key={`other-${item.id}`} value={item.id} disabled>
-              {item.label}
-            </MenuItem>
-          )),
-        ]
-      : []),
-  ];
-
-  const allItems = React.useMemo(
-    () => [...itemsOnThisPage, ...itemsOnOtherPages],
-    [itemsOnThisPage, itemsOnOtherPages]
-  );
-
-  const allowedIds = React.useMemo(() => new Set(allItems.map((i) => i.id)), [allItems]);
-
-  const selectValue = allowedIds.has(currentFrameName)
-    ? currentFrameName
-    : allowedIds.has(defaultFrameName)
-    ? defaultFrameName
-    : "";
+    );
+  }
+  if (visibleItemsOnOtherPages.length > 0) {
+    menuItems.push(<ListSubheader key="other-header">Frames on other pages</ListSubheader>);
+    for (const item of visibleItemsOnOtherPages) {
+      menuItems.push(
+        <MenuItem key={`other-${item.id}`} value={item.id} disabled>
+          {item.label}
+        </MenuItem>
+      );
+    }
+  }
 
   return (
     <Box display="flex" width="100%" alignItems="center">
@@ -132,12 +167,12 @@ export default function ContainerSelector() {
         <Select
           labelId="frame-select-label"
           id="frame-select-label"
-          value={selectValue}
+          value={selectedFrameValue}
           onChange={handleFrameChange}
           sx={{ textAlign: "center" }}
           displayEmpty
         >
-          {selectChildren}
+          {menuItems}
         </Select>
       </FormControl>
     </Box>
