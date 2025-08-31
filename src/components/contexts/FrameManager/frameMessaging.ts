@@ -1,8 +1,12 @@
 import { POST_MESSAGE_LOG_ENABLED } from "./FrameManager";
 import type { FrameElement } from "./frameUtils";
 import { SAME_ORIGIN_TARGET, CROSS_ORIGIN_TARGET } from "./framePersistence";
+import { FrameProperties } from "./frameUtils";
 
-type FramesByName = Record<string, FrameElement[]>;
+export type FramesByName = Record<
+  string,
+  { elements: FrameElement[]; properties: FrameProperties }
+>;
 
 type RequestSyncMessage = { type: "requestSync"; frameName: string; pageName?: string };
 type UpdatePositionMessage = {
@@ -67,7 +71,7 @@ export function sendSyncFrameToChild(
     );
   }
 
-  console.log("ORIGIN: ",getTargetOrigin(resolvedTargetWindow))
+  // console.log("ORIGIN: ",getTargetOrigin(resolvedTargetWindow))
   try {
     resolvedTargetWindow.postMessage(payload, getTargetOrigin(resolvedTargetWindow));
   } catch (sendError) {
@@ -78,7 +82,7 @@ export function sendSyncFrameToChild(
 }
 
 export function installTopMessageHandler(
-  getFramesForFrameName: (externalFrameName: string, requestedPageName?: string) => Record<string, FrameElement[]>,
+  getFramesForFrameName: (externalFrameName: string, requestedPageName?: string) => FramesByName,
   registerFrameByName: (externalFrameName: string) => void,
   updateElementPositionTop: (elementId: string, x: number, y: number, frameName: string) => void,
   removeElementTop: (elementId: string, frameName: string) => void,

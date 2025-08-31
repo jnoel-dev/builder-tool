@@ -196,13 +196,22 @@ useEffect(() => {
     return externalFrameName === DEFAULT_FRAME_NAME ? applicationState.rootPage : DEFAULT_PAGE_NAME;
   }
 
-  function buildFramePayloadForChild(externalFrameName: string, nextState: AppState): Record<string, FrameElement[]> {
+  function buildFramePayloadForChild(
+    externalFrameName: string,
+    nextState: AppState
+  ): Record<string, { elements: FrameElement[]; properties: Record<string, unknown> }> {
     const frameNode = nextState.frames[externalFrameName];
-    if (!frameNode) return { [externalFrameName]: [] };
+    if (!frameNode) {
+      return { [externalFrameName]: { elements: [], properties: {} } };
+    }
+
     const pageKey = resolvePageKeyForFrame(externalFrameName);
-    const elements = frameNode.pages[pageKey]?.elements || [];
-    return { [externalFrameName]: elements };
+    const elements = frameNode.pages[pageKey]?.elements ?? [];
+    const properties = frameNode.properties ?? {};
+
+    return { [externalFrameName]: { elements, properties } };
   }
+
 
   function updateElementPosition(elementId: string, xPercent: number, yPercent: number, frameName: string) {
     setApplicationState((previousState) => {

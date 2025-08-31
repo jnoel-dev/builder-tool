@@ -2,13 +2,14 @@
 
 import React, { ReactNode, useEffect, useState, useRef } from "react";
 import Collapse from "@mui/material/Collapse";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import { useFrame, POST_MESSAGE_LOG_ENABLED } from "@/components/contexts/FrameManager/FrameManager";
 import componentRegistry from "@/components/contexts/FrameManager/componentRegistry";
 import ElementController from "../../elementController/ElementController";
 import { SAME_ORIGIN_TARGET } from "@/components/contexts/FrameManager/framePersistence";
 import { usePathname } from "next/navigation";
+import FramePropertiesDisplay from "./framePropertiesDisplay/FramePropertiesDisplay";
+import { FramesByName } from "@/components/contexts/FrameManager/frameMessaging";
+import { FrameProperties } from "@/components/contexts/FrameManager/frameUtils";
 
 interface ContainerBaseProps {
   connectedFrameName: string;
@@ -25,19 +26,39 @@ export default function ContainerBase({
   connectedFrameName,
   disableElementControlsForChildren = false
 }: ContainerBaseProps) {
-  const { frameElementsByFrameName, containerRefs, registerFrame, replaceFrameElements} = useFrame();
+  const { frameElementsByFrameName, containerRefs, replaceFrameElements} = useFrame();
   const elementListForFrame = frameElementsByFrameName[connectedFrameName] || [];
   const fallbackRef = useRef<HTMLDivElement | null>(null);
   const containerRefForFrame = containerRefs[connectedFrameName] ?? fallbackRef;
+  const [frameProperties, setFrameProperties] = useState<FrameProperties>();
 
  
 
   const replaceFrameElementsRef = useRef(replaceFrameElements);
   const pathname = usePathname();
-  useEffect(() => {
-    replaceFrameElementsRef.current = replaceFrameElements;
-  }, [replaceFrameElements]);
+  console.log("Test")
 
+
+
+useEffect(() => {
+ 
+  if (window.opener || window !== window.top) return;
+
+  try {
+    const sessionJson = sessionStorage.getItem("SB_STATE");
+    if (!sessionJson) {
+      setFrameProperties(undefined);
+      return;
+    }
+    const sessionState = JSON.parse(sessionJson) as {
+      frames?: Record<string, { properties?: FrameProperties }>;
+    };
+    const propertiesForFrame = sessionState?.frames?.[connectedFrameName]?.properties;
+    setFrameProperties(propertiesForFrame);
+  } catch {
+    setFrameProperties(undefined);
+  }
+}, [connectedFrameName]);
 
 
   useEffect(() => {
@@ -47,7 +68,7 @@ export default function ContainerBase({
       if (event.source === window.top?.opener){
         sourceWindow = "Main Window";
       }
-      const data = event.data as { type?: string; frames?: Record<string, any[]> };
+      const data = event.data as { type?: string; frames?: FramesByName };
       if (!data || data.type !== "syncFrame" || !data.frames) return;
 
       if (POST_MESSAGE_LOG_ENABLED) {
@@ -57,11 +78,16 @@ export default function ContainerBase({
         );
       }
 
-      const incoming = data.frames as Record<string, any[]>;
+      const incoming = data.frames as FramesByName;
       const externalRootName = window.name || "";
+
+      setFrameProperties(incoming[window.name].properties)
+      
+      
       for (const incomingFrameName of Object.keys(incoming)) {
         const localFrameName = incomingFrameName === externalRootName ? "TopFrame" : incomingFrameName;
-        replaceFrameElementsRef.current(localFrameName, incoming[incomingFrameName] as any);
+        replaceFrameElementsRef.current(localFrameName, incoming[incomingFrameName].elements as any);
+        
       }
     }
 
@@ -124,37 +150,41 @@ useEffect(() => {
 }, [pathname]);
 
 
-  return (
-    <>
+return (
+  <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <div style={{ position: "absolute", top: 0, left: 0, zIndex: 1, pointerEvents: "none" }}>
+      <FramePropertiesDisplay properties={frameProperties} />
+    </div>
 
-      {elementListForFrame.map((element) => {
-        const registryEntry = componentRegistry[element.componentName];
-        if (!registryEntry) return null;
+    {elementListForFrame.map((element) => {
+      const registryEntry = componentRegistry[element.componentName];
+      if (!registryEntry) return null;
 
-        const { component: Component, neededProps = {} } = registryEntry;
-        const instanceProps = element.customProps || {};
-        const extraProps = element.isFrameOrContainer ? { savedName: element.id } : {};
+      const { component: Component, neededProps = {} } = registryEntry;
+      const instanceProps = element.customProps || {};
+      const extraProps = element.isFrameOrContainer ? { savedName: element.id } : {};
 
-        return (
-          <ElementController
-            key={element.id}
-            elementToControl={element}
-            controlsDisabled={disableElementControlsForChildren}
-            shouldShowName={element.isFrameOrContainer}
-            containerRef={containerRefForFrame}
-            connectedFrameOrContainerName={connectedFrameName}
-          >
-            <CollapseWrapper>
-              <Component
-                {...neededProps}
-                {...instanceProps}
-                {...extraProps}
-                ref={containerRefForFrame}
-              />
-            </CollapseWrapper>
-          </ElementController>
-        );
-      })}
-    </>
-  );
+      return (
+        <ElementController
+          key={element.id}
+          elementToControl={element}
+          controlsDisabled={disableElementControlsForChildren}
+          shouldShowName={element.isFrameOrContainer}
+          containerRef={containerRefForFrame}
+          connectedFrameOrContainerName={connectedFrameName}
+        >
+          <CollapseWrapper>
+            <Component
+              {...neededProps}
+              {...instanceProps}
+              {...extraProps}
+              ref={containerRefForFrame}
+            />
+          </CollapseWrapper>
+        </ElementController>
+      );
+    })}
+  </div>
+);
+
 }

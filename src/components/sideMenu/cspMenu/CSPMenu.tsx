@@ -76,11 +76,9 @@ function handleApplyClick() {
           <InfoIconWithTooltip
             infoText={
               <>
-                <strong>Applies the below only:</strong>
+                <strong>Directives:</strong> script-src
                 <br />
-                Directives: script-src
-                <br />
-                Sources: self unsafe-inline
+                <strong>Sources:</strong> self unsafe-inline
               </>
             }
           />

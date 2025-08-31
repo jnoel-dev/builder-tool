@@ -14,11 +14,17 @@ export type FrameElement = {
 
 export type PageState = { elements: FrameElement[] };
 
+export type FrameProperties = {
+  [propertyKey: string]: unknown;
+};
+
 export type FrameNode = {
   name: string;
   pages: Record<string, PageState>;
   createdOnPage: string;
+  properties?: FrameProperties;
 };
+
 
 export type AppState = {
   rootPage: string;
