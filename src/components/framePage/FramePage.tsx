@@ -32,7 +32,7 @@ export default function FramePage() {
         color: theme.palette.secondary.main,
       }}
     >
-      <ContainerBase connectedFrameName="TopFrame" hasOwnWindowObject={true} />
+      <ContainerBase connectedFrameName="TopFrame" />
     </div>
   );
 }

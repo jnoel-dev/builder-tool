@@ -7,6 +7,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
 import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
 import { POST_MESSAGE_LOG_ENABLED } from '@/components/contexts/FrameManager/FrameManager';
+import { isCspEnabledForFrame } from '@/components/contexts/FrameManager/framePersistence';
 
 interface FrameProps {
   savedName: string;
@@ -41,12 +42,14 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     ? (isDevelopment ? LOCAL_SAME_DOMAIN_ORIGIN : PROD_SAME_DOMAIN_ORIGIN)
     : (isDevelopment ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN);
 
-  const iframeSrc = `${childOrigin}${FRAME_PATH}${savedName}`;
+  const isCspEnabled = isCspEnabledForFrame(savedName);
+  const iframeSrc = `${childOrigin}${FRAME_PATH}${savedName}${isCspEnabled ? '?csp' : ''}`;
 
   const openPopup = () => {
     const popupWidth = window.innerWidth / 2;
     const popupHeight = window.innerHeight / 2;
-    const popup = window.open(iframeSrc, savedName, `width=${popupWidth},height=${popupHeight}`);
+    const popupUrl = `${childOrigin}${FRAME_PATH}${savedName}${isCspEnabled ? '?csp' : ''}`;
+    const popup = window.open(popupUrl, savedName, `width=${popupWidth},height=${popupHeight}`);
     popupWindowRef.current = popup || null;
     lastPopupPayloadJsonRef.current = '';
   };
@@ -70,47 +73,41 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     return () => window.removeEventListener('resize', updateSize);
   }, [containerRefs]);
 
+  useEffect(() => {
+    function handleChildMessage(messageEvent: MessageEvent) {
+      const isFromIframeWindow =
+        iframeRef.current?.contentWindow &&
+        messageEvent.source === iframeRef.current.contentWindow;
+      if (!isFromIframeWindow) return;
+      if (messageEvent.origin !== childOrigin) return;
 
+      const receivedMessage = messageEvent.data as { type?: string; frameName?: string };
+      const messageType = receivedMessage?.type;
+      const messageFrameName = receivedMessage?.frameName;
 
-useEffect(() => {
-  function handleChildMessage(messageEvent: MessageEvent) {
-    const isFromIframeWindow =
-      iframeRef.current?.contentWindow &&
-      messageEvent.source === iframeRef.current.contentWindow;
-    if (!isFromIframeWindow) return;
-    if (messageEvent.origin !== childOrigin) return;
+      const isLoadingMessage =
+        messageType === MESSAGE_CHILD_READY || messageType === MESSAGE_CHILD_NAVIGATING;
+      if (!isLoadingMessage) return;
 
-    const receivedMessage = messageEvent.data as { type?: string; frameName?: string };
-    const messageType = receivedMessage?.type;
-    const messageFrameName = receivedMessage?.frameName;
+      if (messageFrameName !== savedName) return;
 
-    const isLoadingMessage =
-      messageType === MESSAGE_CHILD_READY || messageType === MESSAGE_CHILD_NAVIGATING;
-    if (!isLoadingMessage) return;
+      if (POST_MESSAGE_LOG_ENABLED) {
+        console.log(
+          `[PostMessage Receive] at "Parent" from "Iframe" | type: ${messageType} | content:`,
+          receivedMessage
+        );
+      }
 
-    if (messageFrameName !== savedName) return;
-
-    if (POST_MESSAGE_LOG_ENABLED) {
-      console.log(
-        `[PostMessage Receive] at "Parent" from "Iframe" | type: ${messageType} | content:`,
-        receivedMessage
-      );
+      if (messageType === MESSAGE_CHILD_READY) {
+        setIsIframeReady(true);
+      } else {
+        setIsIframeReady(false);
+      }
     }
 
-    if (messageType === MESSAGE_CHILD_READY) {
-      setIsIframeReady(true);
-    } else {
-      setIsIframeReady(false);
-
-    }
-  }
-
-  window.addEventListener("message", handleChildMessage);
-  return () => window.removeEventListener("message", handleChildMessage);
-}, []);
-
-
-
+    window.addEventListener("message", handleChildMessage);
+    return () => window.removeEventListener("message", handleChildMessage);
+  }, []);
 
   if (isPopup) {
     return (

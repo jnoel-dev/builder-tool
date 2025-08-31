@@ -33,11 +33,26 @@ export default function ShareButton({ buttonText = 'Share' }: ShareButtonProps) 
     setIsSaving(true);
     try {
       const stateJson = sessionStorage.getItem('SB_STATE') ?? '';
-      const docRef = await addDoc(collection(firestoreDatabase, 'sbStates'), {
+      const documentReference = await addDoc(collection(firestoreDatabase, 'sbStates'), {
         stateJson,
         createdAt: serverTimestamp(),
       });
-      const urlObject = new URL(`${docRef.id}`, SAME_ORIGIN_TARGET);
+
+      const urlObject = new URL(`${documentReference.id}`, SAME_ORIGIN_TARGET);
+
+      let isTopFrameCspEnabled = false;
+      try {
+        if (stateJson) {
+          const parsedState = JSON.parse(stateJson) as any;
+          isTopFrameCspEnabled = Boolean(parsedState?.frames?.TopFrame?.properties?.CspInHeaders === true);
+        }
+      } catch {}
+
+      if (isTopFrameCspEnabled) {
+        const existingQuery = urlObject.searchParams.toString();
+        urlObject.search = existingQuery ? `?${existingQuery}&csp` : `?csp`;
+      }
+
       setShareUrl(urlObject.toString());
     } finally {
       setIsSaving(false);

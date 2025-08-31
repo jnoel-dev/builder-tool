@@ -103,11 +103,16 @@ useEffect(() => {
         if (snapshot.exists() && !cancelled) {
           const data = snapshot.data() as { stateJson?: string };
           const stateJson = data?.stateJson ?? "";
-          if (stateJson) {
-            sessionStorage.setItem("SB_STATE", stateJson);
-            history.replaceState(null, "", SAME_ORIGIN_TARGET);
-            setShareNoticeOpen(true);
-          }
+        if (stateJson) {
+          sessionStorage.setItem("SB_STATE", stateJson);
+
+          const hasCspParam = new URLSearchParams(window.location.search).has("csp");
+          const baseUrl = new URL(SAME_ORIGIN_TARGET);
+          if (hasCspParam) baseUrl.search = "?csp";
+          history.replaceState(null, "", baseUrl.toString());
+
+          setShareNoticeOpen(true);
+        }
 
         }
       } catch {}
@@ -348,6 +353,8 @@ useEffect(() => {
     customProps: Record<string, any> = {}
   ): string {
     const newElementId = getNextElementId(componentName);
+
+
     setApplicationState((previousState) => {
       const frameName = previousState.currentFrame;
       const currentElements = getElementsForFrame(previousState, frameName);

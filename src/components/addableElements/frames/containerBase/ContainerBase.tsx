@@ -13,7 +13,6 @@ import { usePathname } from "next/navigation";
 interface ContainerBaseProps {
   connectedFrameName: string;
   disableElementControlsForChildren?: boolean;
-  hasOwnWindowObject?: boolean;
 }
 
 function CollapseWrapper({ children }: { children: ReactNode }) {
@@ -24,8 +23,7 @@ function CollapseWrapper({ children }: { children: ReactNode }) {
 
 export default function ContainerBase({
   connectedFrameName,
-  disableElementControlsForChildren = false,
-  hasOwnWindowObject = false
+  disableElementControlsForChildren = false
 }: ContainerBaseProps) {
   const { frameElementsByFrameName, containerRefs, registerFrame, replaceFrameElements} = useFrame();
   const elementListForFrame = frameElementsByFrameName[connectedFrameName] || [];
@@ -43,14 +41,8 @@ export default function ContainerBase({
 
 
   useEffect(() => {
-    if (!connectedFrameName) return;
-    registerFrame(connectedFrameName);
-  }, [connectedFrameName]);
-
-  useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (event.source !== window.top && event.source !== window.top?.opener) return;
-      if (!hasOwnWindowObject) return;
       let sourceWindow = "TopFrame";
       if (event.source === window.top?.opener){
         sourceWindow = "Main Window";
@@ -95,7 +87,6 @@ function sendRequestSync(frameName: string) {
 
 useEffect(() => {
   if (!window.name) return;
-  if (!hasOwnWindowObject) return;
 
   const onPopState = () => {
     if (sessionStorage.getItem("navigation:SPAreplace")) return;
@@ -108,14 +99,12 @@ useEffect(() => {
 
 useEffect(() => {
   if (!window.name) return;
-  if (!hasOwnWindowObject) return;
   if (sessionStorage.getItem("navigation:SPAreplace")) return;
   sendRequestSync(connectedFrameName);
 }, [pathname, connectedFrameName]);
 
 useEffect(() => {
   if (!window.name) return;
-  if (!hasOwnWindowObject) return;
   const parentWindow = window.parent;
 
   const sendChildReady = () => {
@@ -126,7 +115,7 @@ useEffect(() => {
         readyPayload
       );
     }
-    parentWindow?.postMessage(readyPayload, SAME_ORIGIN_TARGET);
+    parentWindow?.postMessage(readyPayload, '*');
   };
 
 

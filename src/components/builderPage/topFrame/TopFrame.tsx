@@ -4,9 +4,12 @@ import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import ContainerBase from '@/components/addableElements/frames/containerBase/ContainerBase';
 import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
+import React, { useEffect } from 'react';
+import { isCspEnabledForFrame } from '@/components/contexts/FrameManager/framePersistence';
+
 export default function TopFrame(){
   const theme = useTheme();
-   const { containerRefs } = useFrame();
+  const { containerRefs } = useFrame();
 
 
 
@@ -32,7 +35,6 @@ export default function TopFrame(){
         TopFrame
       </Typography>
 
-
       <Box
         id="TopFrame"
         ref={containerRefs["TopFrame"]}
@@ -45,9 +47,8 @@ export default function TopFrame(){
           color: theme.palette.secondary.main,
         }}
       >
-        <ContainerBase connectedFrameName='TopFrame' hasOwnWindowObject={true} />
+        <ContainerBase connectedFrameName='TopFrame' />
       </Box>
     </div>
   );
-}  
-  
+}
