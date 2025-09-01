@@ -7,7 +7,9 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
 import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
 import { POST_MESSAGE_LOG_ENABLED } from '@/components/contexts/FrameManager/FrameManager';
-import { isCspEnabledForFrame } from '@/components/contexts/FrameManager/framePersistence';
+import { SAME_ORIGIN_TARGET } from '@/components/contexts/FrameManager/framePersistence';
+import { FrameProperties } from '@/components/contexts/FrameManager/frameUtils';
+import FramePropertiesDisplay from '../containerBase/framePropertiesDisplay/FramePropertiesDisplay';
 
 interface FrameProps {
   savedName: string;
@@ -27,6 +29,8 @@ export default function Frame({ savedName, frameType }: FrameProps) {
   const { containerRefs, registerFrame } = useFrame();
   const [iframeSize, setIframeSize] = useState({ width: 0, height: 0 });
   const [isIframeReady, setIsIframeReady] = useState(false);
+  const [canRenderIframe, setCanRenderIframe] = useState(false);
+  const [useCspParam, setUseCspParam] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const popupWindowRef = useRef<Window | null>(null);
@@ -42,13 +46,13 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     ? (isDevelopment ? LOCAL_SAME_DOMAIN_ORIGIN : PROD_SAME_DOMAIN_ORIGIN)
     : (isDevelopment ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN);
 
-  const isCspEnabled = isCspEnabledForFrame(savedName);
-  const iframeSrc = `${childOrigin}${FRAME_PATH}${savedName}${isCspEnabled ? '?csp' : ''}`;
+  const [frameProperties, setFrameProperties] = useState<FrameProperties>();
+  const iframeSrc = `${childOrigin}${FRAME_PATH}${savedName}${useCspParam ? '?csp' : ''}`;
 
   const openPopup = () => {
     const popupWidth = window.innerWidth / 2;
     const popupHeight = window.innerHeight / 2;
-    const popupUrl = `${childOrigin}${FRAME_PATH}${savedName}${isCspEnabled ? '?csp' : ''}`;
+    const popupUrl = `${childOrigin}${FRAME_PATH}${savedName}${useCspParam ? '?csp' : ''}`;
     const popup = window.open(popupUrl, savedName, `width=${popupWidth},height=${popupHeight}`);
     popupWindowRef.current = popup || null;
     lastPopupPayloadJsonRef.current = '';
@@ -59,7 +63,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     if (registeredFramesRef.current.has(savedName)) return;
     registeredFramesRef.current.add(savedName);
     registerFrame(savedName);
-  }, [savedName]);
+  }, []);
 
   useEffect(() => {
     function updateSize() {
@@ -109,6 +113,44 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     return () => window.removeEventListener("message", handleChildMessage);
   }, []);
 
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.source !== window.top && event.source !== window.top?.opener) return;
+      const data = event.data as { type?: string; properties?: FrameProperties };
+      if (!data || data.type !== "syncFrameProperties" || !data.properties) return;
+
+      if (POST_MESSAGE_LOG_ENABLED) {
+        const from = event.source === window.top?.opener ? "Main Window" : "TopFrame";
+        console.log(
+          `[PostMessage Receive] at "${savedName}" from "${from}" | type: syncFrameProperties | content:`,
+          data
+        );
+      }
+
+      setCanRenderIframe(true);
+      setFrameProperties(data.properties);
+
+      const hasCspInHeaders = Object.prototype.hasOwnProperty.call(data.properties as object, 'CspInHeaders');
+      setUseCspParam(hasCspInHeaders);
+    }
+
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  useEffect(() => {
+    const targetWindow = window.top?.opener ? window.top.opener : window.top;
+    const message = { type: "requestPropertiesSync", frameName: savedName };
+
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Send] from "${window.name}" to "TopFrame" | type: requestPropertiesSync | content:`,
+        message
+      );
+    }
+    targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
+  }, []);
+
   if (isPopup) {
     return (
       <Box sx={{ backgroundColor: theme.palette.primary.main, color: theme.palette.text.primary, padding: 2 }}>
@@ -124,10 +166,11 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     );
   }
 
-  const showSpinner = !isIframeReady;
+  const showSpinner = !canRenderIframe || !isIframeReady;
 
   return (
     <Box>
+      
       <Box
         ref={containerRefs[savedName]}
         id="iframeContainer"
@@ -148,14 +191,26 @@ export default function Frame({ savedName, frameType }: FrameProps) {
             <CircularProgress />
           </Box>
         )}
-        <iframe
-          ref={iframeRef}
-          name={savedName}
-          src={iframeSrc}
-          width={iframeSize.width}
-          height={iframeSize.height}
-          style={{ border: 'none', flex: '0 0 auto' }}
-        />
+        {canRenderIframe && (
+         
+    <div style={{ position: "relative" }}>
+      <Box sx={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}>
+        <FramePropertiesDisplay properties={frameProperties} />
+      </Box>
+
+      <iframe
+        ref={iframeRef}
+        name={savedName}
+        src={iframeSrc}
+        width={iframeSize.width}
+        height={iframeSize.height}
+        style={{ border: "none", flex: "0 0 auto" }}
+      />
+    </div>
+
+
+       
+        )}
       </Box>
     </Box>
   );

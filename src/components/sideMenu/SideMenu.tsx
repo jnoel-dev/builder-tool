@@ -5,7 +5,7 @@ import ElementsMenu from "./elementsMenu/ElementsMenu";
 import MenuBase from "./menuBase/MenuBase";
 import SettingsMenu from './settingsMenu/SettingsMenu';
 import NavigationMenu from './navigationMenu/NavigationMenu';
-import CSPMenu from './cspMenu/CSPMenu';
+import PropertiesMenu from './propertiesMenu/PropertiesMenu';
 
 export default function SideMenu() {
   const [expanded, setExpanded] = useState<string | false>(false);
@@ -29,14 +29,14 @@ export default function SideMenu() {
         setExpanded={setExpanded}
       />
       <MenuBase
-        menuName="Navigation"
-        menuComponent={NavigationMenu}
+        menuName="Properties"
+        menuComponent={PropertiesMenu}
         expanded={expanded}
         setExpanded={setExpanded}
       />
       <MenuBase
-        menuName="CSP"
-        menuComponent={CSPMenu}
+        menuName="Navigation"
+        menuComponent={NavigationMenu}
         expanded={expanded}
         setExpanded={setExpanded}
       />

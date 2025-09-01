@@ -235,3 +235,9 @@ export function setCspEnabledForFrame(frameName: string, enabled: boolean): void
 
   writeSession(nextState);
 }
+export function getFrameProperties(frameName: string): Record<string, any> {
+  const session = readSessionLoose();
+  const frame = session?.frames?.[frameName];
+  const properties = frame?.properties;
+  return properties && typeof properties === "object" ? { ...properties } : {};
+}

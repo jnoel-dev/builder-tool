@@ -44,7 +44,7 @@ export default function InfoIconWithTooltip({ infoText }: InfoIconProps) {
           ],
         },
       }}>
-      <IconButton size="medium" disableRipple={true}>
+      <IconButton size="small" disableRipple={true}>
         <InfoIcon fontSize="inherit" />
       </IconButton>
     </HtmlTooltip>

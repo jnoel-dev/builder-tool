@@ -7,9 +7,10 @@ import componentRegistry from "@/components/contexts/FrameManager/componentRegis
 import ElementController from "../../elementController/ElementController";
 import { SAME_ORIGIN_TARGET } from "@/components/contexts/FrameManager/framePersistence";
 import { usePathname } from "next/navigation";
-import FramePropertiesDisplay from "./framePropertiesDisplay/FramePropertiesDisplay";
+
 import { FramesByName } from "@/components/contexts/FrameManager/frameMessaging";
-import { FrameProperties } from "@/components/contexts/FrameManager/frameUtils";
+
+
 
 interface ContainerBaseProps {
   connectedFrameName: string;
@@ -26,39 +27,27 @@ export default function ContainerBase({
   connectedFrameName,
   disableElementControlsForChildren = false
 }: ContainerBaseProps) {
-  const { frameElementsByFrameName, containerRefs, replaceFrameElements} = useFrame();
+  const { frameElementsByFrameName, containerRefs, replaceFrameElements,registerFrame} = useFrame();
   const elementListForFrame = frameElementsByFrameName[connectedFrameName] || [];
   const fallbackRef = useRef<HTMLDivElement | null>(null);
   const containerRefForFrame = containerRefs[connectedFrameName] ?? fallbackRef;
-  const [frameProperties, setFrameProperties] = useState<FrameProperties>();
+
+  
 
  
 
   const replaceFrameElementsRef = useRef(replaceFrameElements);
   const pathname = usePathname();
-  console.log("Test")
 
 
 
 useEffect(() => {
  
-  if (window.opener || window !== window.top) return;
+  registerFrame(connectedFrameName)
 
-  try {
-    const sessionJson = sessionStorage.getItem("SB_STATE");
-    if (!sessionJson) {
-      setFrameProperties(undefined);
-      return;
-    }
-    const sessionState = JSON.parse(sessionJson) as {
-      frames?: Record<string, { properties?: FrameProperties }>;
-    };
-    const propertiesForFrame = sessionState?.frames?.[connectedFrameName]?.properties;
-    setFrameProperties(propertiesForFrame);
-  } catch {
-    setFrameProperties(undefined);
-  }
-}, [connectedFrameName]);
+}, []);
+
+
 
 
   useEffect(() => {
@@ -81,10 +70,11 @@ useEffect(() => {
       const incoming = data.frames as FramesByName;
       const externalRootName = window.name || "";
 
-      setFrameProperties(incoming[window.name].properties)
+      
       
       
       for (const incomingFrameName of Object.keys(incoming)) {
+  
         const localFrameName = incomingFrameName === externalRootName ? "TopFrame" : incomingFrameName;
         replaceFrameElementsRef.current(localFrameName, incoming[incomingFrameName].elements as any);
         
@@ -151,10 +141,7 @@ useEffect(() => {
 
 
 return (
-  <div style={{ position: "relative", width: "100%", height: "100%" }}>
-    <div style={{ position: "absolute", top: 0, left: 0, zIndex: 1, pointerEvents: "none" }}>
-      <FramePropertiesDisplay properties={frameProperties} />
-    </div>
+  <div >
 
     {elementListForFrame.map((element) => {
       const registryEntry = componentRegistry[element.componentName];

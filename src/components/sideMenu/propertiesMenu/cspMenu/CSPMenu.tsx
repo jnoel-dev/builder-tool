@@ -1,19 +1,16 @@
+'use client'
 import * as React from "react";
-import Divider from "@mui/material/Divider";
-import ContainerSelector from "../elementsMenu/containerSelector/ContainerSelector";
 import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 import { useEffect } from "react";
-import { Stack, Button, Switch, FormControl, FormControlLabel, FormHelperText } from "@mui/material";
-import InfoIconWithTooltip from "../infoIcon/InfoIcon";
+import { Stack, Button, Switch, FormControl, FormControlLabel, FormHelperText, Paper, Box, Divider } from "@mui/material";
+import InfoIconWithTooltip from "../../infoIcon/InfoIcon";
 import { isCspEnabledForFrame, setCspEnabledForFrame } from "@/components/contexts/FrameManager/framePersistence";
+import Typography from "@mui/material/Typography";
 
-export default function CSPMenu({ expanded }: { expanded: boolean }) {
-  const { setCurrentFrameName, defaultFrameName, currentFrameName } = useFrame();
+export default function CSPMenu() {
+  const {  currentFrameName } = useFrame();
   const [isCspEnabled, setIsCspEnabled] = React.useState(false);
 
-  useEffect(() => {
-    if (expanded) setCurrentFrameName(defaultFrameName);
-  }, [expanded]);
 
   useEffect(() => {
     if (!currentFrameName) return;
@@ -62,31 +59,31 @@ function handleApplyClick() {
 
 
   return (
+ 
+
     <Stack>
-      <ContainerSelector listTrueFramesOnly={true} />
-      <Divider component="li" />
+
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <Divider sx={{ width: "100%" }} />
+        <div><strong>Directives:</strong> script-src</div>
+        <div><strong>Sources:</strong> self unsafe-inline</div>
+        <Divider sx={{ width: "100%" }} />
+      </div>
+
       <FormControl size="small" fullWidth>
-        <FormHelperText>Enable CSP</FormHelperText>
         <Stack direction="row" spacing={0}>
           <FormControlLabel
             control={<Switch checked={isCspEnabled} onChange={handleToggleChange} />}
             label="CSP in headers"
             sx={{ margin: 0 }}
           />
-          <InfoIconWithTooltip
-            infoText={
-              <>
-                <strong>Directives:</strong> script-src
-                <br />
-                <strong>Sources:</strong> self unsafe-inline
-              </>
-            }
-          />
+
         </Stack>
       </FormControl>
       <Button variant="contained" color="secondary" fullWidth onClick={handleApplyClick}>
         Apply
       </Button>
     </Stack>
+ 
   );
 }
