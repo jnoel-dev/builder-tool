@@ -10,6 +10,7 @@ import { POST_MESSAGE_LOG_ENABLED } from '@/components/contexts/FrameManager/Fra
 import { SAME_ORIGIN_TARGET } from '@/components/contexts/FrameManager/framePersistence';
 import { FrameProperties } from '@/components/contexts/FrameManager/frameUtils';
 import FramePropertiesDisplay from '../containerBase/framePropertiesDisplay/FramePropertiesDisplay';
+import { getFrameProperties } from '@/components/contexts/FrameManager/framePersistence';
 
 interface FrameProps {
   savedName: string;
@@ -113,43 +114,58 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     return () => window.removeEventListener("message", handleChildMessage);
   }, []);
 
-  useEffect(() => {
-    function onMessage(event: MessageEvent) {
-      if (event.source !== window.top && event.source !== window.top?.opener) return;
-      const data = event.data as { type?: string; properties?: FrameProperties };
-      if (!data || data.type !== "syncFrameProperties" || !data.properties) return;
+useEffect(() => {
+   const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN ;
 
-      if (POST_MESSAGE_LOG_ENABLED) {
-        const from = event.source === window.top?.opener ? "Main Window" : "TopFrame";
-        console.log(
-          `[PostMessage Receive] at "${savedName}" from "${from}" | type: syncFrameProperties | content:`,
-          data
-        );
-      }
+  if (isLocalSameOrigin) {
+    const props = getFrameProperties(savedName);
+    setCanRenderIframe(true);
+    setFrameProperties(props);
+    const hasCspInHeaders = Object.prototype.hasOwnProperty.call(props as object, "CspInHeaders");
+    setUseCspParam(hasCspInHeaders);
+    return;
+  }
 
-      setCanRenderIframe(true);
-      setFrameProperties(data.properties);
-
-      const hasCspInHeaders = Object.prototype.hasOwnProperty.call(data.properties as object, 'CspInHeaders');
-      setUseCspParam(hasCspInHeaders);
-    }
-
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, []);
-
-  useEffect(() => {
-    const targetWindow = window.top?.opener ? window.top.opener : window.top;
-    const message = { type: "requestPropertiesSync", frameName: savedName };
+  function onMessage(event: MessageEvent) {
+    if (event.source !== window.top && event.source !== window.top?.opener) return;
+    const data = event.data as { type?: string; properties?: FrameProperties };
+    if (!data || data.type !== "syncFrameProperties" || !data.properties) return;
 
     if (POST_MESSAGE_LOG_ENABLED) {
+      const from = event.source === window.top?.opener ? "Main Window" : "TopFrame";
       console.log(
-        `[PostMessage Send] from "${window.name}" to "TopFrame" | type: requestPropertiesSync | content:`,
-        message
+        `[PostMessage Receive] at "${savedName}" from "${from}" | type: syncFrameProperties | content:`,
+        data
       );
     }
-    targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
-  }, []);
+
+    setCanRenderIframe(true);
+    setFrameProperties(data.properties);
+
+    const hasCspInHeaders = Object.prototype.hasOwnProperty.call(data.properties as object, "CspInHeaders");
+    setUseCspParam(hasCspInHeaders);
+  }
+
+  window.addEventListener("message", onMessage);
+  return () => window.removeEventListener("message", onMessage);
+}, []);
+
+useEffect(() => {
+  const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN ;
+  if (isLocalSameOrigin) return;
+
+  const targetWindow = window.top?.opener ? window.top.opener : window.top;
+  const message = { type: "requestPropertiesSync", frameName: savedName };
+
+  if (POST_MESSAGE_LOG_ENABLED) {
+    console.log(
+      `[PostMessage Send] from "${window.name}" to "TopFrame" | type: requestPropertiesSync | content:`,
+      message
+    );
+  }
+  targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
+}, []);
+
 
   if (isPopup) {
     return (

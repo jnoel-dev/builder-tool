@@ -201,40 +201,39 @@ export function persistPagesByOrigin(pagesByOrigin: PagesByOrigin): void {
   writeSession(stateToWrite);
 }
 
-export function isCspEnabledForFrame(frameName: string): boolean {
-  const session = readSessionLoose();
-  const frame = session?.frames?.[frameName];
-  const properties = frame?.properties ?? {};
-  return typeof properties.CspInHeaders !== "undefined";
-}
+export function setFrameProperty(frameName: string, propertyName: string, is_enabled: boolean): void {
+  if (typeof window === "undefined") return;
 
-export function setCspEnabledForFrame(frameName: string, enabled: boolean): void {
   const session = readSessionLoose();
   if (!session?.frames?.[frameName]) return;
 
-  const currentFrame = session.frames[frameName];
-  const currentProperties = currentFrame.properties ?? {};
-
-  let nextProperties: Record<string, any>;
-  if (enabled) {
-    nextProperties = { ...currentProperties, CspInHeaders: true };
-  } else {
-    const filteredEntries = Object.entries(currentProperties).filter(
-      ([propertyKey]) => propertyKey !== "CspInHeaders"
-    );
-    nextProperties = Object.fromEntries(filteredEntries);
-  }
-
-  const nextState = {
+  const nextSession = {
     ...session,
     frames: {
       ...session.frames,
-      [frameName]: { ...currentFrame, properties: nextProperties },
+      [frameName]: { ...session.frames[frameName] },
     },
   };
 
-  writeSession(nextState);
+  const frame = nextSession.frames[frameName];
+  const nextProperties = frame.properties && typeof frame.properties === "object" ? { ...frame.properties } : {};
+
+  if (is_enabled) {
+    nextProperties[propertyName] = true;
+    frame.properties = nextProperties;
+  } else {
+    delete nextProperties[propertyName];
+    if (Object.keys(nextProperties).length > 0) {
+      frame.properties = nextProperties;
+    } else {
+      delete frame.properties;
+    }
+  }
+
+  writeSession(nextSession);
 }
+
+
 export function getFrameProperties(frameName: string): Record<string, any> {
   const session = readSessionLoose();
   const frame = session?.frames?.[frameName];

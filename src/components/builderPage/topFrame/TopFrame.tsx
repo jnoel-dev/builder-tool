@@ -5,11 +5,12 @@ import Box from '@mui/material/Box';
 import ContainerBase from '@/components/addableElements/frames/containerBase/ContainerBase';
 import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
 import React, { useEffect } from 'react';
-import { isCspEnabledForFrame } from '@/components/contexts/FrameManager/framePersistence';
+
 
 export default function TopFrame(){
   const theme = useTheme();
   const { containerRefs } = useFrame();
+
 
 
 
@@ -46,7 +47,8 @@ export default function TopFrame(){
           border: 'dashed',
           color: theme.palette.secondary.main,
         }}
-      >
+      > 
+   
         <ContainerBase connectedFrameName='TopFrame' />
       </Box>
     </div>

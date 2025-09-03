@@ -4,28 +4,29 @@ import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 import { useEffect } from "react";
 import { Stack, Button, Switch, FormControl, FormControlLabel, FormHelperText, Paper, Box, Divider } from "@mui/material";
 import InfoIconWithTooltip from "../../infoIcon/InfoIcon";
-import { isCspEnabledForFrame, setCspEnabledForFrame } from "@/components/contexts/FrameManager/framePersistence";
+import { setFrameProperty, getFrameProperties } from "@/components/contexts/FrameManager/framePersistence";
 import Typography from "@mui/material/Typography";
 
 export default function CSPMenu() {
   const {  currentFrameName } = useFrame();
-  const [isCspEnabled, setIsCspEnabled] = React.useState(false);
+  const [isCspInHeadersEnabled, setIsCspInHeadersEnabled] = React.useState(false);
 
 
   useEffect(() => {
     if (!currentFrameName) return;
-    const enabled = isCspEnabledForFrame(currentFrameName);
-    setIsCspEnabled(enabled);
+    const properties = getFrameProperties(currentFrameName);
+    const hasCspInHeaders = Object.prototype.hasOwnProperty.call(properties, "CspInHeaders")
+    setIsCspInHeadersEnabled(hasCspInHeaders);
   }, [currentFrameName]);
 
   function handleToggleChange(_: React.ChangeEvent<HTMLInputElement>, nextValue: boolean) {
-    setIsCspEnabled(nextValue);
+    setIsCspInHeadersEnabled(nextValue);
   }
 
 function handleApplyClick() {
   if (!currentFrameName) return;
 
-  setCspEnabledForFrame(currentFrameName, isCspEnabled);
+  setFrameProperty(currentFrameName, "CspInHeaders", isCspInHeadersEnabled);
 
   if (currentFrameName !== "TopFrame") {
     window.location.replace(window.location.href);
@@ -36,7 +37,7 @@ function handleApplyClick() {
   const searchParams = new URLSearchParams(currentUrl.search);
 
   const hasCspParam = searchParams.has("csp");
-  const shouldHaveCspParam = isCspEnabled;
+  const shouldHaveCspParam = isCspInHeadersEnabled;
 
   if (shouldHaveCspParam === hasCspParam) {
     window.location.replace(window.location.href);
@@ -73,7 +74,7 @@ function handleApplyClick() {
       <FormControl size="small" fullWidth>
         <Stack direction="row" spacing={0}>
           <FormControlLabel
-            control={<Switch checked={isCspEnabled} onChange={handleToggleChange} />}
+            control={<Switch checked={isCspInHeadersEnabled} onChange={handleToggleChange} />}
             label="CSP in headers"
             sx={{ margin: 0 }}
           />

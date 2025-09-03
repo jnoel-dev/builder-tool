@@ -5,11 +5,16 @@ import Collapse from "@mui/material/Collapse";
 import { useFrame, POST_MESSAGE_LOG_ENABLED } from "@/components/contexts/FrameManager/FrameManager";
 import componentRegistry from "@/components/contexts/FrameManager/componentRegistry";
 import ElementController from "../../elementController/ElementController";
-import { SAME_ORIGIN_TARGET } from "@/components/contexts/FrameManager/framePersistence";
+import { SAME_ORIGIN_TARGET,getFrameProperties } from "@/components/contexts/FrameManager/framePersistence";
 import { usePathname } from "next/navigation";
-
+import { FrameProperties } from "@/components/contexts/FrameManager/frameUtils";
 import { FramesByName } from "@/components/contexts/FrameManager/frameMessaging";
+import FramePropertiesDisplay from "./framePropertiesDisplay/FramePropertiesDisplay";
+import { DEFAULT_FRAME_NAME } from "@/components/contexts/FrameManager/frameUtils";
 
+
+const LOCAL_SAME_DOMAIN_ORIGIN = 'http://localhost:3000';
+const PROD_SAME_DOMAIN_ORIGIN = 'https://build.jonnoel.dev';
 
 
 interface ContainerBaseProps {
@@ -38,7 +43,7 @@ export default function ContainerBase({
 
   const replaceFrameElementsRef = useRef(replaceFrameElements);
   const pathname = usePathname();
-
+  const [topFrameProperties, setTopFrameProperties] = useState<FrameProperties>();
 
 
 useEffect(() => {
@@ -139,10 +144,58 @@ useEffect(() => {
 
 }, [pathname]);
 
+useEffect(() => {
+  if (window !== window.top && !window.opener) return;
+  const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN ;
+  if (isLocalSameOrigin) return;
+
+  const targetWindow = window.opener;
+  const message = { type: "requestPropertiesSync", frameName: window.name };
+
+  if (POST_MESSAGE_LOG_ENABLED) {
+    console.log(
+      `[PostMessage Send] from "${window.name}" to "TopFrame" | type: requestPropertiesSync | content:`,
+      message
+    );
+  }
+  targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
+}, []);
+
+useEffect(() => {
+  if (window !== window.top) return;
+   const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN ;
+
+  if (isLocalSameOrigin) {
+     const frameName = window.opener ? window.name : DEFAULT_FRAME_NAME;
+    const props = getFrameProperties(frameName);
+    setTopFrameProperties(props);
+    return;
+  }
+
+  function onMessage(event: MessageEvent) {
+    if (event.source !== window.top && event.source !== window.top?.opener) return;
+    const data = event.data as { type?: string; properties?: FrameProperties };
+    if (!data || data.type !== "syncFrameProperties" || !data.properties) return;
+
+    if (POST_MESSAGE_LOG_ENABLED) {
+      const from = event.source === window.top?.opener ? "Main Window" : "TopFrame";
+      console.log(
+        `[PostMessage Receive] at "${window.name}" from "${from}" | type: syncFrameProperties | content:`,
+        data
+      );
+    }
+    setTopFrameProperties(data.properties);
+
+  }
+
+  window.addEventListener("message", onMessage);
+  return () => window.removeEventListener("message", onMessage);
+}, []);
+
 
 return (
   <div >
-
+    <FramePropertiesDisplay properties={topFrameProperties}/>
     {elementListForFrame.map((element) => {
       const registryEntry = componentRegistry[element.componentName];
       if (!registryEntry) return null;
