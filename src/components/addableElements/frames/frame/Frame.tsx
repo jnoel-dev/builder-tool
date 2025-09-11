@@ -31,7 +31,6 @@ export default function Frame({ savedName, frameType }: FrameProps) {
   const [iframeSize, setIframeSize] = useState({ width: 0, height: 0 });
   const [isIframeReady, setIsIframeReady] = useState(false);
   const [canRenderIframe, setCanRenderIframe] = useState(false);
-  const [useCspParam, setUseCspParam] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const popupWindowRef = useRef<Window | null>(null);
@@ -48,12 +47,21 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     : (isDevelopment ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN);
 
   const [frameProperties, setFrameProperties] = useState<FrameProperties>();
-  const iframeSrc = `${childOrigin}${FRAME_PATH}${savedName}${useCspParam ? '?csp' : ''}`;
+
+  function buildPropertyQuery(enabledProperties?: Record<string, any>): string {
+    if (!enabledProperties || typeof enabledProperties !== 'object') return '';
+    const enabledKeys = Object.keys(enabledProperties).filter(propertyName => enabledProperties[propertyName] === true).sort();
+    return enabledKeys.length ? `?${enabledKeys.map(encodeURIComponent).join('&')}` : '';
+  }
+
+  const propertyQuery = React.useMemo(() => buildPropertyQuery(frameProperties), [frameProperties]);
+
+  const iframeSrc = `${childOrigin}${FRAME_PATH}${savedName}${propertyQuery}`;
 
   const openPopup = () => {
     const popupWidth = window.innerWidth / 2;
     const popupHeight = window.innerHeight / 2;
-    const popupUrl = `${childOrigin}${FRAME_PATH}${savedName}${useCspParam ? '?csp' : ''}`;
+    const popupUrl = `${childOrigin}${FRAME_PATH}${savedName}${propertyQuery}`;
     const popup = window.open(popupUrl, savedName, `width=${popupWidth},height=${popupHeight}`);
     popupWindowRef.current = popup || null;
     lastPopupPayloadJsonRef.current = '';
@@ -114,57 +122,52 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     return () => window.removeEventListener("message", handleChildMessage);
   }, []);
 
-useEffect(() => {
-   const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN ;
+  useEffect(() => {
+    const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN;
 
-  if (isLocalSameOrigin) {
-    const props = getFrameProperties(savedName);
-    setCanRenderIframe(true);
-    setFrameProperties(props);
-    const hasCspInHeaders = Object.prototype.hasOwnProperty.call(props as object, "CspInHeaders");
-    setUseCspParam(hasCspInHeaders);
-    return;
-  }
-
-  function onMessage(event: MessageEvent) {
-    if (event.source !== window.top && event.source !== window.top?.opener) return;
-    const data = event.data as { type?: string; properties?: FrameProperties };
-    if (!data || data.type !== "syncFrameProperties" || !data.properties) return;
-
-    if (POST_MESSAGE_LOG_ENABLED) {
-      const from = event.source === window.top?.opener ? "Main Window" : "TopFrame";
-      console.log(
-        `[PostMessage Receive] at "${savedName}" from "${from}" | type: syncFrameProperties | content:`,
-        data
-      );
+    if (isLocalSameOrigin) {
+      const properties = getFrameProperties(savedName);
+      setCanRenderIframe(true);
+      setFrameProperties(properties);
+      return;
     }
 
-    setCanRenderIframe(true);
-    setFrameProperties(data.properties);
+    function onMessage(event: MessageEvent) {
+      if (event.source !== window.top && event.source !== window.top?.opener) return;
+      const data = event.data as { type?: string; properties?: FrameProperties };
+      if (!data || data.type !== "syncFrameProperties" || !data.properties) return;
 
-    const hasCspInHeaders = Object.prototype.hasOwnProperty.call(data.properties as object, "CspInHeaders");
-    setUseCspParam(hasCspInHeaders);
-  }
+      if (POST_MESSAGE_LOG_ENABLED) {
+        const from = event.source === window.top?.opener ? "Main Window" : "TopFrame";
+        console.log(
+          `[PostMessage Receive] at "${savedName}" from "${from}" | type: syncFrameProperties | content:`,
+          data
+        );
+      }
 
-  window.addEventListener("message", onMessage);
-  return () => window.removeEventListener("message", onMessage);
-}, []);
+      setCanRenderIframe(true);
+      setFrameProperties(data.properties);
+    }
 
-useEffect(() => {
-  const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN ;
-  if (isLocalSameOrigin) return;
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
 
-  const targetWindow = window.top?.opener ? window.top.opener : window.top;
-  const message = { type: "requestPropertiesSync", frameName: savedName };
+  useEffect(() => {
+    const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN;
+    if (isLocalSameOrigin) return;
 
-  if (POST_MESSAGE_LOG_ENABLED) {
-    console.log(
-      `[PostMessage Send] from "${window.name}" to "TopFrame" | type: requestPropertiesSync | content:`,
-      message
-    );
-  }
-  targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
-}, []);
+    const targetWindow = window.top?.opener ? window.top.opener : window.top;
+    const message = { type: "requestPropertiesSync", frameName: savedName };
+
+    if (POST_MESSAGE_LOG_ENABLED) {
+      console.log(
+        `[PostMessage Send] from "${window.name}" to "TopFrame" | type: requestPropertiesSync | content:`,
+        message
+      );
+    }
+    targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
+  }, []);
 
 
   if (isPopup) {
@@ -186,7 +189,6 @@ useEffect(() => {
 
   return (
     <Box>
-      
       <Box
         ref={containerRefs[savedName]}
         id="iframeContainer"
@@ -208,24 +210,20 @@ useEffect(() => {
           </Box>
         )}
         {canRenderIframe && (
-         
-    <div style={{ position: "relative" }}>
-      <Box sx={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}>
-        <FramePropertiesDisplay properties={frameProperties} />
-      </Box>
+          <div style={{ position: "relative" }}>
+            <Box sx={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}>
+              <FramePropertiesDisplay properties={frameProperties} />
+            </Box>
 
-      <iframe
-        ref={iframeRef}
-        name={savedName}
-        src={iframeSrc}
-        width={iframeSize.width}
-        height={iframeSize.height}
-        style={{ border: "none", flex: "0 0 auto" }}
-      />
-    </div>
-
-
-       
+            <iframe
+              ref={iframeRef}
+              name={savedName}
+              src={iframeSrc}
+              width={iframeSize.width}
+              height={iframeSize.height}
+              style={{ border: "none", flex: "0 0 auto" }}
+            />
+          </div>
         )}
       </Box>
     </Box>

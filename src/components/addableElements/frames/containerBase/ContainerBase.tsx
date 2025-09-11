@@ -32,7 +32,7 @@ export default function ContainerBase({
   connectedFrameName,
   disableElementControlsForChildren = false
 }: ContainerBaseProps) {
-  const { frameElementsByFrameName, containerRefs, replaceFrameElements,registerFrame} = useFrame();
+  const { frameElementsByFrameName, containerRefs, replaceFrameElements,registerFrame,firebaseDocLoaded} = useFrame();
   const elementListForFrame = frameElementsByFrameName[connectedFrameName] || [];
   const fallbackRef = useRef<HTMLDivElement | null>(null);
   const containerRefForFrame = containerRefs[connectedFrameName] ?? fallbackRef;
@@ -190,7 +190,7 @@ useEffect(() => {
 
   window.addEventListener("message", onMessage);
   return () => window.removeEventListener("message", onMessage);
-}, []);
+}, [firebaseDocLoaded]);
 
 
 return (

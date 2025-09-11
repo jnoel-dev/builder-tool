@@ -60,6 +60,7 @@ export interface FrameContextValue {
   rootPageName: string;
   getFrameCreatedOnPage: (frameName: string) => string;
   defaultFrameName: string;
+  firebaseDocLoaded: boolean;
 }
 
 const FrameContext = createContext<FrameContextValue | undefined>(undefined);
@@ -87,6 +88,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
   const lastRequestedPageByFrameRef = useRef<Record<string, string>>({});
   const hasHydratedRef = useRef(false);
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
+  const [receivedFirebaseResponse, setReceivedFirebaseResponse] = useState(false);
 
 
 
@@ -96,24 +98,28 @@ useEffect(() => {
   let cancelled = false;
 
   (async () => {
-    const firstSegment = window.location.pathname.split("/").filter(Boolean)[0] ?? "";
+    const pathSegments = window.location.pathname.split("/").filter(Boolean);
+    const firstSegment = pathSegments[0] ?? "";
     if (/^[A-Za-z0-9]{20}$/.test(firstSegment)) {
       try {
         const snapshot = await getDoc(doc(firestoreDatabase, "sbStates", firstSegment));
         if (snapshot.exists() && !cancelled) {
           const data = snapshot.data() as { stateJson?: string };
           const stateJson = data?.stateJson ?? "";
-        if (stateJson) {
-          sessionStorage.setItem("SB_STATE", stateJson);
+          if (stateJson) {
+            sessionStorage.setItem("SB_STATE", stateJson);
 
-          const hasCspParam = new URLSearchParams(window.location.search).has("csp");
-          const baseUrl = new URL(SAME_ORIGIN_TARGET);
-          if (hasCspParam) baseUrl.search = "?csp";
-          history.replaceState(null, "", baseUrl.toString());
+            const currentUrl = new URL(window.location.href);
+            const remainingPath = pathSegments.slice(1).join("/");
+            const newUrl = new URL(SAME_ORIGIN_TARGET);
+            newUrl.pathname = `/${remainingPath}`;
+            newUrl.search = currentUrl.search;
+            newUrl.hash = currentUrl.hash;
+            history.replaceState(null, "", newUrl.toString());
 
-          setShareNoticeOpen(true);
-        }
-
+            setShareNoticeOpen(true);
+            setReceivedFirebaseResponse(true);
+          }
         }
       } catch {}
     }
@@ -426,6 +432,7 @@ useEffect(() => {
         rootPageName: applicationState.rootPage,
         getFrameCreatedOnPage,
         defaultFrameName: DEFAULT_FRAME_NAME,
+        firebaseDocLoaded : receivedFirebaseResponse
       }}
     > 
 

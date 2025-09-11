@@ -40,18 +40,20 @@ export default function ShareButton({ buttonText = 'Share' }: ShareButtonProps) 
 
       const urlObject = new URL(`${documentReference.id}`, SAME_ORIGIN_TARGET);
 
-      let isTopFrameCspEnabled = false;
       try {
         if (stateJson) {
           const parsedState = JSON.parse(stateJson) as any;
-          isTopFrameCspEnabled = Boolean(parsedState?.frames?.TopFrame?.properties?.CspInHeaders === true);
+          const topFrameProperties = parsedState?.frames?.TopFrame?.properties;
+          if (topFrameProperties && typeof topFrameProperties === 'object') {
+            const enabledPropertyKeys = Object.keys(topFrameProperties).filter(propertyName => topFrameProperties[propertyName] === true).sort();
+            for (const propertyName of enabledPropertyKeys) {
+              const existingQuery = urlObject.search ? `${urlObject.search}&` : '?';
+              urlObject.search = `${existingQuery}${encodeURIComponent(propertyName)}`;
+            }
+
+          }
         }
       } catch {}
-
-      if (isTopFrameCspEnabled) {
-        const existingQuery = urlObject.searchParams.toString();
-        urlObject.search = existingQuery ? `?${existingQuery}&csp` : `?csp`;
-      }
 
       setShareUrl(urlObject.toString());
     } finally {

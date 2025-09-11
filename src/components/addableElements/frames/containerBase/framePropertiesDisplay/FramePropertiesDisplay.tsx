@@ -9,14 +9,6 @@ type FramePropertiesDisplayProps = {
   properties?: Record<string, unknown>;
 };
 
-function formatValue(value: unknown): string {
-  if (typeof value === 'string') return value;
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
 
 export default function FramePropertiesDisplay({ properties }: FramePropertiesDisplayProps) {
   const hasProperties = properties && Object.keys(properties).length > 0;
@@ -29,11 +21,19 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
   return (
     <Box>
       <Stack spacing={0.5}>
-        {entries.map(([propertyKey, propertyValue]) => {
-          const color = propertyKey === 'CspInHeaders' ? 'red' : 'white';
+        {entries.map(([propertyKey]) => {
+          let textColor: string;
+          switch (propertyKey) {
+            case 'cspH':
+            case 'cspM':
+              textColor = 'red';
+              break;
+            default:
+              textColor = 'white';
+          }
           return (
-            <Typography key={propertyKey} variant="body2" sx={{ color }}>
-              <strong>{propertyKey}</strong>: {formatValue(propertyValue)}
+            <Typography key={propertyKey} variant="body2" sx={{ color: textColor }}>
+              <strong>{propertyKey}</strong>
             </Typography>
           );
         })}
