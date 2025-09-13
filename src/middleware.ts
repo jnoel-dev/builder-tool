@@ -22,7 +22,7 @@ export function middleware(request: NextRequest) {
   const forwardedQueryParamsJson = JSON.stringify(forwardedQueryParams);
 
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-sb-forwarded-query", forwardedQueryParamsJson);
+  requestHeaders.set("x-frame-properties", forwardedQueryParamsJson);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 

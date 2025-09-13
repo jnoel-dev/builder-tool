@@ -10,12 +10,23 @@ import ContainerSelector from "../elementsMenu/containerSelector/ContainerSelect
 import CSPMenu from "./cspMenu/CSPMenu";
 import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 import { DEFAULT_FRAME_NAME } from "@/components/contexts/FrameManager/frameUtils";
+import { setFrameProperty, getFrameProperties } from "@/components/contexts/FrameManager/framePersistence";
+import { Button } from "@mui/material";
 
 enum TabIndex {
   CSP,
   CSS,
   NativeFunctions,
 }
+
+
+
+function buildPropertyQuery(enabledProperties?: Record<string, any>): string {
+  if (!enabledProperties || typeof enabledProperties !== 'object') return '';
+  const enabledKeys = Object.keys(enabledProperties).filter(name => enabledProperties[name] === true).sort();
+  return enabledKeys.length ? `?${enabledKeys.map(encodeURIComponent).join('&')}` : '';
+}
+
 
 function CustomTabPanel(props: { children?: React.ReactNode; index: number; value: number }) {
   const { children, value, index, ...other } = props;
@@ -33,6 +44,7 @@ function getTabProps(index: number) {
 export default function PropertiesMenu(expanded: boolean) {
   const [selectedTab, setSelectedTab] = React.useState(TabIndex.CSP);
   const { setCurrentFrameName } = useFrame();
+  const { currentFrameName } = useFrame();
 
     React.useEffect(() => {
     setCurrentFrameName(DEFAULT_FRAME_NAME);
@@ -42,6 +54,23 @@ export default function PropertiesMenu(expanded: boolean) {
   function handleTabChange(_: React.SyntheticEvent, tabIndex: number) {
     setSelectedTab(tabIndex);
   }
+
+  function handleApplyClick() {
+  if (!currentFrameName) return;
+
+  if (currentFrameName !== DEFAULT_FRAME_NAME) {
+    window.location.reload();
+    return;
+  }
+
+  const topProps = getFrameProperties(DEFAULT_FRAME_NAME);
+  const propertyQuery = buildPropertyQuery(topProps);
+
+  const url = new URL(window.location.href);
+  url.search = propertyQuery;
+  history.replaceState(null, '', url.toString());
+  window.location.reload();
+}
 
   return (
     <div>
@@ -57,7 +86,6 @@ export default function PropertiesMenu(expanded: boolean) {
             centered
           >
             <Tab label="CSP" {...getTabProps(TabIndex.CSP)} />
-            <Tab label="CSS" {...getTabProps(TabIndex.CSS)} />
             <Tab label="Native Functions" {...getTabProps(TabIndex.NativeFunctions)} />
           </Tabs>
         </Box>
@@ -74,6 +102,9 @@ export default function PropertiesMenu(expanded: boolean) {
           <Divider component="li" />
         </CustomTabPanel>
       </Box>
+      <Button variant="contained" color="secondary" fullWidth onClick={handleApplyClick}>
+        Apply
+      </Button>
     </div>
   );
 }
