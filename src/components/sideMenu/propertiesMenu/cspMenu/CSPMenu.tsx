@@ -31,8 +31,8 @@ function buildPropertyQuery(enabledProperties?: Record<string, any>): string {
 
       <FormControl size="small" fullWidth>
           <PropertyToggle propertyKey="cspH" label="CSP in headers" />
-          {/* <PropertyToggle propertyKey="cspM" label="CSP in meta tag" additionalPropertyKey='cspMN' additionalPropertyLabel='add nonce value'/> */}
-          <PropertyToggle propertyKey="cspM" label="CSP in meta tag"/>
+          <PropertyToggle propertyKey="cspM" label="CSP in meta tag" additionalPropertyKey='cspMN' additionalPropertyLabel='add nonce value'/>
+          {/* <PropertyToggle propertyKey="cspM" label="CSP in meta tag"/> */}
       </FormControl>
 
 
