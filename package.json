@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "sw:build": "esbuild src/serviceWorker.ts --bundle --platform=browser --format=iife --outfile=public/serviceWorker.js",
-    "sw:watch": "esbuild src/serviceWorker.ts --bundle --platform=browser --format=iife --outfile=public/serviceWorker.js --watch",
+    "sw:build": "esbuild src/components/sideMenu/propertiesMenu/cspMenu/serviceWorker.ts --bundle --platform=browser --format=iife --outfile=public/serviceWorker.js",
+    "sw:watch": "esbuild src/components/sideMenu/propertiesMenu/cspMenu/serviceWorker.ts --bundle --platform=browser --format=iife --outfile=public/serviceWorker.js --watch",
+    "nf:build": "esbuild src/components/sideMenu/propertiesMenu/nativeFunctionsMenu/nativeFunctions.ts --bundle --platform=browser --format=iife --outfile=public/nativeFunctions.js",
+    "nf:watch": "esbuild src/components/sideMenu/propertiesMenu/nativeFunctionsMenu/nativeFunctions.ts --bundle --platform=browser --format=iife --outfile=public/nativeFunctions.js --watch",
     "dev:3000": "next dev --port 3000 --turbopack",
     "dev:3001": "next dev --port 3001 --turbopack",
-    "dev": "concurrently -k \"npm:sw:watch\" \"npm:dev:3000\" \"npm:dev:3001\"",
-    "build": "npm run sw:build && next build",
+    "dev": "concurrently -k \"npm:sw:watch\" \"npm:nf:watch\" \"npm:dev:3000\" \"npm:dev:3001\"",
+    "build": "npm run sw:build && npm run nf:build && next build",
     "start": "next start",
     "lint": "next lint"
   },

@@ -12,10 +12,10 @@ import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 import { DEFAULT_FRAME_NAME } from "@/components/contexts/FrameManager/frameUtils";
 import { setFrameProperty, getFrameProperties } from "@/components/contexts/FrameManager/framePersistence";
 import { Button } from "@mui/material";
+import NativeFunctionsMenu from "./nativeFunctionsMenu/NativeFunctionsMenu";
 
 enum TabIndex {
   CSP,
-  CSS,
   NativeFunctions,
 }
 
@@ -94,12 +94,8 @@ export default function PropertiesMenu(expanded: boolean) {
           <CSPMenu/>
         </CustomTabPanel>
 
-        <CustomTabPanel value={selectedTab} index={TabIndex.CSS}>
-          <Divider component="li" />
-        </CustomTabPanel>
-
         <CustomTabPanel value={selectedTab} index={TabIndex.NativeFunctions}>
-          <Divider component="li" />
+          <NativeFunctionsMenu/>
         </CustomTabPanel>
       </Box>
       <Button variant="contained" color="secondary" fullWidth onClick={handleApplyClick}>

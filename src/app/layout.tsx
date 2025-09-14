@@ -2,6 +2,7 @@ import "./globals.css";
 import { headers } from "next/headers";
 import { BackgroundManager } from "@/components/contexts/backgroundContext/BackgroundManager";
 import BaseLayout from "@/components/baseLayout/BaseLayout";
+import Script from "next/script";
 
 function getSameOriginTarget(): string {
   return process.env.NODE_ENV === "production" ? "https://build.jonnoel.dev" : "http://localhost:3000";
@@ -31,6 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const shouldInjectMeta = hasCspMeta || hasCspMetaWithNonce;
 
   const scriptNonce = hasCspMetaWithNonce ? incomingHeaders.get("x-nonce") || undefined : undefined;
+  const shouldOverrideGetComputedStyle = "nfGCS" in frameProperties;
 
   return (
     <html lang="en">
@@ -39,6 +41,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <meta httpEquiv="Content-Security-Policy" content={buildCsp(scriptNonce)} />
         ) : null}
         {scriptNonce ? <meta name="csp-nonce" content={scriptNonce} /> : null}
+
+        {shouldOverrideGetComputedStyle ? (
+          <>
+            <Script src="/nativeFunctions.js" strategy="beforeInteractive" nonce={scriptNonce} />
+          </>
+        ) : null}
       </head>
       <body>
         <BackgroundManager>
