@@ -36,6 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const propertyToFunctionName: Record<string, string> = {
     nfGCS: "overrideGetComputedStyle",
     nfR: "overrideRequest",
+    nfP: "overridePromiseWithZone"
   };
   const overrideFunctionNames = Object.keys(frameProperties)
     .filter((key) => key in propertyToFunctionName)

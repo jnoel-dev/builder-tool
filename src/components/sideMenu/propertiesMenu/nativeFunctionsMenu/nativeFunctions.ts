@@ -2,11 +2,32 @@ declare global {
   interface Window {
     overrideGetComputedStyle?: () => void;
     overrideRequest?: () => void;
+    overridePromiseWithZone?: () => void;
     NativeFunctions?: {
       overrideGetComputedStyle: () => void;
       overrideRequest: () => void;
+      overridePromiseWithZone: () => void;
     };
   }
+}
+
+function getCspNonce(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const el = document.querySelector('meta[name="csp-nonce"]') as HTMLMetaElement | null;
+  const v = el?.content;
+  return v && v.length > 0 ? v : undefined;
+}
+
+function loadScriptOnce(src: string, id: string): void {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(id)) return;
+  const el = document.createElement("script");
+  el.id = id;
+  el.src = src;
+  el.async = false;
+  const nonce = getCspNonce();
+  if (nonce) (el as any).nonce = nonce;
+  document.head.appendChild(el);
 }
 
 export function overrideGetComputedStyle(): void {
@@ -80,18 +101,28 @@ export function overrideRequest(): void {
   (window as any).Request = OverriddenRequest as any;
 }
 
+export function overridePromiseWithZone(): void {
+  if (typeof window === "undefined") return;
+  const w = window as any;
+  if (w.Zone || w.ZoneAwarePromise) return;
+
+  loadScriptOnce("/zone.min.js", "zonejs-core");
+}
 
 if (typeof window !== "undefined") {
   window.overrideGetComputedStyle = overrideGetComputedStyle;
   window.overrideRequest = overrideRequest;
+  window.overridePromiseWithZone = overridePromiseWithZone;
   window.NativeFunctions = {
     overrideGetComputedStyle,
-    overrideRequest
+    overrideRequest,
+    overridePromiseWithZone
   };
 }
 
 const NativeFunctions = {
   overrideGetComputedStyle,
-  overrideRequest
+  overrideRequest,
+  overridePromiseWithZone
 };
 export default NativeFunctions;

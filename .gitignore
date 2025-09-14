@@ -10,3 +10,4 @@ firebase-debug.log
 .env.local
 public/nativeFunctions.js
 public/serviceWorker.js
+public/zone.min.js

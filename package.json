@@ -12,7 +12,9 @@
     "dev": "concurrently -k \"npm:sw:watch\" \"npm:nf:watch\" \"npm:dev:3000\" \"npm:dev:3001\"",
     "build": "npm run sw:build && npm run nf:build && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "node copy-zone.mjs",
+    "prebuild": "node copy-zone.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -33,7 +35,8 @@
     "postcss": "^8.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "three": "^0.174.0"
+    "three": "^0.174.0",
+    "zone.js": "^0.15.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.12",
