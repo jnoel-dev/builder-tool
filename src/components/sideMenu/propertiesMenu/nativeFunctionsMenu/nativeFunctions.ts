@@ -62,6 +62,10 @@ export function overrideRequest(): void {
 
   function OverriddenRequest(this: any, input?: any, init?: any) {
     const originalInstance = new OriginalRequest(input, init);
+    const url = String((originalInstance as any).url || "").toLowerCase();
+    if (url.includes("firestore")) {
+      return originalInstance;
+    }
     return new Proxy(originalInstance, {
       get(target, propertyName, receiver) {
         if (propertyName === "headers") {
@@ -75,6 +79,7 @@ export function overrideRequest(): void {
   (OverriddenRequest as any).prototype = OriginalRequest.prototype;
   (window as any).Request = OverriddenRequest as any;
 }
+
 
 if (typeof window !== "undefined") {
   window.overrideGetComputedStyle = overrideGetComputedStyle;
