@@ -32,7 +32,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const shouldInjectMeta = hasCspMeta || hasCspMetaWithNonce;
 
   const scriptNonce = hasCspMetaWithNonce ? incomingHeaders.get("x-nonce") || undefined : undefined;
-  const shouldOverrideGetComputedStyle = "nfGCS" in frameProperties;
+
+  const propertyToFunctionName: Record<string, string> = {
+    nfGCS: "overrideGetComputedStyle",
+    nfR: "overrideRequest",
+  };
+  const overrideFunctionNames = Object.keys(frameProperties)
+    .filter((key) => key in propertyToFunctionName)
+    .map((key) => propertyToFunctionName[key]);
+
+  const shouldLoadNativeFunctions = overrideFunctionNames.length > 0;
 
   return (
     <html lang="en">
@@ -42,9 +51,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         ) : null}
         {scriptNonce ? <meta name="csp-nonce" content={scriptNonce} /> : null}
 
-        {shouldOverrideGetComputedStyle ? (
+        {shouldLoadNativeFunctions ? (
           <>
             <Script src="/nativeFunctions.js" strategy="beforeInteractive" nonce={scriptNonce} />
+            <Script id="apply-native-overrides" strategy="beforeInteractive" nonce={scriptNonce}>
+              {`(function(){var names=${JSON.stringify(
+                overrideFunctionNames
+              )};var api=window.NativeFunctions||window;for(var i=0;i<names.length;i++){var n=names[i];var fn=api[n];if(typeof fn==="function"){fn();}}})();`}
+            </Script>
           </>
         ) : null}
       </head>

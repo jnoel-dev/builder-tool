@@ -11,6 +11,7 @@ export default function NativeFunctionsMenu() {
 
       <FormControl size="small" fullWidth>
           <PropertyToggle propertyKey="nfGCS" label="Override getComputedStyle"/>
+          <PropertyToggle propertyKey="nfR" label="Override Request"/>
 
       </FormControl>
 

@@ -1,13 +1,18 @@
 declare global {
   interface Window {
     overrideGetComputedStyle?: () => void;
+    overrideRequest?: () => void;
+    NativeFunctions?: {
+      overrideGetComputedStyle: () => void;
+      overrideRequest: () => void;
+    };
   }
 }
 
 export function overrideGetComputedStyle(): void {
   if (typeof window === "undefined") return;
-  const currentGetComputedStyle = (window as any).getComputedStyle;
-  if (typeof currentGetComputedStyle !== "function") return;
+  const existingGetComputedStyle = (window as any).getComputedStyle;
+  if (typeof existingGetComputedStyle !== "function") return;
 
   const emptyString = "";
 
@@ -50,9 +55,38 @@ export function overrideGetComputedStyle(): void {
   }
 }
 
-if (typeof window !== "undefined") {
-  (window as any).overrideGetComputedStyle = overrideGetComputedStyle;
-  overrideGetComputedStyle();
+export function overrideRequest(): void {
+  if (typeof window === "undefined") return;
+  const OriginalRequest = (window as any).Request;
+  if (typeof OriginalRequest !== "function") return;
+
+  function OverriddenRequest(this: any, input?: any, init?: any) {
+    const originalInstance = new OriginalRequest(input, init);
+    return new Proxy(originalInstance, {
+      get(target, propertyName, receiver) {
+        if (propertyName === "headers") {
+          return {};
+        }
+        return Reflect.get(target, propertyName, receiver);
+      }
+    });
+  }
+
+  (OverriddenRequest as any).prototype = OriginalRequest.prototype;
+  (window as any).Request = OverriddenRequest as any;
 }
 
-export default overrideGetComputedStyle;
+if (typeof window !== "undefined") {
+  window.overrideGetComputedStyle = overrideGetComputedStyle;
+  window.overrideRequest = overrideRequest;
+  window.NativeFunctions = {
+    overrideGetComputedStyle,
+    overrideRequest
+  };
+}
+
+const NativeFunctions = {
+  overrideGetComputedStyle,
+  overrideRequest
+};
+export default NativeFunctions;
