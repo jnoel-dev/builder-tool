@@ -8,3 +8,4 @@ firebase-debug.log
 .vscode/launch.json
 .vscode/settings.json
 .env.local
+public/sw.js

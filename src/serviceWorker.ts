@@ -1,0 +1,62 @@
+/// <reference lib="webworker" />
+
+
+function getCrossOriginForOrigin(currentOrigin: string): string {
+  if (currentOrigin.startsWith("http://localhost:3000")) return "http://localhost:3001";
+  if (currentOrigin.startsWith("http://localhost:3001")) return "http://localhost:3000";
+  if (currentOrigin.startsWith("https://build.jonnoel.dev")) return "https://frame.jonnoel.dev";
+  if (currentOrigin.startsWith("https://frame.jonnoel.dev")) return "https://build.jonnoel.dev";
+  return currentOrigin;
+}
+
+function buildCspHeaderValue(requestUrl: URL): string {
+  const sameOrigin = requestUrl.origin;
+  const crossOrigin = getCrossOriginForOrigin(sameOrigin);
+  const allowedScriptSources = ["'self'", "'unsafe-inline'", sameOrigin, crossOrigin];
+  return `script-src ${allowedScriptSources.join(" ")};`;
+}
+
+function shouldApplyCspForRequest(request: Request): boolean {
+  const requestUrl = new URL(request.url);
+  if (request.mode !== "navigate") return false;
+  if (requestUrl.origin !== self.location.origin) return false;
+  if (!requestUrl.searchParams.has("cspSW")) return false;
+  return true;
+}
+
+async function cloneResponseWithCsp(originalResponse: Response, cspHeaderValue: string): Promise<Response> {
+  const responseHeaders = new Headers(originalResponse.headers);
+  responseHeaders.set("Content-Security-Policy", cspHeaderValue);
+  return new Response(originalResponse.body, {
+    status: originalResponse.status,
+    statusText: originalResponse.statusText,
+    headers: responseHeaders,
+  });
+}
+
+async function handleFetchEvent(fetchEvent: FetchEvent): Promise<Response> {
+  const request = fetchEvent.request;
+  if (!shouldApplyCspForRequest(request)) return fetch(request);
+  const originalResponse = await fetch(request);
+  const requestUrl = new URL(request.url);
+  const cspHeaderValue = buildCspHeaderValue(requestUrl);
+  return cloneResponseWithCsp(originalResponse, cspHeaderValue);
+}
+
+function onInstall(_event: ExtendableEvent): void {
+  (self as unknown as ServiceWorkerGlobalScope).skipWaiting();
+}
+
+function onActivate(event: ExtendableEvent): void {
+  event.waitUntil((self as unknown as ServiceWorkerGlobalScope).clients.claim());
+}
+
+
+
+function onFetch(event: FetchEvent): void {
+  event.respondWith(handleFetchEvent(event));
+}
+
+self.addEventListener("install", onInstall as EventListener);
+self.addEventListener("activate", onActivate as EventListener);
+self.addEventListener("fetch", onFetch as EventListener);
