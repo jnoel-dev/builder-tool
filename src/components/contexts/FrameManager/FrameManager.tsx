@@ -185,17 +185,20 @@ useEffect(() => {
     return nextState;
   }
 
+
+
 useEffect(() => {
   if (typeof window === "undefined") return;
   if (!("serviceWorker" in navigator)) return;
 
-  const SERVICE_WORKER_PATH = "/serviceWorker.js";
-  const searchParams = new URLSearchParams(window.location.search);
-  const isCspServiceWorkerEnabled = searchParams.has("cspSW");
+  const serviceWorkerPath = "/serviceWorker.js";
+  const isCspServiceWorkerEnabled = new URLSearchParams(window.location.search).has("cspSW");
+  const isFramePath = window.location.pathname.startsWith("/frame/");
+  const desiredScope = isFramePath ? "/frame/" : "/";
 
   if (isCspServiceWorkerEnabled) {
     const hadController = !!navigator.serviceWorker.controller;
-    navigator.serviceWorker.register(SERVICE_WORKER_PATH, { scope: "/" }).then((registration) => {
+    navigator.serviceWorker.register(serviceWorkerPath, { scope: desiredScope }).then((registration) => {
       const isFreshInstall = !!registration.installing;
       if (!hadController && isFreshInstall) {
         const reloadOnControl = () => window.location.reload();
@@ -207,24 +210,30 @@ useEffect(() => {
 
   navigator.serviceWorker.getRegistrations().then(async (registrations) => {
     let didUnregister = false;
+
     for (const registration of registrations) {
-      const urls = [
+      const registrationControlsThisPage = window.location.href.startsWith(registration.scope);
+      if (!registrationControlsThisPage) continue;
+      if (registration.scope !== new URL(window.location.origin + desiredScope).href) continue;
+
+      const scriptUrlCandidates = [
         registration.installing?.scriptURL,
         registration.waiting?.scriptURL,
         registration.active?.scriptURL,
       ].filter(Boolean) as string[];
-      if (urls.some((u) => new URL(u).pathname === SERVICE_WORKER_PATH)) {
+
+      const isTargetWorker = scriptUrlCandidates.some((scriptUrlString) => {
+        return new URL(scriptUrlString).pathname === serviceWorkerPath;
+      });
+
+      if (isTargetWorker) {
         if (await registration.unregister()) didUnregister = true;
       }
     }
+
     if (didUnregister) window.location.reload();
   });
 }, []);
-
-
-
-
-
 
   function setElementsForFrameAndCurrentPage(previousState: AppState, frameName: string, elements: FrameElement[]): AppState {
     const pageKey = getCurrentPageFromFrameName(frameName);
