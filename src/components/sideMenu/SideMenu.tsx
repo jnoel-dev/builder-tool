@@ -6,6 +6,7 @@ import MenuBase from "./menuBase/MenuBase";
 import SettingsMenu from './settingsMenu/SettingsMenu';
 import NavigationMenu from './navigationMenu/NavigationMenu';
 import PropertiesMenu from './propertiesMenu/PropertiesMenu';
+import SnippetMenu from './snippetMenu/SnippetMenu';
 
 export default function SideMenu() {
   const [expanded, setExpanded] = useState<string | false>(false);
@@ -37,6 +38,12 @@ export default function SideMenu() {
       <MenuBase
         menuName="Navigation"
         menuComponent={NavigationMenu}
+        expanded={expanded}
+        setExpanded={setExpanded}
+      />
+      <MenuBase
+        menuName="Snippet"
+        menuComponent={SnippetMenu}
         expanded={expanded}
         setExpanded={setExpanded}
       />
