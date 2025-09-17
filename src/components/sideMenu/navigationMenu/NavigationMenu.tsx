@@ -25,11 +25,11 @@ import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 import {
   loadPagesByOriginWithDefaults,
   persistPagesByOrigin,
-  PagesByOrigin,
 } from "@/components/contexts/FrameManager/framePersistence";
 import ContainerSelector from "../elementsMenu/containerSelector/ContainerSelector";
 import { DEV_ORIGINS } from "@/components/contexts/FrameManager/framePersistence";
 import { PROD_ORIGINS } from "@/components/contexts/FrameManager/framePersistence";
+import { PagesByOrigin } from "@/components/contexts/FrameManager/frameUtils";
 
 function getKnownOrigins(): string[] {
   return process.env.NODE_ENV === "development" ? DEV_ORIGINS : PROD_ORIGINS;

@@ -3,6 +3,26 @@ import { getKnownChildWindowInfoByFrameName } from "./frameMessaging";
 export const DEFAULT_FRAME_NAME = "TopFrame";
 export const DEFAULT_PAGE_NAME = "HomePage";
 
+export type PagesByOrigin = Record<string, string[]>;
+
+export enum UUIDType {
+  Variable = "variable",
+  Cookie = "cookie",
+  ForceLoad = "forceLoad",
+}
+export type SnippetProperties = {
+  systemGuid: string;
+  environmentPathName: string;
+  cdnDomain: string;
+  loadInCdIframes: boolean;
+  uuid: {
+    type: UUIDType;
+    name?: string;
+    value?: string;
+    delayMs?: number;
+  };
+};
+
 export type FrameElement = {
   id: string;
   componentName: string;
@@ -31,6 +51,8 @@ export type AppState = {
   frames: Record<string, FrameNode>;
   frameOrder: string[];
   currentFrame: string;
+  pagesByOrigin?: PagesByOrigin
+  snippetProperties?: SnippetProperties;
 };
 
 export function getMaxSuffixFromId(idValue: string): number {

@@ -1,9 +1,6 @@
 "use client";
 
-import { AppState } from "./frameUtils";
-
-export type PagesByOrigin = Record<string, string[]>;
-type SerializedPagesByOrigin = Partial<Record<"OriginMain" | "OriginSame" | "OriginCross", string[]>>;
+import { AppState, SnippetProperties, PagesByOrigin } from "./frameUtils";
 
 export const DEV_ORIGINS = ["localhost:3000/", "localhost:3000/frame/", "localhost:3001/frame/"];
 export const PROD_ORIGINS = ["build.jonnoel.dev/", "build.jonnoel.dev/frame/", "frame.jonnoel.dev/frame/"];
@@ -16,27 +13,10 @@ export const SAME_ORIGIN_TARGET =
 export const CROSS_ORIGIN_TARGET =
   process.env.NODE_ENV === "production" ? "https://frame.jonnoel.dev/" : "http://localhost:3001/";
 
-type ExtendedAppState = AppState & { pagesByOrigin?: PagesByOrigin };
-
 function getKnownOrigins(): [string, string, string] {
   const isDevelopment = typeof process !== "undefined" && process.env.NODE_ENV === "development";
   const originList = isDevelopment ? DEV_ORIGINS : PROD_ORIGINS;
   return [originList[0], originList[1], originList[2]];
-}
-
-function getSerializedMapping() {
-  const [originMain, originSame, originCross] = getKnownOrigins();
-  return [
-    { serializedKey: "OriginMain" as const, originKey: originMain },
-    { serializedKey: "OriginSame" as const, originKey: originSame },
-    { serializedKey: "OriginCross" as const, originKey: originCross },
-  ];
-}
-
-function isSerializedPagesByOrigin(value: unknown): value is SerializedPagesByOrigin {
-  if (!value || typeof value !== "object") return false;
-  const providedKeys = Object.keys(value as object);
-  return ["OriginMain", "OriginSame", "OriginCross"].some(k => providedKeys.includes(k));
 }
 
 function cleanPageList(pageNames: string[]): string[] {
@@ -50,95 +30,38 @@ function cleanPageList(pageNames: string[]): string[] {
   return cleanedList;
 }
 
-function mapSerializedToRuntime(serialized: SerializedPagesByOrigin): PagesByOrigin {
-  const mapping = getSerializedMapping();
-  const runtime: PagesByOrigin = {};
-  for (const { serializedKey, originKey } of mapping) {
-    const serializedPages = serialized[serializedKey];
-    if (Array.isArray(serializedPages) && serializedPages.length > 0) {
-      const cleanedPages = cleanPageList(serializedPages);
-      if (cleanedPages.length > 0) runtime[originKey] = cleanedPages;
-    }
-  }
-  return runtime;
-}
-
-function mapRuntimeToSerialized(runtime: PagesByOrigin): SerializedPagesByOrigin | undefined {
-  const mapping = getSerializedMapping();
-  const serializedOutput: SerializedPagesByOrigin = {};
-  for (const { serializedKey, originKey } of mapping) {
-    const runtimePages = cleanPageList(runtime[originKey] || []);
-    if (runtimePages.length > 0) serializedOutput[serializedKey] = runtimePages;
-  }
-  return Object.keys(serializedOutput).length === 0 ? undefined : serializedOutput;
-}
-
-function hasValidCoreShape(value: any): value is ExtendedAppState {
-  return (
-    value &&
-    typeof value === "object" &&
-    value.frames &&
-    value.frameOrder &&
-    value.currentFrame &&
-    typeof value.rootPage === "string"
-  );
-}
-
-function normalizeParsedState(parsedJson: any): ExtendedAppState | null {
-  if (!hasValidCoreShape(parsedJson)) return null;
-  if (parsedJson.pagesByOrigin && isSerializedPagesByOrigin(parsedJson.pagesByOrigin)) {
-    const runtimePagesByOrigin = mapSerializedToRuntime(parsedJson.pagesByOrigin);
-    const hasAnyPages = Object.values(runtimePagesByOrigin).some(pageList => pageList.length > 0);
-    return hasAnyPages ? { ...parsedJson, pagesByOrigin: runtimePagesByOrigin } : { ...parsedJson, pagesByOrigin: undefined };
-  }
-  return parsedJson as ExtendedAppState;
-}
-
-function readSessionLoose(): any | null {
+function readSession(): any | null {
   try {
     const sessionJson = sessionStorage.getItem(SESSION_KEY_STATE);
     if (!sessionJson) return null;
-    const parsed = JSON.parse(sessionJson);
-    return normalizeParsedState(parsed) ?? parsed;
+    return JSON.parse(sessionJson);
   } catch {
     return null;
   }
 }
 
-function readSessionStrict(): ExtendedAppState | null {
-  const parsed = readSessionLoose();
-  return parsed && hasValidCoreShape(parsed) ? (parsed as ExtendedAppState) : null;
-}
-
-function toSerializableState(stateToPersist: any): any {
-  const hasPagesKey = stateToPersist && typeof stateToPersist === "object" && "pagesByOrigin" in stateToPersist;
-  if (!hasPagesKey) return stateToPersist;
-  const serialized = mapRuntimeToSerialized(stateToPersist.pagesByOrigin as PagesByOrigin);
-  if (serialized) return { ...stateToPersist, pagesByOrigin: serialized };
-  const { pagesByOrigin, ...rest } = stateToPersist;
-  return rest;
-}
-
 function writeSession(stateToPersist: any): void {
   try {
-    sessionStorage.setItem(SESSION_KEY_STATE, JSON.stringify(toSerializableState(stateToPersist)));
+    sessionStorage.setItem(SESSION_KEY_STATE, JSON.stringify(stateToPersist));
   } catch {}
 }
 
 export function loadInitialState(defaultFrameName: string, defaultPageName: string): AppState | null {
   if (typeof window === "undefined") return null;
 
-  const sessionState = readSessionStrict();
+  const sessionState = readSession() as AppState | null;
   if (sessionState) {
     return {
       rootPage: sessionState.rootPage,
       frames: sessionState.frames,
       frameOrder: sessionState.frameOrder,
       currentFrame: defaultFrameName,
+      pagesByOrigin: sessionState.pagesByOrigin,
+      snippetProperties: sessionState.snippetProperties,
     };
   }
 
-  const initialState: ExtendedAppState = {
+  const initialState: AppState = {
     rootPage: defaultPageName,
     frames: {
       [defaultFrameName]: {
@@ -149,25 +72,25 @@ export function loadInitialState(defaultFrameName: string, defaultPageName: stri
     },
     frameOrder: [defaultFrameName],
     currentFrame: defaultFrameName,
+    pagesByOrigin: undefined,
+    snippetProperties: undefined,
   };
+
   writeSession(initialState);
-  return {
-    rootPage: initialState.rootPage,
-    frames: initialState.frames,
-    frameOrder: initialState.frameOrder,
-    currentFrame: initialState.currentFrame,
-  };
+  return initialState;
 }
 
 export function persistStateToSession(appState: AppState): void {
   if (typeof window === "undefined") return;
-  const existingSession = readSessionLoose();
-  const nextSessionState = {
+  const existingSession = (readSession() || {}) as AppState;
+  const nextSessionState: AppState = {
+    ...existingSession,
     rootPage: appState.rootPage,
     frames: appState.frames,
     frameOrder: appState.frameOrder,
     currentFrame: appState.currentFrame,
-    pagesByOrigin: existingSession?.pagesByOrigin,
+    pagesByOrigin: appState.pagesByOrigin ?? existingSession.pagesByOrigin,
+    snippetProperties: appState.snippetProperties ?? existingSession.snippetProperties,
   };
   writeSession(nextSessionState);
 }
@@ -175,7 +98,7 @@ export function persistStateToSession(appState: AppState): void {
 export function loadPagesByOriginWithDefaults(defaultPagesByOrigin: PagesByOrigin): PagesByOrigin {
   if (typeof window === "undefined") return { ...defaultPagesByOrigin };
 
-  const sessionValue = readSessionLoose();
+  const sessionValue = readSession() as AppState | null;
   const knownOriginList = getKnownOrigins();
 
   const mergedPagesByOrigin: PagesByOrigin = {};
@@ -186,9 +109,15 @@ export function loadPagesByOriginWithDefaults(defaultPagesByOrigin: PagesByOrigi
   const storedPagesByOrigin = sessionValue?.pagesByOrigin as PagesByOrigin | undefined;
   if (storedPagesByOrigin) {
     for (const [originUrl, pageNames] of Object.entries(storedPagesByOrigin)) {
-      const uniquePages = Array.from(new Set<string>(["Home Page", ...pageNames]));
+      const uniquePages = Array.from(new Set<string>(["Home Page", ...cleanPageList(pageNames || [])]));
       mergedPagesByOrigin[originUrl] = uniquePages;
     }
+  }
+
+  for (const [originUrl, pageNames] of Object.entries(defaultPagesByOrigin)) {
+    const existingList = mergedPagesByOrigin[originUrl] || ["Home Page"];
+    const uniquePages = Array.from(new Set<string>([...existingList, ...cleanPageList(pageNames || [])]));
+    mergedPagesByOrigin[originUrl] = uniquePages;
   }
 
   return mergedPagesByOrigin;
@@ -196,47 +125,60 @@ export function loadPagesByOriginWithDefaults(defaultPagesByOrigin: PagesByOrigi
 
 export function persistPagesByOrigin(pagesByOrigin: PagesByOrigin): void {
   if (typeof window === "undefined") return;
-  const existingSession = readSessionLoose();
-  const stateToWrite = existingSession ? { ...existingSession, pagesByOrigin: { ...pagesByOrigin } } : { pagesByOrigin };
+  const existingSession = (readSession() || {}) as AppState;
+  const stateToWrite = { ...existingSession, pagesByOrigin: { ...pagesByOrigin } };
   writeSession(stateToWrite);
 }
 
-export function setFrameProperty(frameName: string, propertyName: string, is_enabled: boolean): void {
+export function setFrameProperty(frameName: string, propertyName: string, isEnabled: boolean): void {
   if (typeof window === "undefined") return;
 
-  const session = readSessionLoose();
-  if (!session?.frames?.[frameName]) return;
+  const sessionValue = readSession() as AppState | null;
+  if (!sessionValue?.frames?.[frameName]) return;
 
-  const nextSession = {
-    ...session,
+  const nextSession: AppState = {
+    ...sessionValue,
     frames: {
-      ...session.frames,
-      [frameName]: { ...session.frames[frameName] },
+      ...sessionValue.frames,
+      [frameName]: { ...sessionValue.frames[frameName] },
     },
   };
 
-  const frame = nextSession.frames[frameName];
-  const nextProperties = frame.properties && typeof frame.properties === "object" ? { ...frame.properties } : {};
+  const frameNode = nextSession.frames[frameName];
+  const nextProperties =
+    frameNode.properties && typeof frameNode.properties === "object" ? { ...frameNode.properties } : {};
 
-  if (is_enabled) {
+  if (isEnabled) {
     nextProperties[propertyName] = true;
-    frame.properties = nextProperties;
+    frameNode.properties = nextProperties;
   } else {
     delete nextProperties[propertyName];
     if (Object.keys(nextProperties).length > 0) {
-      frame.properties = nextProperties;
+      frameNode.properties = nextProperties;
     } else {
-      delete frame.properties;
+      delete frameNode.properties;
     }
   }
 
   writeSession(nextSession);
 }
 
-
-export function getFrameProperties(frameName: string): Record<string, any> {
-  const session = readSessionLoose();
-  const frame = session?.frames?.[frameName];
-  const properties = frame?.properties;
+export function getFrameProperties(frameName: string): Record<string, unknown> {
+  const sessionValue = readSession() as AppState | null;
+  const frameNode = sessionValue?.frames?.[frameName];
+  const properties = frameNode?.properties;
   return properties && typeof properties === "object" ? { ...properties } : {};
+}
+
+export function setSnippetProperties(snippetProperties: SnippetProperties): void {
+  if (typeof window === "undefined") return;
+  const existingSession = (readSession() || {}) as AppState;
+  const nextSessionState = { ...existingSession, snippetProperties: { ...snippetProperties } };
+  writeSession(nextSessionState);
+}
+
+export function getSnippetProperties(): SnippetProperties | undefined {
+  const sessionValue = readSession() as AppState | null;
+  const stored = sessionValue?.snippetProperties as SnippetProperties | undefined;
+  return stored && typeof stored === "object" ? { ...stored } : undefined;
 }
