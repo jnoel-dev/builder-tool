@@ -32,7 +32,7 @@ export default function ContainerBase({
   connectedFrameName,
   disableElementControlsForChildren = false
 }: ContainerBaseProps) {
-  const { frameElementsByFrameName, containerRefs, replaceFrameElements,registerFrame,firebaseDocLoaded} = useFrame();
+  const { frameElementsByFrameName, containerRefs, replaceFrameElements,registerFrame,receivedFirebaseResponse} = useFrame();
   const elementListForFrame = frameElementsByFrameName[connectedFrameName] || [];
   const fallbackRef = useRef<HTMLDivElement | null>(null);
   const containerRefForFrame = containerRefs[connectedFrameName] ?? fallbackRef;
@@ -94,7 +94,7 @@ function sendRequestSync(frameName: string) {
   const targetWindow = window.top?.opener ? window.top.opener : window.top;
   const nameForTop = frameName === "TopFrame" ? window.name : frameName;
   const segments = document.location.pathname.split("/").filter(Boolean);
-  const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");
+  const pageName = segments[1] === "frame" ? (segments[3] || "HomePage") : (segments[1] || "HomePage");
   const message = { type: "requestSync", frameName: nameForTop, pageName };
 
   if (POST_MESSAGE_LOG_ENABLED) {
@@ -190,7 +190,7 @@ useEffect(() => {
 
   window.addEventListener("message", onMessage);
   return () => window.removeEventListener("message", onMessage);
-}, [firebaseDocLoaded]);
+}, [receivedFirebaseResponse]);
 
 
 return (

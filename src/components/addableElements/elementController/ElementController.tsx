@@ -119,7 +119,7 @@ export default function ElementController({
           : connectedFrameOrContainerName;
       const targetWindow = window.top?.opener ? window.top.opener : window.top;
       const segments = document.location.pathname.split("/").filter(Boolean);
-      const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");
+      const pageName = segments[1] === "frame" ? (segments[3] || "HomePage") : (segments[1] || "HomePage");
       const msg = {
         type: 'updateElementPosition',
         frameName: frameNameForTop,
@@ -167,7 +167,7 @@ export default function ElementController({
 
       const targetWindow = window.top?.opener ? window.top.opener : window.top;
       const segments = document.location.pathname.split("/").filter(Boolean);
-      const pageName = segments[0] === "frame" ? (segments[2] || "HomePage") : (segments[0] || "HomePage");
+      const pageName = segments[1] === "frame" ? (segments[3] || "HomePage") : (segments[1] || "HomePage");
       const msg = {
         type: 'removeElement',
         frameName: frameNameForTop,

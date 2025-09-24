@@ -80,8 +80,8 @@ export function rebuildIdCountersFromState(appState: AppState): Record<string, n
 
 export function pageNameFromPath(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
-  if (segments[0] === "frame") return segments[2] || DEFAULT_PAGE_NAME;
-  return segments[0] || DEFAULT_PAGE_NAME;
+  if (segments[1] === "frame") return segments[3] || DEFAULT_PAGE_NAME;
+  return segments[1] || DEFAULT_PAGE_NAME;
 }
 
 export function getCurrentPageFromFrameName(frameName: string): string {

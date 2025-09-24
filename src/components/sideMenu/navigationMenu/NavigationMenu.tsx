@@ -27,20 +27,9 @@ import {
   persistPagesByOrigin,
 } from "@/components/contexts/FrameManager/framePersistence";
 import ContainerSelector from "../elementsMenu/containerSelector/ContainerSelector";
-import { DEV_ORIGINS } from "@/components/contexts/FrameManager/framePersistence";
-import { PROD_ORIGINS } from "@/components/contexts/FrameManager/framePersistence";
+
 import { PagesByOrigin } from "@/components/contexts/FrameManager/frameUtils";
 
-function getKnownOrigins(): string[] {
-  return process.env.NODE_ENV === "development" ? DEV_ORIGINS : PROD_ORIGINS;
-}
-
-function getInitialPagesByOrigin(): Record<string, string[]> {
-  const origins = getKnownOrigins();
-  const pages: Record<string, string[]> = {};
-  for (const origin of origins) pages[origin] = ["Home Page"];
-  return pages;
-}
 
 function isTopFrame(name: string): boolean {
   return /topframe/i.test(name);
@@ -69,22 +58,50 @@ function findOriginForFrameName(
   originUrls: string[],
   childMap: Record<string, { id: string }[]>
 ): string {
-  const hostRoot = typeof window !== "undefined" ? `${window.location.host}/` : "";
-  const lower = frameName.toLowerCase();
+  const currentHost = typeof window !== "undefined" ? window.location.host : "";
+  const frameNameLower = frameName.toLowerCase();
 
-  if (lower.includes("topframe")) return originUrls.find((url) => url === hostRoot) || originUrls[0];
-  if (lower.includes("samedomain"))
-    return originUrls.find((url) => url.startsWith(hostRoot) && url.endsWith("/frame/")) || originUrls[0];
-  if (lower.includes("crossdomain"))
-    return originUrls.find((url) => url.endsWith("/frame/") && url !== hostRoot + "frame/") || originUrls[0];
-
-  for (const parentName in childMap) {
-    if ((childMap[parentName] || []).some((child) => child.id === frameName)) {
-      return findOriginForFrameName(parentName, originUrls, childMap);
+  const parsedOrigins = originUrls.map((originUrl) => {
+    try {
+      const parsed = new URL(originUrl);
+      return { raw: originUrl, host: parsed.host, path: parsed.pathname };
+    } catch {
+      return { raw: originUrl, host: "", path: "" };
     }
+  });
+
+
+  function isSameHost(hostname: string): boolean {
+    return currentHost !== "" && hostname === currentHost;
   }
-  return originUrls.includes(hostRoot) ? hostRoot : originUrls[0];
+
+  function selectMatchingOrigin(
+    predicate: (origin: { raw: string; host: string; path: string }) => boolean
+  ): string | null {
+    const match = parsedOrigins.find(predicate);
+    return match ? match.raw : null;
+  }
+
+  if (frameNameLower.includes("topframe")) {
+
+    return originUrls[0];
+  } else if (frameNameLower.includes("samedomain")) {
+    return originUrls[1];
+  } else if (frameNameLower.includes("crossdomain")) {
+
+    return originUrls[2];
+  } else {
+    for (const parentName in childMap) {
+      const children = childMap[parentName] || [];
+      if (children.some((child) => child.id === frameName)) {
+        return findOriginForFrameName(parentName, originUrls, childMap);
+      }
+    }
+    const sameHost = selectMatchingOrigin((origin) => isSameHost(origin.host));
+    return sameHost || originUrls[0];
+  }
 }
+
 
 export default function NavigationMenu() {
   const {
@@ -94,36 +111,68 @@ export default function NavigationMenu() {
     containerRefs,
     frameElementsByFrameName,
     addElementToCurrentFrame,
+    knownFrameOrigins,
+    receivedFirebaseResponse
+    
+
+    
   } = useFrame();
 
-  const initialPagesByOrigin = getInitialPagesByOrigin();
+  function getInitialPagesByOrigin(): Record<string, string[]> {
+  const origins = knownFrameOrigins;
+  const pages: Record<string, string[]> = {};
+  for (const origin of origins) pages[origin] = ["Home Page"];
+  return pages;
+}
 
-  const [pagesByOrigin, setPagesByOrigin] = useState<PagesByOrigin>(initialPagesByOrigin);
-  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
-    setPagesByOrigin(loadPagesByOriginWithDefaults(initialPagesByOrigin));
-    setIsMounted(true);
-  }, []);
 
-  useEffect(() => {
-    if (!isMounted) return;
-    persistPagesByOrigin(pagesByOrigin);
-  }, [pagesByOrigin, isMounted]);
+  const [pagesByOrigin, setPagesByOrigin] = useState<PagesByOrigin>(getInitialPagesByOrigin());
 
-  const [selectedOriginUrl, setSelectedOriginUrl] = useState(Object.keys(initialPagesByOrigin)[0]);
+
+
+
+
+
+  const [selectedOriginUrl, setSelectedOriginUrl] = useState("");
   const [selectedPageName, setSelectedPageName] = useState("Home Page");
   const [navigationMode, setNavigationMode] = useState<NavigationType>(NavigationType.Full);
 
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>(
-    Object.entries(initialPagesByOrigin).flatMap(([originUrl, pageTitles]) => [
+    Object.entries(getInitialPagesByOrigin()).flatMap(([originUrl, pageTitles]) => [
       originUrl,
       ...pageTitles.map((pageTitle) => `${originUrl}-${pageTitle}`),
     ])
   );
 
+useEffect(() => {
+  let cancelled = false;
+
+  (async () => {
+    const defaults: PagesByOrigin = Object.fromEntries(
+      knownFrameOrigins.map((originUrl) => [originUrl, ["Home Page"]])
+    );
+
+    const loaded = await loadPagesByOriginWithDefaults(defaults);
+    if (cancelled) return;
+
+    setPagesByOrigin(loaded);
+    setSelectedOriginUrl(Object.keys(loaded)[0] ?? "");
+    setExpandedItemIds(
+      Object.entries(loaded).flatMap(([originUrl, pageTitles]) => [
+        originUrl,
+        ...pageTitles.map((title) => `${originUrl}-${title}`),
+      ])
+    );
+  })();
+
+  return () => { cancelled = true; };
+}, [knownFrameOrigins, receivedFirebaseResponse]);
+
+
+  
   useEffect(() => {
-    if (!isMounted) return;
+   
     const allOriginUrls = Object.keys(pagesByOrigin);
     if (allOriginUrls.length === 0) return;
 
@@ -137,9 +186,9 @@ export default function NavigationMenu() {
         ...(pagesByOrigin[originUrl] || []).map((pageTitle) => `${originUrl}-${pageTitle}`),
       ])
     );
-  }, [pagesByOrigin, isMounted]); 
+  }, [pagesByOrigin]); 
 
-  const [destinationOriginUrl, setDestinationOriginUrl] = useState<string>(Object.keys(initialPagesByOrigin)[0]);
+  const [destinationOriginUrl, setDestinationOriginUrl] = useState<string>(Object.keys(getInitialPagesByOrigin())[0]);
 
   useEffect(() => {
     const allOriginUrls = Object.keys(pagesByOrigin);
@@ -166,10 +215,16 @@ export default function NavigationMenu() {
 
     const newPageTitle = `${baseTitle}${nextNumber}`;
 
-    setPagesByOrigin((prev) => ({
-      ...prev,
-      [selectedOriginUrl]: [...prev[selectedOriginUrl], newPageTitle],
-    }));
+    setPagesByOrigin(previous => {
+      const currentPages = previous[selectedOriginUrl] ?? [];
+      const next = { ...previous, [selectedOriginUrl]: [...currentPages, newPageTitle] };
+      persistPagesByOrigin(next);
+      return next;
+    });
+
+
+
+    
 
     setExpandedItemIds((prev) => [...prev, `${selectedOriginUrl}-${newPageTitle}`]);
     setSelectedPageName(newPageTitle);
@@ -200,13 +255,21 @@ export default function NavigationMenu() {
     });
   }
 
-  function removePage(originUrl: string, pageTitle: string): void {
-    setPagesByOrigin((prev) => ({
-      ...prev,
-      [originUrl]: prev[originUrl].filter((title) => title !== pageTitle),
-    }));
-    if (selectedPageName === pageTitle) setSelectedPageName("Home Page");
+function removePage(originUrl: string, pageTitle: string): void {
+  setPagesByOrigin(previous => {
+    const updatedPages = {
+      ...previous,
+      [originUrl]: previous[originUrl].filter(title => title !== pageTitle),
+    };
+    persistPagesByOrigin(updatedPages);
+    return updatedPages;
+  });
+
+  if (selectedPageName === pageTitle) {
+    setSelectedPageName("Home Page");
   }
+}
+
 
   const availableDestinationPages = pagesByOrigin[destinationOriginUrl] || ["Home Page"];
 

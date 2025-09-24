@@ -12,10 +12,9 @@ import React, {
 } from "react";
 
 import { installTopMessageHandler, sendSyncFrameToChild, getKnownChildWindowInfoByFrameName } from "./frameMessaging";
-import { loadInitialState, persistStateToSession, SAME_ORIGIN_TARGET } from "./framePersistence";
+import { loadInitialState, persistStateToSession, setPersistenceKnownFrameOrigins, getFrameProperties } from "./framePersistence";
 import { usePathname } from "next/navigation";
-import { doc,getDoc } from "firebase/firestore";
-import { firestoreDatabase } from "./firebaseConfig";
+
 import { Snackbar, Alert } from '@mui/material';
 
 
@@ -60,8 +59,13 @@ export interface FrameContextValue {
   rootPageName: string;
   getFrameCreatedOnPage: (frameName: string) => string;
   defaultFrameName: string;
-  firebaseDocLoaded: boolean;
+  receivedFirebaseResponse: boolean;
+  firebaseID: string;
+  knownFrameOrigins: string[];
+
 }
+
+
 
 const FrameContext = createContext<FrameContextValue | undefined>(undefined);
 
@@ -80,7 +84,7 @@ export function FrameManager({ children }: { children: ReactNode }) {
     frameOrder: [DEFAULT_FRAME_NAME],
     currentFrame: DEFAULT_FRAME_NAME,
   });
-
+  const stateKey = React.useMemo(() => JSON.stringify(applicationState), [applicationState]);
   const idCountersByComponentRef = useRef<Record<string, number>>({});
   const containerRefsRef = useRef<Record<string, RefObject<HTMLDivElement | null>>>({
     [DEFAULT_FRAME_NAME]: createRef<HTMLDivElement | null>(),
@@ -89,40 +93,27 @@ export function FrameManager({ children }: { children: ReactNode }) {
   const hasHydratedRef = useRef(false);
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
   const [receivedFirebaseResponse, setReceivedFirebaseResponse] = useState(false);
+  const [firebaseID, setFirebaseID] = React.useState<string>("");
+  const [knownFrameOrigins, setKnownFrameOrigins] = React.useState<string[]>([]);
+
+
 
 
 
 useEffect(() => {
+
+  const segments = typeof window !== "undefined" ? window.location.pathname.split("/").filter(Boolean) : [];
+  const firstSegment = segments[0] ?? "";
+  const idFromUrl = /^[A-Za-z0-9]{20}$/.test(firstSegment) ? firstSegment : "";
+  if (idFromUrl) setFirebaseID(idFromUrl);
+  setKnownOriginsForFirebaseID(idFromUrl);
+
   if (!isTopWindow) return;
 
   let cancelled = false;
 
   (async () => {
-    const pathSegments = window.location.pathname.split("/").filter(Boolean);
-    const firstSegment = pathSegments[0] ?? "";
-    if (/^[A-Za-z0-9]{20}$/.test(firstSegment)) {
-      try {
-        const snapshot = await getDoc(doc(firestoreDatabase, "sbStates", firstSegment));
-        if (snapshot.exists() && !cancelled) {
-          const data = snapshot.data() as { stateJson?: string };
-          const stateJson = data?.stateJson ?? "";
-          if (stateJson) {
-            sessionStorage.setItem("SB_STATE", stateJson);
 
-            const currentUrl = new URL(window.location.href);
-            const remainingPath = pathSegments.slice(1).join("/");
-            const newUrl = new URL(SAME_ORIGIN_TARGET);
-            newUrl.pathname = `/${remainingPath}`;
-            newUrl.search = currentUrl.search;
-            newUrl.hash = currentUrl.hash;
-            history.replaceState(null, "", newUrl.toString());
-
-            setShareNoticeOpen(true);
-            setReceivedFirebaseResponse(true);
-          }
-        }
-      } catch {}
-    }
 
     const loadedState = await loadInitialState(DEFAULT_FRAME_NAME, DEFAULT_PAGE_NAME);
     const initialState = loadedState || applicationState;
@@ -131,6 +122,7 @@ useEffect(() => {
     if (cancelled) return;
 
     setApplicationState(initialWithPage);
+    // setShareNoticeOpen(true)
     idCountersByComponentRef.current = rebuildIdCountersFromState(initialWithPage);
     for (const frameName of Object.keys(initialWithPage.frames)) {
       if (!containerRefsRef.current[frameName]) {
@@ -143,7 +135,9 @@ useEffect(() => {
   return () => {
     cancelled = true;
   };
-}, [isTopWindow]);
+}, [isTopWindow, setFirebaseID]);
+
+
 
 
 
@@ -151,9 +145,16 @@ useEffect(() => {
 
 useEffect(() => {
   if (!isTopWindow) return;
-  if (!hasHydratedRef.current) return;
-  persistStateToSession(applicationState);
-}, [isTopWindow, applicationState]);
+ if (!hasHydratedRef.current) return;
+
+  (async () => {
+    const wasSynced = await persistStateToSession(applicationState);
+    
+    setReceivedFirebaseResponse(wasSynced);
+    console.log("TEST HERE NOW")
+  })();
+}, [isTopWindow, stateKey]);
+
 
 
 useEffect(() => {
@@ -191,9 +192,11 @@ useEffect(() => {
   if (typeof window === "undefined") return;
   if (!("serviceWorker" in navigator)) return;
 
+  const frameName = isTopWindow ? DEFAULT_FRAME_NAME : window.name;
+  const frameProperties = getFrameProperties(frameName);
   const serviceWorkerPath = "/serviceWorker.js";
-  const isCspServiceWorkerEnabled = new URLSearchParams(window.location.search).has("cspSW");
-  const isFramePath = window.location.pathname.startsWith("/frame/");
+  const isCspServiceWorkerEnabled = Boolean(frameProperties["cspSW"]);
+  const isFramePath = window.location.pathname.includes("/frame/");
   const desiredScope = isFramePath ? "/frame/" : "/";
 
   if (isCspServiceWorkerEnabled) {
@@ -234,6 +237,12 @@ useEffect(() => {
     if (didUnregister) window.location.reload();
   });
 }, []);
+
+
+
+
+
+
 
   function setElementsForFrameAndCurrentPage(previousState: AppState, frameName: string, elements: FrameElement[]): AppState {
     const pageKey = getCurrentPageFromFrameName(frameName);
@@ -455,6 +464,32 @@ useEffect(() => {
     return frameNode ? frameNode.createdOnPage : DEFAULT_PAGE_NAME;
   }
 
+  function setKnownOriginsForFirebaseID(firebaseID: string): void {
+    if (!firebaseID) return;
+
+    const origins =
+      process.env.NODE_ENV === "development"
+        ? [
+            `localhost:3000/${firebaseID}/`,
+            `localhost:3000/${firebaseID}/frame/`,
+            `localhost:3001/${firebaseID}/frame/`,
+          ]
+        : [
+            `build.jonnoel.dev/${firebaseID}/`,
+            `build.jonnoel.dev/${firebaseID}/frame/`,
+            `frame.jonnoel.dev/${firebaseID}/frame/`,
+          ];
+
+    setKnownFrameOrigins(origins);
+    setPersistenceKnownFrameOrigins(knownFrameOrigins);
+    
+  }
+
+
+
+
+
+
   const frameNameList = applicationState.frameOrder;
   const currentFrameName = applicationState.currentFrame;
   const frameElementsByFrameName: Record<string, FrameElement[]> = {};
@@ -463,6 +498,9 @@ useEffect(() => {
   }
 
   const containerRefs = containerRefsRef.current;
+
+
+
 
   return (
     <FrameContext.Provider
@@ -482,7 +520,10 @@ useEffect(() => {
         rootPageName: applicationState.rootPage,
         getFrameCreatedOnPage,
         defaultFrameName: DEFAULT_FRAME_NAME,
-        firebaseDocLoaded : receivedFirebaseResponse
+        receivedFirebaseResponse,
+        firebaseID,
+        knownFrameOrigins
+
       }}
     > 
 

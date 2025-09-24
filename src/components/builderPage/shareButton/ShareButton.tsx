@@ -40,21 +40,6 @@ export default function ShareButton({ buttonText = 'Share' }: ShareButtonProps) 
 
       const urlObject = new URL(`${documentReference.id}`, SAME_ORIGIN_TARGET);
 
-      try {
-        if (stateJson) {
-          const parsedState = JSON.parse(stateJson) as any;
-          const topFrameProperties = parsedState?.frames?.TopFrame?.properties;
-          if (topFrameProperties && typeof topFrameProperties === 'object') {
-            const enabledPropertyKeys = Object.keys(topFrameProperties).filter(propertyName => topFrameProperties[propertyName] === true).sort();
-            for (const propertyName of enabledPropertyKeys) {
-              const existingQuery = urlObject.search ? `${urlObject.search}&` : '?';
-              urlObject.search = `${existingQuery}${encodeURIComponent(propertyName)}`;
-            }
-
-          }
-        }
-      } catch {}
-
       setShareUrl(urlObject.toString());
     } finally {
       setIsSaving(false);

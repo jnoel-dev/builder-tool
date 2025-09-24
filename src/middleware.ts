@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const ID_PATTERN = /^[A-Za-z0-9]{20}$/;
+
 function getSameOriginTarget(): string {
   return process.env.NODE_ENV === "production" ? "https://build.jonnoel.dev" : "http://localhost:3000";
 }
@@ -24,32 +26,96 @@ function generateNonce(): string {
   const randomCharString = Array.from(randomBytesArray, (byteValue) => String.fromCharCode(byteValue)).join("");
   return btoa(randomCharString);
 }
-
-export function middleware(request: NextRequest) {
-  const urlSearchParams = request.nextUrl.searchParams;
-
-  const frameProperties: Record<string, string> = {};
-  for (const [paramKey, paramValue] of urlSearchParams.entries()) {
-    frameProperties[paramKey] = paramValue;
+function extractFramePropertiesFromState(stateJsonString: string, requestUrl: URL): Record<string, unknown> {
+  if (!stateJsonString) return {};
+  try {
+    const parsedState = JSON.parse(stateJsonString) as {
+      frames?: Record<string, { properties?: Record<string, unknown> }>;
+    };
+    const pathSegments = requestUrl.pathname.split("/").filter(Boolean);
+    const isFramePath = pathSegments[1] === "frame";
+    const requestedFrameName = isFramePath && pathSegments[2] ? pathSegments[2] : "TopFrame";
+    const properties = parsedState.frames?.[requestedFrameName]?.properties;
+    return properties && typeof properties === "object" ? { ...properties } : {};
+  } catch {
+    return {};
   }
-  const framePropertiesJson = JSON.stringify(frameProperties);
+}
+
+export async function middleware(request: NextRequest) {
+  const requestUrl = new URL(request.url);
+  const path = requestUrl.pathname;
+  const pathSegments = path.split("/").filter(Boolean);
+  const firstSegment = pathSegments[0] ?? "";
+  const hasValidId = ID_PATTERN.test(firstSegment);
+  const isDocumentRequest =
+    request.method === "GET" && request.headers.get("sec-fetch-dest") === "document" && !request.headers.get("x-middleware-prefetch");
+
+  if (isDocumentRequest && !hasValidId) {
+    try {
+      const createResponse = await fetch(`${requestUrl.origin}/api/sbstate`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-mw": "1" },
+        cache: "no-store",
+      });
+      if (createResponse.ok) {
+        const { id: createdId } = (await createResponse.json()) as { id: string };
+        const redirectUrl = new URL(`/${createdId}${path}`, requestUrl.origin);
+        redirectUrl.search = requestUrl.search;
+        return NextResponse.redirect(redirectUrl);
+      }
+    } catch {}
+  }
 
   const outgoingRequestHeaders = new Headers(request.headers);
-  outgoingRequestHeaders.set("x-frame-properties", framePropertiesJson);
-
+  let shouldSetCspHeader = false;
+  let shouldSetCspHeaderWithNonce = false;
   let scriptNonce: string | undefined;
-  if (urlSearchParams.has("cspMN")) {
-    scriptNonce = generateNonce();
-    outgoingRequestHeaders.set("x-nonce", scriptNonce);
+  let shouldSignalCspSw = false;
+
+  if (hasValidId) {
+    try {
+      const apiResponse = await fetch(`${requestUrl.origin}/api/sbstate/${firstSegment}`, {
+        method: "GET",
+        cache: "no-store",
+        headers: { "x-mw": "1" },
+      });
+      if (apiResponse.ok) {
+        const { stateJson } = (await apiResponse.json()) as { stateJson?: string };
+        const frameProperties = extractFramePropertiesFromState(stateJson ?? "", requestUrl);
+        outgoingRequestHeaders.set("x-frame-properties", JSON.stringify(frameProperties));
+        shouldSetCspHeader = Boolean(frameProperties["cspH"]);
+        shouldSetCspHeaderWithNonce = Boolean(frameProperties["cspMN"]);
+        shouldSignalCspSw = Boolean(frameProperties["cspSW"]);
+        if (shouldSetCspHeaderWithNonce) {
+          scriptNonce = generateNonce();
+          outgoingRequestHeaders.set("x-nonce", scriptNonce);
+        }
+      }
+    } catch {}
+  }
+
+  if (shouldSetCspHeaderWithNonce && scriptNonce) {
+    outgoingRequestHeaders.set("content-security-policy", buildCspWithNonce(scriptNonce));
+  } else if (shouldSetCspHeader) {
+    outgoingRequestHeaders.set("content-security-policy", buildCsp());
   }
 
   const response = NextResponse.next({ request: { headers: outgoingRequestHeaders } });
 
-  if (urlSearchParams.has("cspMN") && scriptNonce) {
+  if (shouldSignalCspSw) {
+    response.headers.set("x-csp-sw", "1");
+  }
+
+  if (shouldSetCspHeaderWithNonce && scriptNonce) {
     response.headers.set("Content-Security-Policy", buildCspWithNonce(scriptNonce));
-  } else if (urlSearchParams.has("cspH")) {
+  } else if (shouldSetCspHeader) {
     response.headers.set("Content-Security-Policy", buildCsp());
   }
 
   return response;
 }
+
+export const config = {
+  matcher: ["/((?!api).*)"],
+};

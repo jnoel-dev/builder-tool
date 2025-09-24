@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 
-
 function getCrossOriginForOrigin(currentOrigin: string): string {
   if (currentOrigin.startsWith("http://localhost:3000")) return "http://localhost:3001";
   if (currentOrigin.startsWith("http://localhost:3001")) return "http://localhost:3000";
@@ -16,11 +15,10 @@ function buildCspHeaderValue(requestUrl: URL): string {
   return `script-src ${allowedScriptSources.join(" ")};`;
 }
 
-function shouldApplyCspForRequest(request: Request): boolean {
+function shouldConsiderRequest(request: Request): boolean {
   const requestUrl = new URL(request.url);
   if (request.mode !== "navigate") return false;
   if (requestUrl.origin !== self.location.origin) return false;
-  if (!requestUrl.searchParams.has("cspSW")) return false;
   return true;
 }
 
@@ -36,10 +34,23 @@ async function cloneResponseWithCsp(originalResponse: Response, cspHeaderValue: 
 
 async function handleFetchEvent(fetchEvent: FetchEvent): Promise<Response> {
   const request = fetchEvent.request;
-  if (!shouldApplyCspForRequest(request)) return fetch(request);
+
+  if (!shouldConsiderRequest(request)) {
+    return fetch(request);
+  }
+
   const originalResponse = await fetch(request);
+  const cspSwHeader = originalResponse.headers.get("x-csp-sw");
+  const isCspEnabledForResponse = cspSwHeader === "1";
+  console.log("x-csp-sw header:", cspSwHeader, "| URL:", request.url);
+
+  if (!isCspEnabledForResponse) {
+    return originalResponse;
+  }
+
   const requestUrl = new URL(request.url);
   const cspHeaderValue = buildCspHeaderValue(requestUrl);
+  console.log("Applying CSP via Service Worker for:", request.url);
   return cloneResponseWithCsp(originalResponse, cspHeaderValue);
 }
 
@@ -50,8 +61,6 @@ function onInstall(_event: ExtendableEvent): void {
 function onActivate(event: ExtendableEvent): void {
   event.waitUntil((self as unknown as ServiceWorkerGlobalScope).clients.claim());
 }
-
-
 
 function onFetch(event: FetchEvent): void {
   event.respondWith(handleFetchEvent(event));

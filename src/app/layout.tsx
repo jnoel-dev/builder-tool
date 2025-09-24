@@ -2,7 +2,6 @@ import "./globals.css";
 import { headers } from "next/headers";
 import { BackgroundManager } from "@/components/contexts/backgroundContext/BackgroundManager";
 import BaseLayout from "@/components/baseLayout/BaseLayout";
-import Script from "next/script";
 
 function getSameOriginTarget(): string {
   return process.env.NODE_ENV === "production" ? "https://build.jonnoel.dev" : "http://localhost:3000";
@@ -18,6 +17,8 @@ function buildCsp(nonceValue?: string): string {
   return `script-src ${allowedScriptSources.join(" ")};`;
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const incomingHeaders = await headers();
   const framePropertiesJson = incomingHeaders.get("x-frame-properties") ?? "{}";
@@ -27,11 +28,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     frameProperties = JSON.parse(framePropertiesJson) as Record<string, string>;
   } catch {}
 
-  const hasCspMeta = "cspM" in frameProperties;
-  const hasCspMetaWithNonce = "cspMN" in frameProperties;
-  const shouldInjectMeta = hasCspMeta || hasCspMetaWithNonce;
+  const hasCspMeta = "cspM" in frameProperties || "cspMN" in frameProperties;
 
-  const scriptNonce = hasCspMetaWithNonce ? incomingHeaders.get("x-nonce") || undefined : undefined;
+  const rawNonce = incomingHeaders.get("x-nonce");
+  const scriptNonce = rawNonce && rawNonce.trim().length > 0 ? rawNonce.trim() : undefined;
 
   const propertyToFunctionName: Record<string, string> = {
     nfGCS: "overrideGetComputedStyle",
@@ -44,22 +44,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const shouldLoadNativeFunctions = overrideFunctionNames.length > 0;
 
+  const nonceValue = scriptNonce || "";
+
+
+  const inlineApply = `(function(){var names=${JSON.stringify(
+    overrideFunctionNames
+  )};var api=window.NativeFunctions||window;for(var i=0;i<names.length;i++){var fn=api[names[i]];if(typeof fn==="function"){try{fn();}catch(_){}}}})();`;
+
   return (
     <html lang="en">
       <head>
-        {shouldInjectMeta ? (
-          <meta httpEquiv="Content-Security-Policy" content={buildCsp(scriptNonce)} />
-        ) : null}
-        {scriptNonce ? <meta name="csp-nonce" content={scriptNonce} /> : null}
-
+        {hasCspMeta ? <meta httpEquiv="Content-Security-Policy" content={buildCsp(scriptNonce)} /> : null}
+      
         {shouldLoadNativeFunctions ? (
           <>
-            <Script src="/nativeFunctions.js" strategy="beforeInteractive" nonce={scriptNonce} />
-            <Script id="apply-native-overrides" strategy="beforeInteractive" nonce={scriptNonce}>
-              {`(function(){var names=${JSON.stringify(
-                overrideFunctionNames
-              )};var api=window.NativeFunctions||window;for(var i=0;i<names.length;i++){var n=names[i];var fn=api[n];if(typeof fn==="function"){fn();}}})();`}
-            </Script>
+            <script suppressHydrationWarning src="/nativeFunctions.js" nonce={nonceValue}></script>
+            <script suppressHydrationWarning nonce={nonceValue} dangerouslySetInnerHTML={{ __html: inlineApply }} />
           </>
         ) : null}
       </head>

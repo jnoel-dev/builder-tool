@@ -1,11 +1,14 @@
 "use client";
 
 import { AppState, SnippetProperties, PagesByOrigin } from "./frameUtils";
+import { doc,getDoc,setDoc } from "firebase/firestore";
+import { firestoreDatabase } from "./firebaseConfig";
 
-export const DEV_ORIGINS = ["localhost:3000/", "localhost:3000/frame/", "localhost:3001/frame/"];
-export const PROD_ORIGINS = ["build.jonnoel.dev/", "build.jonnoel.dev/frame/", "frame.jonnoel.dev/frame/"];
+
 
 const SESSION_KEY_STATE = "SB_STATE";
+
+
 
 export const SAME_ORIGIN_TARGET =
   process.env.NODE_ENV === "production" ? "https://build.jonnoel.dev/" : "http://localhost:3000/";
@@ -13,10 +16,10 @@ export const SAME_ORIGIN_TARGET =
 export const CROSS_ORIGIN_TARGET =
   process.env.NODE_ENV === "production" ? "https://frame.jonnoel.dev/" : "http://localhost:3001/";
 
-function getKnownOrigins(): [string, string, string] {
-  const isDevelopment = typeof process !== "undefined" && process.env.NODE_ENV === "development";
-  const originList = isDevelopment ? DEV_ORIGINS : PROD_ORIGINS;
-  return [originList[0], originList[1], originList[2]];
+let knownFrameOrigins: string[] = [];
+
+export function setPersistenceKnownFrameOrigins(frameOrigins: string[]): void{
+  knownFrameOrigins = frameOrigins ;
 }
 
 function cleanPageList(pageNames: string[]): string[] {
@@ -40,13 +43,20 @@ function readSession(): any | null {
   }
 }
 
-function writeSession(stateToPersist: any): void {
+async function writeSession(stateToPersist: any): Promise<boolean> {
   try {
     sessionStorage.setItem(SESSION_KEY_STATE, JSON.stringify(stateToPersist));
   } catch {}
+  try {
+    const wasSynced = await sendAppStateToFirebase(stateToPersist as AppState);
+    return wasSynced;
+  } catch {
+    return false;
+  }
 }
 
-export function loadInitialState(defaultFrameName: string, defaultPageName: string): AppState | null {
+
+export async function loadInitialState(defaultFrameName: string, defaultPageName: string): Promise<AppState | null> {
   if (typeof window === "undefined") return null;
 
   const sessionState = readSession() as AppState | null;
@@ -76,12 +86,50 @@ export function loadInitialState(defaultFrameName: string, defaultPageName: stri
     snippetProperties: undefined,
   };
 
+  const pathSegments = window.location.pathname.split("/").filter(Boolean);
+  const documentId = pathSegments[0] ?? "";
+
+  if (/^[A-Za-z0-9]{20}$/.test(documentId)) {
+    try {
+      const snapshot = await getDoc(doc(firestoreDatabase, "sbStates", documentId));
+      if (snapshot.exists()) {
+        const data = snapshot.data() as { stateJson?: string };
+        const stateJsonString = (data?.stateJson ?? "").trim();
+        if (stateJsonString === "") {
+          await sendAppStateToFirebase(initialState);
+          writeSession(initialState);
+          return initialState;
+        } else {
+          let parsedState: AppState | null = null;
+          try {
+            parsedState = JSON.parse(stateJsonString) as AppState;
+          } catch {
+            parsedState = null;
+          }
+          if (parsedState) {
+            const normalizedState: AppState = {
+              rootPage: parsedState.rootPage,
+              frames: parsedState.frames,
+              frameOrder: parsedState.frameOrder,
+              currentFrame: defaultFrameName,
+              pagesByOrigin: parsedState.pagesByOrigin,
+              snippetProperties: parsedState.snippetProperties,
+            };
+            writeSession(normalizedState);
+            return normalizedState;
+          }
+        }
+      }
+    } catch {}
+  }
+
   writeSession(initialState);
   return initialState;
 }
 
-export function persistStateToSession(appState: AppState): void {
-  if (typeof window === "undefined") return;
+
+export async function persistStateToSession(appState: AppState): Promise<boolean> {
+  if (typeof window === "undefined") return false;
   const existingSession = (readSession() || {}) as AppState;
   const nextSessionState: AppState = {
     ...existingSession,
@@ -92,14 +140,16 @@ export function persistStateToSession(appState: AppState): void {
     pagesByOrigin: appState.pagesByOrigin ?? existingSession.pagesByOrigin,
     snippetProperties: appState.snippetProperties ?? existingSession.snippetProperties,
   };
-  writeSession(nextSessionState);
+  const wasSynced = await writeSession(nextSessionState);
+  return wasSynced;
 }
+
 
 export function loadPagesByOriginWithDefaults(defaultPagesByOrigin: PagesByOrigin): PagesByOrigin {
   if (typeof window === "undefined") return { ...defaultPagesByOrigin };
 
   const sessionValue = readSession() as AppState | null;
-  const knownOriginList = getKnownOrigins();
+  const knownOriginList = knownFrameOrigins;
 
   const mergedPagesByOrigin: PagesByOrigin = {};
   for (const originUrl of knownOriginList) {
@@ -161,6 +211,7 @@ export function setFrameProperty(frameName: string, propertyName: string, isEnab
   }
 
   writeSession(nextSession);
+  
 }
 
 export function getFrameProperties(frameName: string): Record<string, unknown> {
@@ -182,3 +233,19 @@ export function getSnippetProperties(): SnippetProperties | undefined {
   const stored = sessionValue?.snippetProperties as SnippetProperties | undefined;
   return stored && typeof stored === "object" ? { ...stored } : undefined;
 }
+
+async function sendAppStateToFirebase(applicationState: AppState): Promise<boolean> {
+  const pathSegments = window.location.pathname.split("/").filter(Boolean);
+  const documentId = pathSegments[0] ?? "";
+  if (!/^[A-Za-z0-9]{20}$/.test(documentId)) return false;
+
+  const stateJsonString = JSON.stringify(applicationState);
+  try {
+    await setDoc(doc(firestoreDatabase, "sbStates", documentId), { stateJson: stateJsonString }, { merge: true });
+    return true;
+  } catch (error){
+    console.error("firebase:setDoc failed", error);
+    return false;
+  }
+}
+

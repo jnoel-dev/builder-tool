@@ -27,7 +27,7 @@ const MESSAGE_CHILD_READY = 'child:ready';
 const MESSAGE_CHILD_NAVIGATING = 'child:navigating';
 
 export default function Frame({ savedName, frameType }: FrameProps) {
-  const { containerRefs, registerFrame } = useFrame();
+  const { containerRefs, registerFrame, firebaseID } = useFrame();
   const [iframeSize, setIframeSize] = useState({ width: 0, height: 0 });
   const [isIframeReady, setIsIframeReady] = useState(false);
   const [canRenderIframe, setCanRenderIframe] = useState(false);
@@ -48,20 +48,13 @@ export default function Frame({ savedName, frameType }: FrameProps) {
 
   const [frameProperties, setFrameProperties] = useState<FrameProperties>();
 
-  function buildPropertyQuery(enabledProperties?: Record<string, any>): string {
-    if (!enabledProperties || typeof enabledProperties !== 'object') return '';
-    const enabledKeys = Object.keys(enabledProperties).filter(propertyName => enabledProperties[propertyName] === true).sort();
-    return enabledKeys.length ? `?${enabledKeys.map(encodeURIComponent).join('&')}` : '';
-  }
 
-  const propertyQuery = React.useMemo(() => buildPropertyQuery(frameProperties), [frameProperties]);
-
-  const iframeSrc = `${childOrigin}${FRAME_PATH}${savedName}${propertyQuery}`;
+  const iframeSrc = `${childOrigin}/${firebaseID}${FRAME_PATH}${savedName}`;
 
   const openPopup = () => {
     const popupWidth = window.innerWidth / 2;
     const popupHeight = window.innerHeight / 2;
-    const popupUrl = `${childOrigin}${FRAME_PATH}${savedName}${propertyQuery}`;
+    const popupUrl = `${childOrigin}/${firebaseID}${FRAME_PATH}${savedName}`;
     const popup = window.open(popupUrl, savedName, `width=${popupWidth},height=${popupHeight}`);
     popupWindowRef.current = popup || null;
     lastPopupPayloadJsonRef.current = '';

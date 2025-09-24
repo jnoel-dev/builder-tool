@@ -3,8 +3,6 @@
 import SideMenu from '../sideMenu/SideMenu';
 import TopFrame from './topFrame/TopFrame';
 
-import ShareButton from './shareButton/ShareButton';
-
 export default function BuilderPage() {
   return (
     <div
@@ -22,7 +20,7 @@ export default function BuilderPage() {
     >
       <TopFrame />
       <SideMenu />
-      <ShareButton />
+
     </div>
   );
 }

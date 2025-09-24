@@ -5,6 +5,7 @@ import { Box, Checkbox, FormControlLabel, Switch } from '@mui/material'
 import { useFrame } from '@/components/contexts/FrameManager/FrameManager'
 import { getFrameProperties, setFrameProperty } from '@/components/contexts/FrameManager/framePersistence'
 
+
 type PropertyToggleProps = {
   propertyKey: string
   label: string
@@ -18,7 +19,7 @@ export default function PropertyToggle({
   additionalPropertyKey = '',
   additionalPropertyLabel = ''
 }: PropertyToggleProps) {
-  const { currentFrameName, firebaseDocLoaded } = useFrame()
+  const { currentFrameName, receivedFirebaseResponse } = useFrame()
   const [isEnabled, setIsEnabled] = React.useState(false)
   const [isAdditionalChecked, setIsAdditionalChecked] = React.useState(false)
 
@@ -38,7 +39,7 @@ export default function PropertyToggle({
       setIsAdditionalChecked(false)
       setIsEnabled(false)
     }
-  }, [currentFrameName, firebaseDocLoaded, propertyKey, additionalPropertyKey])
+  }, [currentFrameName, receivedFirebaseResponse, propertyKey, additionalPropertyKey])
 
   function handleToggleChange(_: React.ChangeEvent<HTMLInputElement>, nextValue: boolean) {
     setIsEnabled(nextValue)

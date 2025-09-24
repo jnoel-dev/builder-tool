@@ -20,14 +20,6 @@ enum TabIndex {
 }
 
 
-
-function buildPropertyQuery(enabledProperties?: Record<string, any>): string {
-  if (!enabledProperties || typeof enabledProperties !== 'object') return '';
-  const enabledKeys = Object.keys(enabledProperties).filter(name => enabledProperties[name] === true).sort();
-  return enabledKeys.length ? `?${enabledKeys.map(encodeURIComponent).join('&')}` : '';
-}
-
-
 function CustomTabPanel(props: { children?: React.ReactNode; index: number; value: number }) {
   const { children, value, index, ...other } = props;
   return (
@@ -63,11 +55,7 @@ export default function PropertiesMenu(expanded: boolean) {
     return;
   }
 
-  const topProps = getFrameProperties(DEFAULT_FRAME_NAME);
-  const propertyQuery = buildPropertyQuery(topProps);
-
   const url = new URL(window.location.href);
-  url.search = propertyQuery;
   history.replaceState(null, '', url.toString());
   window.location.reload();
 }

@@ -19,9 +19,8 @@ import { SnippetProperties, UUIDType } from "@/components/contexts/FrameManager/
 import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 
 
-
 export default function SnippetMenu() {
-  const {firebaseDocLoaded } = useFrame()
+
   const [systemGuid, setSystemGuid] = React.useState("");
   const [environmentPathName, setEnvironmentPathName] = React.useState("success");
   const [cdnDomain, setCdnDomain] = React.useState("cdn.walkme.com");
@@ -31,6 +30,12 @@ export default function SnippetMenu() {
   const [uuidName, setUuidName] = React.useState("");
   const [uuidValue, setUuidValue] = React.useState("");
   const [uuidDelayMs, setUuidDelayMs] = React.useState("0");
+    const {
+
+      receivedFirebaseResponse
+
+      
+    } = useFrame();
 
   React.useEffect(() => {
     const existingProperties = getSnippetProperties() as SnippetProperties | undefined;
@@ -48,7 +53,7 @@ export default function SnippetMenu() {
         ? String(existingProperties.uuid.delayMs)
         : "0"
     );
-  }, [firebaseDocLoaded]);
+  }, [receivedFirebaseResponse]);
 
   const dynamicLabel =
     uuidType === UUIDType.Variable ? "Variable name" : uuidType === UUIDType.Cookie ? "Cookie name" : "Name";
