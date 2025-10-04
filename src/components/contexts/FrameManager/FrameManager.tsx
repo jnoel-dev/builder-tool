@@ -30,6 +30,7 @@ import {
   pageNameFromPath,
   getElementsForFrame,
   getCurrentPageFromFrameName,
+  FrameProperties,
 } from "./frameUtils";
 
 export const POST_MESSAGE_LOG_ENABLED = true;
@@ -101,28 +102,26 @@ export function FrameManager({ children }: { children: ReactNode }) {
 
 
 useEffect(() => {
-
   const segments = typeof window !== "undefined" ? window.location.pathname.split("/").filter(Boolean) : [];
   const firstSegment = segments[0] ?? "";
   const idFromUrl = /^[A-Za-z0-9]{20}$/.test(firstSegment) ? firstSegment : "";
   if (idFromUrl) setFirebaseID(idFromUrl);
   setKnownOriginsForFirebaseID(idFromUrl);
 
-  if (!isTopWindow) return;
-
   let cancelled = false;
 
   (async () => {
+    const isTopWindow = typeof window !== "undefined" && window === window.top && !window.opener;
+    const firstFrameName = isTopWindow ? DEFAULT_FRAME_NAME : window.name;
+    const loadedState = await loadInitialState(firstFrameName, DEFAULT_FRAME_NAME, DEFAULT_PAGE_NAME);
 
-
-    const loadedState = await loadInitialState(DEFAULT_FRAME_NAME, DEFAULT_PAGE_NAME);
     const initialState = loadedState || applicationState;
     const derivedRootPage = pageNameFromPath(window.location.pathname);
     const initialWithPage: AppState = { ...initialState, rootPage: derivedRootPage, currentFrame: DEFAULT_FRAME_NAME };
     if (cancelled) return;
 
     setApplicationState(initialWithPage);
-    // setShareNoticeOpen(true)
+    setReceivedFirebaseResponse(true);
     idCountersByComponentRef.current = rebuildIdCountersFromState(initialWithPage);
     for (const frameName of Object.keys(initialWithPage.frames)) {
       if (!containerRefsRef.current[frameName]) {
@@ -130,12 +129,20 @@ useEffect(() => {
       }
     }
     hasHydratedRef.current = true;
+
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      const existingRegistration = await navigator.serviceWorker.getRegistration();
+      if (!existingRegistration) {
+        await navigator.serviceWorker.register("/serviceWorker.js", { scope: "/" });
+      }
+    }
   })();
 
   return () => {
     cancelled = true;
   };
-}, [isTopWindow, setFirebaseID]);
+}, [setFirebaseID]);
+
 
 
 
@@ -148,9 +155,9 @@ useEffect(() => {
  if (!hasHydratedRef.current) return;
 
   (async () => {
-    const wasSynced = await persistStateToSession(applicationState);
+    await persistStateToSession(applicationState);
     
-    setReceivedFirebaseResponse(wasSynced);
+    
     console.log("TEST HERE NOW")
   })();
 }, [isTopWindow, stateKey]);
@@ -187,56 +194,10 @@ useEffect(() => {
   }
 
 
+  
 
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  if (!("serviceWorker" in navigator)) return;
 
-  const frameName = isTopWindow ? DEFAULT_FRAME_NAME : window.name;
-  const frameProperties = getFrameProperties(frameName);
-  const serviceWorkerPath = "/serviceWorker.js";
-  const isCspServiceWorkerEnabled = Boolean(frameProperties["cspSW"]);
-  const isFramePath = window.location.pathname.includes("/frame/");
-  const desiredScope = isFramePath ? "/frame/" : "/";
 
-  if (isCspServiceWorkerEnabled) {
-    const hadController = !!navigator.serviceWorker.controller;
-    navigator.serviceWorker.register(serviceWorkerPath, { scope: desiredScope }).then((registration) => {
-      const isFreshInstall = !!registration.installing;
-      if (!hadController && isFreshInstall) {
-        const reloadOnControl = () => window.location.reload();
-        navigator.serviceWorker.addEventListener("controllerchange", reloadOnControl, { once: true });
-      }
-    });
-    return;
-  }
-
-  navigator.serviceWorker.getRegistrations().then(async (registrations) => {
-    let didUnregister = false;
-
-    for (const registration of registrations) {
-      const registrationControlsThisPage = window.location.href.startsWith(registration.scope);
-      if (!registrationControlsThisPage) continue;
-      if (registration.scope !== new URL(window.location.origin + desiredScope).href) continue;
-
-      const scriptUrlCandidates = [
-        registration.installing?.scriptURL,
-        registration.waiting?.scriptURL,
-        registration.active?.scriptURL,
-      ].filter(Boolean) as string[];
-
-      const isTargetWorker = scriptUrlCandidates.some((scriptUrlString) => {
-        return new URL(scriptUrlString).pathname === serviceWorkerPath;
-      });
-
-      if (isTargetWorker) {
-        if (await registration.unregister()) didUnregister = true;
-      }
-    }
-
-    if (didUnregister) window.location.reload();
-  });
-}, []);
 
 
 

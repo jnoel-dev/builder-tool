@@ -272,6 +272,14 @@ function removePage(originUrl: string, pageTitle: string): void {
 
 
   const availableDestinationPages = pagesByOrigin[destinationOriginUrl] || ["Home Page"];
+  function maskIdInPath(rawUrl: string): string {
+  const idPattern = /^[A-Za-z0-9]{20}$/;
+  return rawUrl
+    .split("/")
+    .map((segment) => (idPattern.test(segment) ? "{ID}" : segment))
+    .join("/");
+}
+  
 
 
   return (
@@ -282,26 +290,26 @@ function removePage(originUrl: string, pageTitle: string): void {
           expandedItems={expandedItemIds}
           onExpandedItemsChange={(event, newExpandedIds) => setExpandedItemIds(newExpandedIds)}
         >
-          {Object.entries(pagesByOrigin).map(([originUrl, pageTitles]) => (
-            <TreeItem key={originUrl} itemId={originUrl} label={originUrl}>
-              {pageTitles.map((pageTitle) => (
-                <TreeItem
-                  key={pageTitle}
-                  itemId={`${originUrl}-${pageTitle}`}
-                  label={
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <Typography sx={{ flex: 1 }}>{pageTitle}</Typography>
-                      {pageTitle !== "Home Page" && (
-                        <IconButton size="small" onClick={() => removePage(originUrl, pageTitle)}>
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  }
-                />
-              ))}
-            </TreeItem>
-          ))}
+        {Object.entries(pagesByOrigin).map(([originUrl, pageTitles]) => (
+          <TreeItem key={originUrl} itemId={originUrl} label={maskIdInPath(originUrl)}>
+            {pageTitles.map((pageTitle) => (
+              <TreeItem
+                key={pageTitle}
+                itemId={`${originUrl}-${pageTitle}`}
+                label={
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <Typography sx={{ flex: 1 }}>{pageTitle}</Typography>
+                    {pageTitle !== "Home Page" && (
+                      <IconButton size="small" onClick={() => removePage(originUrl, pageTitle)}>
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
+                }
+              />
+            ))}
+          </TreeItem>
+        ))}
         </SimpleTreeView>
       </Box>
 
@@ -312,11 +320,11 @@ function removePage(originUrl: string, pageTitle: string): void {
           onChange={(event: SelectChangeEvent<string>) => setSelectedOriginUrl(event.target.value)}
           sx={{ textAlign: "center" }}
         >
-          {Object.keys(pagesByOrigin).map((originUrl) => (
-            <MenuItem key={originUrl} value={originUrl}>
-              {originUrl}
-            </MenuItem>
-          ))}
+        {Object.keys(pagesByOrigin).map((originUrl) => (
+          <MenuItem key={originUrl} value={originUrl}>
+            {maskIdInPath(originUrl)}
+          </MenuItem>
+        ))}
         </Select>
       </FormControl>
 

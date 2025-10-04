@@ -55,16 +55,24 @@ async function handleFetchEvent(fetchEvent: FetchEvent): Promise<Response> {
 }
 
 function onInstall(_event: ExtendableEvent): void {
+
   (self as unknown as ServiceWorkerGlobalScope).skipWaiting();
 }
 
 function onActivate(event: ExtendableEvent): void {
+ 
   event.waitUntil((self as unknown as ServiceWorkerGlobalScope).clients.claim());
 }
 
 function onFetch(event: FetchEvent): void {
+  const requestUrl = new URL(event.request.url);
+  const pathSegments = requestUrl.pathname.split("/").filter(Boolean);
+  const hasFirebaseID = pathSegments.some((segment) => /^[A-Za-z0-9]{20}$/.test(segment));
+  if (!hasFirebaseID) return;
+  console.log(event.request.url);
   event.respondWith(handleFetchEvent(event));
 }
+
 
 self.addEventListener("install", onInstall as EventListener);
 self.addEventListener("activate", onActivate as EventListener);

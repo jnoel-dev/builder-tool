@@ -56,7 +56,7 @@ async function writeSession(stateToPersist: any): Promise<boolean> {
 }
 
 
-export async function loadInitialState(defaultFrameName: string, defaultPageName: string): Promise<AppState | null> {
+export async function loadInitialState(frameToLoad: string, defaultFrameName: string, defaultPageName: string): Promise<AppState | null> {
   if (typeof window === "undefined") return null;
 
   const sessionState = readSession() as AppState | null;
@@ -107,7 +107,28 @@ export async function loadInitialState(defaultFrameName: string, defaultPageName
             parsedState = null;
           }
           if (parsedState) {
-            const normalizedState: AppState = {
+            if (frameToLoad !== defaultFrameName) {
+              const newFrames = { ...parsedState.frames };
+              delete (newFrames as Record<string, unknown>)["TopFrame"];
+
+              if (newFrames[frameToLoad]) {
+                const targetFrame = newFrames[frameToLoad];
+                delete newFrames[frameToLoad];
+                newFrames[defaultFrameName] = { ...targetFrame, name: defaultFrameName };
+              }
+              const remappedState: AppState = {
+                rootPage: parsedState.rootPage,
+                frames: newFrames,
+                frameOrder: parsedState.frameOrder,
+                currentFrame: defaultFrameName,
+                pagesByOrigin: parsedState.pagesByOrigin,
+                snippetProperties: parsedState.snippetProperties,
+              };
+              
+              return remappedState;
+            }
+
+            const fullState: AppState = {
               rootPage: parsedState.rootPage,
               frames: parsedState.frames,
               frameOrder: parsedState.frameOrder,
@@ -115,8 +136,8 @@ export async function loadInitialState(defaultFrameName: string, defaultPageName
               pagesByOrigin: parsedState.pagesByOrigin,
               snippetProperties: parsedState.snippetProperties,
             };
-            writeSession(normalizedState);
-            return normalizedState;
+            writeSession(fullState);
+            return fullState;
           }
         }
       }
@@ -126,6 +147,7 @@ export async function loadInitialState(defaultFrameName: string, defaultPageName
   writeSession(initialState);
   return initialState;
 }
+
 
 
 export async function persistStateToSession(appState: AppState): Promise<boolean> {
