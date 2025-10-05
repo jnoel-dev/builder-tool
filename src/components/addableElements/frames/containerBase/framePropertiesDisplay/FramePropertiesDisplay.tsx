@@ -15,8 +15,7 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
     setIsMounted(true);
   }, []);
 
-  const initialKeys = React.useMemo(() => Object.keys(properties ?? {}), [properties]);
-  const [entryKeys, setEntryKeys] = React.useState<string[]>(initialKeys);
+  const [entryKeys, setEntryKeys] = React.useState<string[]>(Object.keys(properties ?? {}));
   const [walkmeTimingText, setWalkmeTimingText] = React.useState<string | null>(null);
   const [walkmeIsReady, setWalkmeIsReady] = React.useState<boolean>(false);
   const [walkmeUserGuid, setWalkmeUserGuid] = React.useState<string | null>(null);
@@ -24,8 +23,13 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
   const [walkmeViaEditor, setWalkmeViaEditor] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    setEntryKeys(initialKeys);
-  }, [initialKeys]);
+    const baseKeys = Object.keys(properties ?? {});
+    setEntryKeys((previousKeys) => {
+      const shouldKeepWl = previousKeys.includes('WL');
+      const merged = shouldKeepWl ? Array.from(new Set(['WL', ...baseKeys])) : baseKeys;
+      return merged;
+    });
+  }, [properties]);
 
   React.useEffect(() => {
     if (!isMounted) return;
@@ -38,7 +42,6 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
         setWalkmeIsReady(false);
         setWalkmeUserGuid(null);
         setWalkmeEnvId(null);
-        setEntryKeys((previousKeys) => previousKeys.filter((keyName) => keyName !== 'WL'));
         return;
       }
 
@@ -56,7 +59,6 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
         setWalkmeIsReady(false);
         setWalkmeUserGuid(null);
         setWalkmeEnvId(null);
-        setEntryKeys((previousKeys) => previousKeys.filter((keyName) => keyName !== 'WL'));
         return;
       }
 
@@ -86,10 +88,11 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
         setWalkmeViaEditor(true);
       }
 
+      setEntryKeys((previousKeys) => (previousKeys.includes('WL') ? previousKeys : ['WL', ...previousKeys]));
+
       if (isReadyDetected) {
         setWalkmeTimingText('walkmeReady');
         setWalkmeIsReady(true);
-        setEntryKeys((previousKeys) => (previousKeys.includes('WL') ? previousKeys : [...previousKeys, 'WL']));
 
         const walkmeApi = (window as any)._walkMe;
         try {
@@ -107,7 +110,6 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
       }
 
       setWalkmeIsReady(false);
-      setEntryKeys((previousKeys) => (previousKeys.includes('WL') ? previousKeys : [...previousKeys, 'WL']));
     }
 
     refreshWalkmeStatus();
@@ -137,7 +139,7 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
   const loadedLabel = walkmeViaEditor ? 'WalkMe loaded via editor' : 'WalkMe loaded';
 
   return (
-    <Box sx={{position: "absolute", top: 0, left: 0}}>
+    <Box sx={{ position: 'absolute', top: 0, left: 0 }}>
       <Stack spacing={0.5}>
         {wlPresent ? (
           <Typography key="WL" variant="body2" sx={{ color: walkmeIsReady ? 'green' : 'yellow' }}>

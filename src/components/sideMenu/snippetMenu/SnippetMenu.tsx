@@ -75,6 +75,8 @@ export default function SnippetMenu() {
       },
     };
     setSnippetProperties(payload);
+    window.location.reload();
+    
   };
 
   return (
