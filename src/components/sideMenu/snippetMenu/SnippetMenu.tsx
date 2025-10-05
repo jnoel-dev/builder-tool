@@ -90,7 +90,7 @@ export default function SnippetMenu() {
       />
       <TextField
         variant="standard"
-        label="Environment path name"
+        label="Environment path name (leave empty for production)"
         slotProps={{ inputLabel: { shrink: true } }}
         value={environmentPathName}
         onChange={(textFieldChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
@@ -113,7 +113,7 @@ export default function SnippetMenu() {
             onChange={(_switchChangeEvent, isChecked) => setLoadInCdIframes(isChecked)}
           />
         }
-        label="Load in CD iFrames"
+        label="Load in CD iframes and popup windows"
         sx={{ margin: 0 }}
       />
       <FormControl size="small" fullWidth>
@@ -136,7 +136,7 @@ export default function SnippetMenu() {
               </>
             }
           >
-            <FormControlLabel value={UUIDType.ForceLoad} control={<Radio />} label="Force load" />
+            <FormControlLabel value={UUIDType.ForceLoad} control={<Radio />} label="Force load WMID" />
           </Tooltip>
           <FormControlLabel value={UUIDType.Variable} control={<Radio />} label="Variable" />
           <FormControlLabel value={UUIDType.Cookie} control={<Radio />} label="Cookie" />

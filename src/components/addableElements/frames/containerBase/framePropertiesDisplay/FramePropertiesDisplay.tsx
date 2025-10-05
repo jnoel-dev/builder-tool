@@ -9,31 +9,189 @@ type FramePropertiesDisplayProps = {
   properties?: Record<string, unknown>;
 };
 
-
 export default function FramePropertiesDisplay({ properties }: FramePropertiesDisplayProps) {
-  const hasProperties = properties && Object.keys(properties).length > 0;
-  if (!hasProperties) {
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const initialKeys = React.useMemo(() => Object.keys(properties ?? {}), [properties]);
+  const [entryKeys, setEntryKeys] = React.useState<string[]>(initialKeys);
+  const [walkmeTimingText, setWalkmeTimingText] = React.useState<string | null>(null);
+  const [walkmeIsReady, setWalkmeIsReady] = React.useState<boolean>(false);
+  const [walkmeUserGuid, setWalkmeUserGuid] = React.useState<string | null>(null);
+  const [walkmeEnvId, setWalkmeEnvId] = React.useState<string | null>(null);
+  const [walkmeViaEditor, setWalkmeViaEditor] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    setEntryKeys(initialKeys);
+  }, [initialKeys]);
+
+  React.useEffect(() => {
+    if (!isMounted) return;
+
+    let intervalId: number | undefined;
+
+    function refreshWalkmeStatus(): void {
+      if (typeof window === 'undefined') {
+        setWalkmeTimingText(null);
+        setWalkmeIsReady(false);
+        setWalkmeUserGuid(null);
+        setWalkmeEnvId(null);
+        setEntryKeys((previousKeys) => previousKeys.filter((keyName) => keyName !== 'WL'));
+        return;
+      }
+
+      const internals = (window as any)._walkmeInternals;
+      const hasTimingList =
+        internals &&
+        internals.timing &&
+        Array.isArray(internals.timing.list) &&
+        internals.timing.list.length > 0;
+
+      const hasWmPlaySnippetData = Boolean((window as any).wmPlaySnippetData);
+
+      if (!hasTimingList && !hasWmPlaySnippetData) {
+        setWalkmeTimingText(null);
+        setWalkmeIsReady(false);
+        setWalkmeUserGuid(null);
+        setWalkmeEnvId(null);
+        setEntryKeys((previousKeys) => previousKeys.filter((keyName) => keyName !== 'WL'));
+        return;
+      }
+
+      let isReadyDetected = false;
+
+      if (hasTimingList) {
+        const walkmeList = internals.timing.list as any[];
+        const readyIndex = walkmeList.findIndex((eventItem: any) => {
+          const eventName =
+            eventItem && typeof eventItem === 'object' && 'name' in eventItem ? String(eventItem.name) : String(eventItem);
+          return eventName === 'walkmeReady';
+        });
+
+        if (readyIndex >= 0) {
+          isReadyDetected = true;
+        } else {
+          const lastIndex = walkmeList.length - 1;
+          const lastEntry = walkmeList[lastIndex];
+          const lastName =
+            lastEntry && typeof lastEntry === 'object' && 'name' in lastEntry ? String(lastEntry.name) : String(lastEntry);
+          setWalkmeTimingText(lastName);
+        }
+      }
+
+      if (hasWmPlaySnippetData) {
+        isReadyDetected = true;
+        setWalkmeViaEditor(true);
+      }
+
+      if (isReadyDetected) {
+        setWalkmeTimingText('walkmeReady');
+        setWalkmeIsReady(true);
+        setEntryKeys((previousKeys) => (previousKeys.includes('WL') ? previousKeys : [...previousKeys, 'WL']));
+
+        const walkmeApi = (window as any)._walkMe;
+        try {
+          const userGuidValue = walkmeApi ? String(walkmeApi.getUserGuid()) : null;
+          const envIdValue = walkmeApi ? String(walkmeApi.getEnvId()) : null;
+          setWalkmeUserGuid(userGuidValue);
+          setWalkmeEnvId(envIdValue);
+        } catch {
+          setWalkmeUserGuid(null);
+          setWalkmeEnvId(null);
+        }
+
+        if (intervalId) window.clearInterval(intervalId);
+        return;
+      }
+
+      setWalkmeIsReady(false);
+      setEntryKeys((previousKeys) => (previousKeys.includes('WL') ? previousKeys : [...previousKeys, 'WL']));
+    }
+
+    refreshWalkmeStatus();
+    intervalId = window.setInterval(refreshWalkmeStatus, 1000);
+
+    return () => {
+      if (intervalId) window.clearInterval(intervalId);
+    };
+  }, [isMounted]);
+
+  if (!isMounted) return null;
+
+  const hasEntries = entryKeys.length > 0;
+  if (!hasEntries) {
     return <Typography variant="body2" sx={{ color: 'white' }} />;
   }
 
-  const entries = Object.entries(properties as Record<string, unknown>);
+  const wlPresent = entryKeys.includes('WL');
+  const otherKeys = entryKeys.filter((keyName) => keyName !== 'WL');
+
+  const loadedSuffix =
+    walkmeIsReady && (walkmeUserGuid || walkmeEnvId)
+      ? ` - GUID:${walkmeUserGuid ?? ''}${walkmeUserGuid && walkmeEnvId ? ' - ' : ''}ENV:${walkmeEnvId ?? ''}`
+      : '';
+
+  const loadingLabel = walkmeViaEditor ? 'WalkMe loading via editor' : 'WalkMe loading';
+  const loadedLabel = walkmeViaEditor ? 'WalkMe loaded via editor' : 'WalkMe loaded';
 
   return (
     <Box>
       <Stack spacing={0.5}>
-        {entries.map(([propertyKey]) => {
+        {wlPresent ? (
+          <Typography key="WL" variant="body2" sx={{ color: walkmeIsReady ? 'green' : 'yellow' }}>
+            <strong>
+              {walkmeIsReady
+                ? `${loadedLabel}${loadedSuffix}`
+                : walkmeTimingText
+                  ? `${loadingLabel} - ${walkmeTimingText}`
+                  : loadingLabel}
+            </strong>
+          </Typography>
+        ) : null}
+
+        {otherKeys.map((propertyKey) => {
           let textColor: string;
+          let displayText: string;
+
           switch (propertyKey) {
             case 'cspH':
+              textColor = 'red';
+              displayText = 'CSP Header';
+              break;
             case 'cspM':
               textColor = 'red';
+              displayText = 'CSP Meta';
+              break;
+            case 'cspMN':
+              textColor = 'red';
+              displayText = 'CSP Meta+Nonce';
+              break;
+            case 'cspSW':
+              textColor = 'red';
+              displayText = 'CSP via SW';
+              break;
+            case 'nfGCS':
+              textColor = 'orange';
+              displayText = 'Override getComputedStyle';
+              break;
+            case 'nfR':
+              textColor = 'orange';
+              displayText = 'Override Request';
+              break;
+            case 'nfP':
+              textColor = 'orange';
+              displayText = 'Override Promise';
               break;
             default:
               textColor = 'white';
+              displayText = propertyKey;
           }
+
           return (
             <Typography key={propertyKey} variant="body2" sx={{ color: textColor }}>
-              <strong>{propertyKey}</strong>
+              <strong>{displayText}</strong>
             </Typography>
           );
         })}

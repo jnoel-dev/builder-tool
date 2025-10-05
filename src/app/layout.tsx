@@ -22,10 +22,17 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const incomingHeaders = await headers();
   const framePropertiesJson = incomingHeaders.get("x-frame-properties") ?? "{}";
+  const snippetPropertiesJson = incomingHeaders.get("x-snippet-properties") ?? "{}";
 
   let frameProperties: Record<string, string> = {};
   try {
     frameProperties = JSON.parse(framePropertiesJson) as Record<string, string>;
+  } catch {}
+
+ 
+  let snippetProperties: Record<string, string> = {};
+  try {
+    snippetProperties = JSON.parse(snippetPropertiesJson) as Record<string, string>;
   } catch {}
 
   const hasCspMeta = "cspM" in frameProperties || "cspMN" in frameProperties;
@@ -46,21 +53,48 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const nonceValue = scriptNonce || "";
 
-
   const inlineApply = `(function(){var names=${JSON.stringify(
     overrideFunctionNames
   )};var api=window.NativeFunctions||window;for(var i=0;i<names.length;i++){var fn=api[names[i]];if(typeof fn==="function"){try{fn();}catch(_){}}}})();`;
+
+
+  const cdnDomain = (snippetProperties["cdnDomain"] || "").trim();
+  const systemGuid = (snippetProperties["systemGuid"] || "").trim();
+  const environmentPathName = (snippetProperties["environmentPathName"] || "").trim();
+
+  const shouldInjectWalkme =
+    cdnDomain.length > 0 && systemGuid.length > 0; 
+
+  const walkmeSrc = shouldInjectWalkme
+    ? (environmentPathName.length > 0
+        ? `https://${cdnDomain}/users/${systemGuid}/${environmentPathName}/walkme_${systemGuid}_https.js`
+        : `https://${cdnDomain}/users/${systemGuid}/walkme_${systemGuid}_https.js`)
+    : "";
+
+  const inlineWalkme =
+    shouldInjectWalkme
+      ? `(function(){var walkme=document.createElement('script'); walkme.type='text/javascript'; walkme.async=true; walkme.src='${walkmeSrc}'; var s=document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(walkme,s); window._walkmeConfig={smartLoad:true};})();`
+      : "";
 
   return (
     <html lang="en">
       <head>
         {hasCspMeta ? <meta httpEquiv="Content-Security-Policy" content={buildCsp(scriptNonce)} /> : null}
-      
+
         {shouldLoadNativeFunctions ? (
           <>
             <script suppressHydrationWarning src="/nativeFunctions.js" nonce={nonceValue}></script>
             <script suppressHydrationWarning nonce={nonceValue} dangerouslySetInnerHTML={{ __html: inlineApply }} />
           </>
+        ) : null}
+
+        {shouldInjectWalkme ? (
+          <script
+            suppressHydrationWarning
+            type="text/javascript"
+            nonce={nonceValue}
+            dangerouslySetInnerHTML={{ __html: inlineWalkme }}
+          />
         ) : null}
       </head>
       <body>

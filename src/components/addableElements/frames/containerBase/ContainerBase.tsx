@@ -195,7 +195,9 @@ useEffect(() => {
 
 return (
   <div >
-    <FramePropertiesDisplay properties={topFrameProperties}/>
+      {typeof window !== 'undefined' && window === window.top ? (
+    <FramePropertiesDisplay properties={topFrameProperties} />
+  ) : null}
     {elementListForFrame.map((element) => {
       const registryEntry = componentRegistry[element.componentName];
       if (!registryEntry) return null;

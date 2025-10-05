@@ -80,18 +80,41 @@ export async function middleware(request: NextRequest) {
         cache: "no-store",
         headers: { "x-mw": "1" },
       });
-      if (apiResponse.ok) {
-        const { stateJson } = (await apiResponse.json()) as { stateJson?: string };
-        const frameProperties = extractFramePropertiesFromState(stateJson ?? "", requestUrl);
-        outgoingRequestHeaders.set("x-frame-properties", JSON.stringify(frameProperties));
-        shouldSetCspHeader = Boolean(frameProperties["cspH"]);
-        shouldSetCspHeaderWithNonce = Boolean(frameProperties["cspMN"]);
-        shouldSignalCspSw = Boolean(frameProperties["cspSW"]);
-        if (shouldSetCspHeaderWithNonce) {
-          scriptNonce = generateNonce();
-          outgoingRequestHeaders.set("x-nonce", scriptNonce);
-        }
+    if (apiResponse.ok) {
+      const { stateJson } = (await apiResponse.json()) as { stateJson?: string };
+      const frameProperties = extractFramePropertiesFromState(stateJson ?? "", requestUrl);
+      outgoingRequestHeaders.set("x-frame-properties", JSON.stringify(frameProperties));
+
+      let snippetProperties: Record<string, unknown> | undefined = undefined;
+      if (typeof stateJson === "string" && stateJson.trim() !== "") {
+        try {
+          const parsed = JSON.parse(stateJson) as { snippetProperties?: Record<string, unknown> };
+          snippetProperties = parsed?.snippetProperties;
+        } catch {}
       }
+
+      const isFrameRoute = pathSegments[1] === "frame";
+      const isCrossOriginTarget = requestUrl.origin === getCrossOriginTarget();
+      const loadInCdIframes = Boolean(
+        snippetProperties && typeof snippetProperties === "object" && (snippetProperties as Record<string, unknown>)["loadInCdIframes"]
+      );
+
+      outgoingRequestHeaders.delete("x-snippet-properties");
+      const allowSnippetHeader =
+        !isFrameRoute || (isFrameRoute && isCrossOriginTarget && loadInCdIframes);
+      if (allowSnippetHeader) {
+        outgoingRequestHeaders.set("x-snippet-properties", JSON.stringify(snippetProperties ?? {}));
+      }
+
+      shouldSetCspHeader = Boolean(frameProperties["cspH"]);
+      shouldSetCspHeaderWithNonce = Boolean(frameProperties["cspMN"]);
+      shouldSignalCspSw = Boolean(frameProperties["cspSW"]);
+      if (shouldSetCspHeaderWithNonce) {
+        scriptNonce = generateNonce();
+        outgoingRequestHeaders.set("x-nonce", scriptNonce);
+      }
+    }
+
     } catch {}
   }
 
