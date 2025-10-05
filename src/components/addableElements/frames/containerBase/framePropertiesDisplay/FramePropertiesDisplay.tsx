@@ -137,7 +137,7 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
   const loadedLabel = walkmeViaEditor ? 'WalkMe loaded via editor' : 'WalkMe loaded';
 
   return (
-    <Box>
+    <Box sx={{position: "absolute", top: 0, left: 0}}>
       <Stack spacing={0.5}>
         {wlPresent ? (
           <Typography key="WL" variant="body2" sx={{ color: walkmeIsReady ? 'green' : 'yellow' }}>

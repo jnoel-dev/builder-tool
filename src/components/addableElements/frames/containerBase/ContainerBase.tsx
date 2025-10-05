@@ -11,6 +11,7 @@ import { FrameProperties } from "@/components/contexts/FrameManager/frameUtils";
 import { FramesByName } from "@/components/contexts/FrameManager/frameMessaging";
 import FramePropertiesDisplay from "./framePropertiesDisplay/FramePropertiesDisplay";
 import { DEFAULT_FRAME_NAME } from "@/components/contexts/FrameManager/frameUtils";
+import { Box } from "@mui/material";
 
 
 const LOCAL_SAME_DOMAIN_ORIGIN = 'http://localhost:3000';
@@ -196,7 +197,9 @@ useEffect(() => {
 return (
   <div >
       {typeof window !== 'undefined' && window === window.top ? (
+  
     <FramePropertiesDisplay properties={topFrameProperties} />
+
   ) : null}
     {elementListForFrame.map((element) => {
       const registryEntry = componentRegistry[element.componentName];
