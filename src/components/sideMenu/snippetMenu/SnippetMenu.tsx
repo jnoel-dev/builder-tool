@@ -13,9 +13,10 @@ import {
   InputAdornment,
   Tooltip,
   Switch,
+  Divider,
 } from "@mui/material";
 import { setSnippetProperties, getSnippetProperties} from "@/components/contexts/FrameManager/framePersistence";
-import { SnippetProperties, UUIDType } from "@/components/contexts/FrameManager/frameUtils";
+import { CreateIdentifierType, SnippetProperties, UUIDType } from "@/components/contexts/FrameManager/frameUtils";
 import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 
 
@@ -26,10 +27,11 @@ export default function SnippetMenu() {
   const [cdnDomain, setCdnDomain] = React.useState("cdn.walkme.com");
   const [loadInCdIframes, setLoadInCdIframes] = React.useState(true);
 
-  const [uuidType, setUuidType] = React.useState<UUIDType>(UUIDType.ForceLoad);
-  const [uuidName, setUuidName] = React.useState("");
-  const [uuidValue, setUuidValue] = React.useState("");
-  const [uuidDelayMs, setUuidDelayMs] = React.useState("0");
+  const [uuidType, setUuidType] = React.useState<UUIDType>(UUIDType.Default);
+  const [createIdentifierType, setCreateIdentifierType] = React.useState<CreateIdentifierType>(CreateIdentifierType.None);
+  const [createIdentiferName, setCreateIdentiferName] = React.useState("");
+  const [createIdentiferValue, setCreateIdentiferValue] = React.useState("");
+  const [createIdentiferDelayMs, setCreateIdentiferDelayMs] = React.useState("0");
     const {
 
       receivedFirebaseResponse
@@ -45,35 +47,38 @@ export default function SnippetMenu() {
     setEnvironmentPathName(existingProperties.environmentPathName ?? "");
     setCdnDomain(existingProperties.cdnDomain ?? "");
     setLoadInCdIframes(Boolean(existingProperties.loadInCdIframes));
-    setUuidType(existingProperties.uuid?.type ?? UUIDType.ForceLoad);
-    setUuidName(existingProperties.uuid?.name ?? "");
-    setUuidValue(existingProperties.uuid?.value ?? "");
-    setUuidDelayMs(
-      typeof existingProperties.uuid?.delayMs === "number" && Number.isFinite(existingProperties.uuid.delayMs)
-        ? String(existingProperties.uuid.delayMs)
+    setUuidType(existingProperties.uuid ?? UUIDType.Default);
+    setCreateIdentifierType(existingProperties.createIdentifier?.type ?? "");
+    setCreateIdentiferName(existingProperties.createIdentifier?.name ?? "");
+    setCreateIdentiferValue(existingProperties.createIdentifier?.value ?? "");
+    setCreateIdentiferDelayMs(
+      typeof existingProperties.createIdentifier?.delayMs === "number" && Number.isFinite(existingProperties.createIdentifier.delayMs)
+        ? String(existingProperties.createIdentifier.delayMs)
         : "0"
     );
   }, [receivedFirebaseResponse]);
 
   const dynamicLabel =
-    uuidType === UUIDType.Variable ? "Variable name" : uuidType === UUIDType.Cookie ? "Cookie name" : "Name";
+    createIdentifierType === CreateIdentifierType.Variable ? "Variable name" : createIdentifierType === CreateIdentifierType.Cookie ? "Cookie name" : "Name";
 
-  const isForceLoad = uuidType === UUIDType.ForceLoad;
+  const identiferWillNotBeCreated = createIdentifierType === CreateIdentifierType.None;
 
   const handleApply = () => {
-    const parsedDelay = Number(uuidDelayMs);
+    const parsedDelay = Number(createIdentiferDelayMs);
     const payload: SnippetProperties = {
       systemGuid,
       environmentPathName,
       cdnDomain,
       loadInCdIframes,
-      uuid: {
-        type: uuidType,
-        name: isForceLoad ? undefined : uuidName || undefined,
-        value: isForceLoad ? undefined : uuidValue || undefined,
-        delayMs: isForceLoad ? undefined : Number.isFinite(parsedDelay) ? parsedDelay : undefined,
-      },
+      uuid: uuidType,
+      createIdentifier: {
+        type: createIdentifierType,
+        name: createIdentiferName,
+        value: createIdentiferValue,
+        delayMs: parsedDelay
+      }
     };
+
     setSnippetProperties(payload);
     window.location.reload();
     
@@ -126,6 +131,7 @@ export default function SnippetMenu() {
             setUuidType(radioChangeEvent.target.value as UUIDType)
           }
         >
+          <FormControlLabel value={UUIDType.Default} control={<Radio />} label="Default" />
           <Tooltip
             followCursor
             placement="top"
@@ -140,8 +146,18 @@ export default function SnippetMenu() {
           >
             <FormControlLabel value={UUIDType.ForceLoad} control={<Radio />} label="Force load WMID" />
           </Tooltip>
-          <FormControlLabel value={UUIDType.Variable} control={<Radio />} label="Variable" />
-          <FormControlLabel value={UUIDType.Cookie} control={<Radio />} label="Cookie" />
+          </RadioGroup>
+        <FormHelperText sx={{ margin: 0 }}>Create identifier on page load</FormHelperText>
+        <RadioGroup
+          value={createIdentifierType}
+          onChange={(radioChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
+            setCreateIdentifierType(radioChangeEvent.target.value as CreateIdentifierType)
+          }
+        >
+         
+          <FormControlLabel value={CreateIdentifierType.None} control={<Radio />} label="None" />
+          <FormControlLabel value={CreateIdentifierType.Variable} control={<Radio />} label="Create variable" />
+          <FormControlLabel value={CreateIdentifierType.Cookie} control={<Radio />} label="Create cookie" />
         </RadioGroup>
       </FormControl>
       <TextField
@@ -149,20 +165,20 @@ export default function SnippetMenu() {
         slotProps={{ inputLabel: { shrink: true } }}
         label={dynamicLabel}
         fullWidth
-        disabled={isForceLoad}
-        value={uuidName}
+        disabled={identiferWillNotBeCreated}
+        value={createIdentiferName}
         onChange={(textFieldChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
-          setUuidName(textFieldChangeEvent.target.value)
+          setCreateIdentiferName(textFieldChangeEvent.target.value)
         }
       />
       <TextField
         variant="standard"
         label="Value"
         slotProps={{ inputLabel: { shrink: true } }}
-        disabled={isForceLoad}
-        value={uuidValue}
+        disabled={identiferWillNotBeCreated}
+        value={createIdentiferValue}
         onChange={(textFieldChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
-          setUuidValue(textFieldChangeEvent.target.value)
+          setCreateIdentiferValue(textFieldChangeEvent.target.value)
         }
       />
       <TextField
@@ -172,10 +188,10 @@ export default function SnippetMenu() {
           inputLabel: { shrink: true },
           input: { endAdornment: <InputAdornment position="end">ms</InputAdornment>, inputMode: "numeric" },
         }}
-        disabled={isForceLoad}
-        value={uuidDelayMs}
+        disabled={identiferWillNotBeCreated}
+        value={createIdentiferDelayMs}
         onChange={(textFieldChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
-          setUuidDelayMs(textFieldChangeEvent.target.value)
+          setCreateIdentiferDelayMs(textFieldChangeEvent.target.value)
         }
       />
       <Button variant="contained" color="secondary" fullWidth onClick={handleApply}>

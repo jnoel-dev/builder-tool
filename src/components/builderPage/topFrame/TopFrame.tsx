@@ -49,7 +49,7 @@ export default function TopFrame(){
         }}
       > 
    
-        <ContainerBase connectedFrameName='TopFrame' />
+        <ContainerBase connectedFrameName='TopFrame' shouldDisplayInfo={true}/>
       </Box>
     </div>
   );

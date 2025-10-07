@@ -10,7 +10,6 @@ export type FramesByName = Record<
 >;
 
 type RequestSyncMessage = { type: "requestSync"; frameName: string; pageName?: string };
-type RequestPropertiesSyncMessage = { type: "requestPropertiesSync"; frameName: string; };
 type UpdatePositionMessage = {
   type: "updateElementPosition";
   frameName: string;
@@ -30,7 +29,6 @@ type TopIncomingMessage =
   | RequestSyncMessage
   | UpdatePositionMessage
   | RemoveElementMessage
-  | RequestPropertiesSyncMessage
 
 type ChildWindowInfo = {
   childWindow: Window;
@@ -65,7 +63,9 @@ export function sendSyncFrameToChild(
     return;
   }
 
-  const payload = { type: "syncFrame", frameName: targetFrameName, frames } as const;
+  const frameProperties = getFrameProperties(targetFrameName)
+
+  const payload = { type: "syncFrame", frameName: targetFrameName, frames, frameProperties  } as const;
 
   if (POST_MESSAGE_LOG_ENABLED) {
     console.log(
@@ -84,33 +84,7 @@ export function sendSyncFrameToChild(
   }
 }
 
-export function sendFrameProperties(targetFrameName: string, properties: FrameProperties,explicitTargetWindow?: Window | null){
-  if (!targetFrameName || targetFrameName === "TopFrame") return;
 
-  const resolvedTargetWindow = explicitTargetWindow ?? getKnownChildWindowInfoByFrameName(targetFrameName)?.childWindow;
-
-  const payload = { type: "syncFrameProperties", properties} as const;
-  if (!resolvedTargetWindow) {
-    if (POST_MESSAGE_LOG_ENABLED) {
-      console.warn(`[PostMessage Send] No contentWindow found for "${targetFrameName}"`);
-    }
-    return;
-  }
-    if (POST_MESSAGE_LOG_ENABLED) {
-    console.log(
-      `[PostMessage Send] from "${window.name || "TopFrame"}" to "${targetFrameName}" | type: syncFrameProperties | content:`,
-      payload
-    );
-  }
-    try {
-    resolvedTargetWindow.postMessage(payload, getTargetOrigin(resolvedTargetWindow));
-  } catch (sendError) {
-    if (POST_MESSAGE_LOG_ENABLED) {
-      console.warn(`[PostMessage Send] failed to post to "${targetFrameName}":`, sendError);
-    }
-  }
-
-}
 
 export function installTopMessageHandler(
   getFramesForFrameName: (externalFrameName: string, requestedPageName?: string) => FramesByName,
@@ -133,8 +107,7 @@ export function installTopMessageHandler(
     if (
       messageType !== "requestSync" &&
       messageType !== "updateElementPosition" &&
-      messageType !== "removeElement" &&
-      messageType !== "requestPropertiesSync"
+      messageType !== "removeElement" 
     )
       return;
 
@@ -147,7 +120,7 @@ export function installTopMessageHandler(
       );
     }
     
-    if ("frameName" in incoming && (incoming as any).frameName && event.source && messageType !== "requestPropertiesSync") {
+    if ("frameName" in incoming && (incoming as any).frameName && event.source ) {
       registerChildWindow((incoming as any).frameName as string, event.source as Window,(incoming as any).pageName);
     }
 
@@ -173,11 +146,7 @@ export function installTopMessageHandler(
         break;
       }
 
-      case "requestPropertiesSync": {
-        const {frameName} = incoming as RequestPropertiesSyncMessage
-        sendFrameProperties(frameName, getFrameProperties(frameName),event.source as Window);
-        break;
-      }
+
     }
   }
 

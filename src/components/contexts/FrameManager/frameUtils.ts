@@ -6,22 +6,31 @@ export const DEFAULT_PAGE_NAME = "HomePage";
 export type PagesByOrigin = Record<string, string[]>;
 
 export enum UUIDType {
-  Variable = "variable",
-  Cookie = "cookie",
   ForceLoad = "forceLoad",
+  Default = "default"
 }
+
+export enum CreateIdentifierType {
+  None = "none",
+  Variable = "variable",
+  Cookie = "cookie"
+}
+export type CreateIdentifier = {
+  type: CreateIdentifierType;
+  name: string;
+  value: string;
+  delayMs: number;
+};
+
 export type SnippetProperties = {
   systemGuid: string;
   environmentPathName: string;
   cdnDomain: string;
   loadInCdIframes: boolean;
-  uuid: {
-    type: UUIDType;
-    name?: string;
-    value?: string;
-    delayMs?: number;
-  };
+  uuid: UUIDType;
+  createIdentifier: CreateIdentifier;
 };
+
 
 export type FrameElement = {
   id: string;

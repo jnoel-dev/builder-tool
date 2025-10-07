@@ -12,6 +12,7 @@ import { FramesByName } from "@/components/contexts/FrameManager/frameMessaging"
 import FramePropertiesDisplay from "./framePropertiesDisplay/FramePropertiesDisplay";
 import { DEFAULT_FRAME_NAME } from "@/components/contexts/FrameManager/frameUtils";
 import { Box } from "@mui/material";
+import { KeyboardReturnOutlined } from "@mui/icons-material";
 
 
 const LOCAL_SAME_DOMAIN_ORIGIN = 'http://localhost:3000';
@@ -21,6 +22,7 @@ const PROD_SAME_DOMAIN_ORIGIN = 'https://build.jonnoel.dev';
 interface ContainerBaseProps {
   connectedFrameName: string;
   disableElementControlsForChildren?: boolean;
+  shouldDisplayInfo?: boolean;
 }
 
 function CollapseWrapper({ children }: { children: ReactNode }) {
@@ -31,7 +33,8 @@ function CollapseWrapper({ children }: { children: ReactNode }) {
 
 export default function ContainerBase({
   connectedFrameName,
-  disableElementControlsForChildren = false
+  disableElementControlsForChildren = false,
+  shouldDisplayInfo = false
 }: ContainerBaseProps) {
   const { frameElementsByFrameName, containerRefs, replaceFrameElements,registerFrame,receivedFirebaseResponse} = useFrame();
   const elementListForFrame = frameElementsByFrameName[connectedFrameName] || [];
@@ -44,7 +47,7 @@ export default function ContainerBase({
 
   const replaceFrameElementsRef = useRef(replaceFrameElements);
   const pathname = usePathname();
-  const [topFrameProperties, setTopFrameProperties] = useState<FrameProperties>();
+  const [frameProperties, setFrameProperties] = useState<FrameProperties>();
 
 
 useEffect(() => {
@@ -57,13 +60,18 @@ useEffect(() => {
 
 
   useEffect(() => {
+    if (window === window.top && !window.opener){
+      setFrameProperties(getFrameProperties(connectedFrameName));
+      return;
+    }
     function onMessage(event: MessageEvent) {
       if (event.source !== window.top && event.source !== window.top?.opener) return;
+      
       let sourceWindow = "TopFrame";
       if (event.source === window.top?.opener){
         sourceWindow = "Main Window";
       }
-      const data = event.data as { type?: string; frames?: FramesByName };
+      const data = event.data as { type?: string; frames?: FramesByName; frameProperties?: FrameProperties };
       if (!data || data.type !== "syncFrame" || !data.frames) return;
 
       if (POST_MESSAGE_LOG_ENABLED) {
@@ -73,6 +81,8 @@ useEffect(() => {
         );
       }
 
+      setFrameProperties(data.frameProperties)
+      console.log("SET: ",data.frameProperties)
       const incoming = data.frames as FramesByName;
       const externalRootName = window.name || "";
 
@@ -89,7 +99,7 @@ useEffect(() => {
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [receivedFirebaseResponse]);
 
 function sendRequestSync(frameName: string) {
   const targetWindow = window.top?.opener ? window.top.opener : window.top;
@@ -145,60 +155,16 @@ useEffect(() => {
 
 }, [pathname]);
 
-useEffect(() => {
-  if (window !== window.top && !window.opener) return;
-  const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN ;
-  if (isLocalSameOrigin) return;
 
-  const targetWindow = window.opener;
-  const message = { type: "requestPropertiesSync", frameName: window.name };
 
-  if (POST_MESSAGE_LOG_ENABLED) {
-    console.log(
-      `[PostMessage Send] from "${window.name}" to "TopFrame" | type: requestPropertiesSync | content:`,
-      message
-    );
-  }
-  targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
-}, []);
 
-useEffect(() => {
-  if (window !== window.top) return;
-   const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN ;
-
-  if (isLocalSameOrigin) {
-     const frameName = window.opener ? window.name : DEFAULT_FRAME_NAME;
-    const props = getFrameProperties(frameName);
-    setTopFrameProperties(props);
-    return;
-  }
-
-  function onMessage(event: MessageEvent) {
-    if (event.source !== window.top && event.source !== window.top?.opener) return;
-    const data = event.data as { type?: string; properties?: FrameProperties };
-    if (!data || data.type !== "syncFrameProperties" || !data.properties) return;
-
-    if (POST_MESSAGE_LOG_ENABLED) {
-      const from = event.source === window.top?.opener ? "Main Window" : "TopFrame";
-      console.log(
-        `[PostMessage Receive] at "${window.name}" from "${from}" | type: syncFrameProperties | content:`,
-        data
-      );
-    }
-    setTopFrameProperties(data.properties);
-
-  }
-
-  window.addEventListener("message", onMessage);
-  return () => window.removeEventListener("message", onMessage);
-}, [receivedFirebaseResponse]);
 
 
 return (
   <div >
-      {typeof window !== 'undefined' && window === window.top ? (
+      {shouldDisplayInfo ? (
   
-    <FramePropertiesDisplay properties={topFrameProperties} />
+    <FramePropertiesDisplay properties={frameProperties} />
 
   ) : null}
     {elementListForFrame.map((element) => {

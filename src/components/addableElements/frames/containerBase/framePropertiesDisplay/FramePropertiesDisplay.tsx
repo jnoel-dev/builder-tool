@@ -22,6 +22,9 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
   const [walkmeEnvId, setWalkmeEnvId] = React.useState<string | null>(null);
   const [walkmeViaEditor, setWalkmeViaEditor] = React.useState<boolean>(false);
 
+  const lastSeenGuidRef = React.useRef<string | null>(null);
+  const lastSeenEnvIdRef = React.useRef<string | null>(null);
+
   React.useEffect(() => {
     const baseKeys = Object.keys(properties ?? {});
     setEntryKeys((previousKeys) => {
@@ -42,6 +45,8 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
         setWalkmeIsReady(false);
         setWalkmeUserGuid(null);
         setWalkmeEnvId(null);
+        lastSeenGuidRef.current = null;
+        lastSeenEnvIdRef.current = null;
         return;
       }
 
@@ -59,6 +64,9 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
         setWalkmeIsReady(false);
         setWalkmeUserGuid(null);
         setWalkmeEnvId(null);
+        setWalkmeViaEditor(false);
+        lastSeenGuidRef.current = null;
+        lastSeenEnvIdRef.current = null;
         return;
       }
 
@@ -83,33 +91,40 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
         }
       }
 
-      if (hasWmPlaySnippetData) {
-        isReadyDetected = true;
-        setWalkmeViaEditor(true);
-      }
+      setWalkmeViaEditor(hasWmPlaySnippetData);
 
       setEntryKeys((previousKeys) => (previousKeys.includes('WL') ? previousKeys : ['WL', ...previousKeys]));
 
-      if (isReadyDetected) {
+      if (isReadyDetected || hasWmPlaySnippetData) {
         setWalkmeTimingText('walkmeReady');
         setWalkmeIsReady(true);
 
         const walkmeApi = (window as any)._walkMe;
         try {
-          const userGuidValue = walkmeApi ? String(walkmeApi.getUserGuid()) : null;
-          const envIdValue = walkmeApi ? String(walkmeApi.getEnvId()) : null;
-          setWalkmeUserGuid(userGuidValue);
-          setWalkmeEnvId(envIdValue);
+          const nextGuidValue = walkmeApi ? String(walkmeApi.getUserGuid()) : null;
+          const nextEnvIdValue = walkmeApi ? String(walkmeApi.getEnvId()) : null;
+
+          if (lastSeenGuidRef.current !== nextGuidValue) {
+            setWalkmeUserGuid(nextGuidValue);
+            lastSeenGuidRef.current = nextGuidValue;
+          }
+          if (lastSeenEnvIdRef.current !== nextEnvIdValue) {
+            setWalkmeEnvId(nextEnvIdValue);
+            lastSeenEnvIdRef.current = nextEnvIdValue;
+          }
         } catch {
-          setWalkmeUserGuid(null);
-          setWalkmeEnvId(null);
+          if (lastSeenGuidRef.current !== null) {
+            setWalkmeUserGuid(null);
+            lastSeenGuidRef.current = null;
+          }
+          if (lastSeenEnvIdRef.current !== null) {
+            setWalkmeEnvId(null);
+            lastSeenEnvIdRef.current = null;
+          }
         }
-
-        if (intervalId) window.clearInterval(intervalId);
-        return;
+      } else {
+        setWalkmeIsReady(false);
       }
-
-      setWalkmeIsReady(false);
     }
 
     refreshWalkmeStatus();
@@ -160,31 +175,31 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
           switch (propertyKey) {
             case 'cspH':
               textColor = 'red';
-              displayText = 'CSP Header';
+              displayText = 'CSP in headers';
               break;
             case 'cspM':
               textColor = 'red';
-              displayText = 'CSP Meta';
+              displayText = 'CSP in meta tag';
               break;
             case 'cspMN':
               textColor = 'red';
-              displayText = 'CSP Meta+Nonce';
+              displayText = 'CSP in meta tag + nonce';
               break;
             case 'cspSW':
               textColor = 'red';
-              displayText = 'CSP via SW';
+              displayText = 'CSP via service worker';
               break;
             case 'nfGCS':
               textColor = 'orange';
-              displayText = 'Override getComputedStyle';
+              displayText = 'native getComputedStyle overriden';
               break;
             case 'nfR':
               textColor = 'orange';
-              displayText = 'Override Request';
+              displayText = 'native Request overriden';
               break;
             case 'nfP':
               textColor = 'orange';
-              displayText = 'Override Promise';
+              displayText = 'native Promise overriden';
               break;
             default:
               textColor = 'white';

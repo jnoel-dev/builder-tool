@@ -9,7 +9,6 @@ import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
 import { POST_MESSAGE_LOG_ENABLED } from '@/components/contexts/FrameManager/FrameManager';
 import { SAME_ORIGIN_TARGET } from '@/components/contexts/FrameManager/framePersistence';
 import { FrameProperties } from '@/components/contexts/FrameManager/frameUtils';
-import FramePropertiesDisplay from '../containerBase/framePropertiesDisplay/FramePropertiesDisplay';
 import { getFrameProperties } from '@/components/contexts/FrameManager/framePersistence';
 
 interface FrameProps {
@@ -30,7 +29,6 @@ export default function Frame({ savedName, frameType }: FrameProps) {
   const { containerRefs, registerFrame, firebaseID } = useFrame();
   const [iframeSize, setIframeSize] = useState({ width: 0, height: 0 });
   const [isIframeReady, setIsIframeReady] = useState(false);
-  const [canRenderIframe, setCanRenderIframe] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const popupWindowRef = useRef<Window | null>(null);
@@ -115,52 +113,9 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     return () => window.removeEventListener("message", handleChildMessage);
   }, []);
 
-  useEffect(() => {
-    const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN;
 
-    if (isLocalSameOrigin) {
-      const properties = getFrameProperties(savedName);
-      setCanRenderIframe(true);
-      setFrameProperties(properties);
-      return;
-    }
 
-    function onMessage(event: MessageEvent) {
-      if (event.source !== window.top && event.source !== window.top?.opener) return;
-      const data = event.data as { type?: string; properties?: FrameProperties };
-      if (!data || data.type !== "syncFrameProperties" || !data.properties) return;
 
-      if (POST_MESSAGE_LOG_ENABLED) {
-        const from = event.source === window.top?.opener ? "Main Window" : "TopFrame";
-        console.log(
-          `[PostMessage Receive] at "${savedName}" from "${from}" | type: syncFrameProperties | content:`,
-          data
-        );
-      }
-
-      setCanRenderIframe(true);
-      setFrameProperties(data.properties);
-    }
-
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, []);
-
-  useEffect(() => {
-    const isLocalSameOrigin = (window.location.origin) === LOCAL_SAME_DOMAIN_ORIGIN || (window.location.origin) === PROD_SAME_DOMAIN_ORIGIN;
-    if (isLocalSameOrigin) return;
-
-    const targetWindow = window.top?.opener ? window.top.opener : window.top;
-    const message = { type: "requestPropertiesSync", frameName: savedName };
-
-    if (POST_MESSAGE_LOG_ENABLED) {
-      console.log(
-        `[PostMessage Send] from "${window.name}" to "TopFrame" | type: requestPropertiesSync | content:`,
-        message
-      );
-    }
-    targetWindow?.postMessage(message, SAME_ORIGIN_TARGET);
-  }, []);
 
 
   if (isPopup) {
@@ -178,7 +133,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     );
   }
 
-  const showSpinner = !canRenderIframe || !isIframeReady;
+  const showSpinner =  !isIframeReady;
 
   return (
     <Box>
@@ -202,10 +157,10 @@ export default function Frame({ savedName, frameType }: FrameProps) {
             <CircularProgress />
           </Box>
         )}
-        {canRenderIframe && (
+        {(
           <div style={{ position: "relative" }}>
             <Box sx={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}>
-              <FramePropertiesDisplay properties={frameProperties} />
+             
             </Box>
 
             <iframe
