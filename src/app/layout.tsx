@@ -65,6 +65,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const shouldInjectWalkme =
     cdnDomain.length > 0 && systemGuid.length > 0; 
 
+  const shouldForceLoadWMID = snippetProperties["uuid"] === "forceLoad";
+
   const walkmeSrc = shouldInjectWalkme
     ? (environmentPathName.length > 0
         ? `https://${cdnDomain}/users/${systemGuid}/${environmentPathName}/walkme_${systemGuid}_https.js`
@@ -87,79 +89,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script suppressHydrationWarning nonce={nonceValue} dangerouslySetInnerHTML={{ __html: inlineApply }} />
       </>
     ) : null}
+  {shouldForceLoadWMID ? (
+<script suppressHydrationWarning src="/forceLoadWMID.js" nonce={nonceValue}></script>
+
+
+) : null}
 
     {shouldInjectWalkme ? (
-      <>
-<script
-  suppressHydrationWarning
-  nonce={nonceValue}
-  dangerouslySetInnerHTML={{
-    __html: `(function interceptCallbacks(){
-  function transformConfigObject(inputObject) {
-    if (inputObject && typeof inputObject === 'object' && !Array.isArray(inputObject)) {
-      const updatedObject = { ...inputObject };
-      updatedObject['EndUserSettings'] = {
-        'Parameters': {},
-        'Method': 'walkme',
-        'FallbackDisabled': true,
-        'CollectDataDisabled': true
-      };
-      const externalConfig = updatedObject['ExternalConfig'];
-      if (externalConfig && typeof externalConfig === 'object') {
-        const icConfig = externalConfig['IcConfig'];
-        if (icConfig && typeof icConfig === 'object') {
-          const identityProviderConfig = icConfig['idp'];
-          if (identityProviderConfig && typeof identityProviderConfig === 'object') {
-            if (identityProviderConfig['active'] === 'true') {
-              identityProviderConfig['active'] = false;
-            }
-          }
-        }
-      }
-      return updatedObject;
-    }
-    return inputObject;
-  }
+   
 
-  function createWrappedCallback(originalCallback, label) {
-    return function wrappedCallback() {
-      const argumentList = Array.from(arguments);
-      if (argumentList.length > 0) {
-        argumentList[0] = transformConfigObject(argumentList[0]);
-      }
-      const updatedFirstArgument = argumentList[0];
-      if (updatedFirstArgument && typeof updatedFirstArgument === 'object' && !Array.isArray(updatedFirstArgument)) {
-        window.__lastInterceptedConfig = updatedFirstArgument;
-        console.info('[Intercept] ' + label + ' config updated', updatedFirstArgument);
-      } else {
-        console.info('[Intercept] ' + label + ' non-object first argument', updatedFirstArgument);
-      }
-      return originalCallback.apply(this, argumentList);
-    };
-  }
-
-  function interceptGlobalCallback(callbackKey, label) {
-    const existingCallback = window[callbackKey];
-    if (typeof existingCallback === 'function') {
-      window[callbackKey] = createWrappedCallback(existingCallback, label);
-      return;
-    }
-    let storedCallbackValue;
-    Object.defineProperty(window, callbackKey, {
-      configurable: true,
-      enumerable: true,
-      get: function getCallback() { return storedCallbackValue; },
-      set: function setCallback(assignedValue) {
-        storedCallbackValue = typeof assignedValue === 'function' ? createWrappedCallback(assignedValue, label) : assignedValue;
-      }
-    });
-  }
-
-  interceptGlobalCallback('WalkMeConfigCallback', 'WalkMeConfigCallback');
-  interceptGlobalCallback('fixedCallback', 'fixedCallback');
-})();`,
-  }}
-/>
 
         <script
           suppressHydrationWarning
@@ -167,7 +105,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           nonce={nonceValue}
           dangerouslySetInnerHTML={{ __html: inlineWalkme }}
         />
-      </>
+     
     ) : null}
   </head>
   <body>

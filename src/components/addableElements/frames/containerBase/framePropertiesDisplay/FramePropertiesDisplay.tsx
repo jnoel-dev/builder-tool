@@ -187,7 +187,7 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
               break;
             case 'cspSW':
               textColor = 'red';
-              displayText = 'CSP via service worker';
+              displayText = 'CSP in headers via service worker';
               break;
             case 'nfGCS':
               textColor = 'orange';
