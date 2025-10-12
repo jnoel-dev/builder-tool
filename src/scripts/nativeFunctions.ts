@@ -1,33 +1,46 @@
+'use client';
+
+import * as React from 'react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 declare global {
   interface Window {
     overrideGetComputedStyle?: () => void;
     overrideRequest?: () => void;
     overridePromiseWithZone?: () => void;
+    overrideSetAttribute?: () => void;
     NativeFunctions?: {
       overrideGetComputedStyle: () => void;
       overrideRequest: () => void;
       overridePromiseWithZone: () => void;
+      overrideSetAttribute: () => void;
     };
   }
 }
 
+type FramePropertiesDisplayProps = {
+  properties?: Record<string, unknown>;
+};
+
 function getCspNonce(): string | undefined {
   if (typeof document === "undefined") return undefined;
-  const el = document.querySelector('meta[name="csp-nonce"]') as HTMLMetaElement | null;
-  const v = el?.content;
-  return v && v.length > 0 ? v : undefined;
+  const metaElement = document.querySelector('meta[name="csp-nonce"]') as HTMLMetaElement | null;
+  const nonceValue = metaElement?.content;
+  return nonceValue && nonceValue.length > 0 ? nonceValue : undefined;
 }
 
-function loadScriptOnce(src: string, id: string): void {
+function loadScriptOnce(scriptSrc: string, scriptId: string): void {
   if (typeof document === "undefined") return;
-  if (document.getElementById(id)) return;
-  const el = document.createElement("script");
-  el.id = id;
-  el.src = src;
-  el.async = false;
-  const nonce = getCspNonce();
-  if (nonce) (el as any).nonce = nonce;
-  document.head.appendChild(el);
+  if (document.getElementById(scriptId)) return;
+  const scriptElement = document.createElement("script");
+  scriptElement.id = scriptId;
+  scriptElement.src = scriptSrc;
+  scriptElement.async = false;
+  const nonceValue = getCspNonce();
+  if (nonceValue) (scriptElement as any).nonce = nonceValue;
+  document.head.appendChild(scriptElement);
 }
 
 export function overrideGetComputedStyle(): void {
@@ -46,7 +59,7 @@ export function overrideGetComputedStyle(): void {
   }
 
   const blankComputedStyleProxy = new Proxy(Object.create(null), {
-    get: function (_target, propertyName) {
+    get: function (targetObject, propertyName) {
       if (propertyName === "getPropertyValue") return returnEmptyString;
       if (propertyName === "getPropertyPriority") return returnEmptyString;
       if (propertyName === "item") return returnEmptyString;
@@ -81,18 +94,18 @@ export function overrideRequest(): void {
   const OriginalRequest = (window as any).Request;
   if (typeof OriginalRequest !== "function") return;
 
-  function OverriddenRequest(this: any, input?: any, init?: any) {
-    const originalInstance = new OriginalRequest(input, init);
-    const url = String((originalInstance as any).url || "").toLowerCase();
-    if (url.includes("firestore")) {
+  function OverriddenRequest(this: any, requestInput?: any, requestInit?: any) {
+    const originalInstance = new OriginalRequest(requestInput, requestInit);
+    const requestUrlLower = String((originalInstance as any).url || "").toLowerCase();
+    if (requestUrlLower.includes("firestore")) {
       return originalInstance;
     }
     return new Proxy(originalInstance, {
-      get(target, propertyName, receiver) {
+      get(targetObject, propertyName, receiverObject) {
         if (propertyName === "headers") {
           return {};
         }
-        return Reflect.get(target, propertyName, receiver);
+        return Reflect.get(targetObject, propertyName, receiverObject);
       }
     });
   }
@@ -103,26 +116,57 @@ export function overrideRequest(): void {
 
 export function overridePromiseWithZone(): void {
   if (typeof window === "undefined") return;
-  const w = window as any;
-  if (w.Zone || w.ZoneAwarePromise) return;
-
+  const windowAny = window as any;
+  if (windowAny.Zone || windowAny.ZoneAwarePromise) return;
   loadScriptOnce("/zone.min.js", "zonejs-core");
+}
+
+export function overrideSetAttribute(): void {
+  if (typeof window === "undefined") return;
+  const elementPrototype = (window as any).Element && (window as any).Element.prototype;
+  if (!elementPrototype || typeof elementPrototype.setAttribute !== "function") return;
+
+  const originalSetAttribute = elementPrototype.setAttribute;
+
+  function sanitizedSetAttribute(this: Element, attributeName: string, attributeValue: any): void {
+    const attributeNameLower = String(attributeName).toLowerCase();
+    if (attributeNameLower === "style") {
+      if (this.hasAttribute("style")) this.removeAttribute("style");
+      return;
+    }
+    originalSetAttribute.call(this, attributeName, attributeValue);
+    if (this.hasAttribute("style")) this.removeAttribute("style");
+  }
+
+
+  try {
+    Object.defineProperty(elementPrototype, "setAttribute", {
+      configurable: true,
+      writable: true,
+      value: sanitizedSetAttribute
+    });
+  } catch {
+    elementPrototype.setAttribute = sanitizedSetAttribute as any;
+  }
 }
 
 if (typeof window !== "undefined") {
   window.overrideGetComputedStyle = overrideGetComputedStyle;
   window.overrideRequest = overrideRequest;
   window.overridePromiseWithZone = overridePromiseWithZone;
+  window.overrideSetAttribute = overrideSetAttribute;
   window.NativeFunctions = {
     overrideGetComputedStyle,
     overrideRequest,
-    overridePromiseWithZone
+    overridePromiseWithZone,
+    overrideSetAttribute
   };
 }
 
 const NativeFunctions = {
   overrideGetComputedStyle,
   overrideRequest,
-  overridePromiseWithZone
+  overridePromiseWithZone,
+  overrideSetAttribute
 };
 export default NativeFunctions;

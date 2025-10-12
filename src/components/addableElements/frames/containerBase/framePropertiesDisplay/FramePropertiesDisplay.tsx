@@ -240,6 +240,10 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
               textColor = 'orange';
               displayText = 'native Promise overriden';
               break;
+            case 'nfSA':
+              textColor = 'orange';
+              displayText = 'native Element.prototype.setAttribute overriden';
+              break;
             default:
               textColor = 'white';
               displayText = propertyKey;
