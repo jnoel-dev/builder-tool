@@ -42,7 +42,7 @@ async function handleFetchEvent(fetchEvent: FetchEvent): Promise<Response> {
   const originalResponse = await fetch(request);
   const cspSwHeader = originalResponse.headers.get("x-csp-sw");
   const isCspEnabledForResponse = cspSwHeader === "1";
-  console.log("x-csp-sw header:", cspSwHeader, "| URL:", request.url);
+
 
   if (!isCspEnabledForResponse) {
     return originalResponse;
@@ -50,7 +50,7 @@ async function handleFetchEvent(fetchEvent: FetchEvent): Promise<Response> {
 
   const requestUrl = new URL(request.url);
   const cspHeaderValue = buildCspHeaderValue(requestUrl);
-  console.log("Applying CSP via Service Worker for:", request.url);
+
   return cloneResponseWithCsp(originalResponse, cspHeaderValue);
 }
 
@@ -69,7 +69,7 @@ function onFetch(event: FetchEvent): void {
   const pathSegments = requestUrl.pathname.split("/").filter(Boolean);
   const hasFirebaseID = pathSegments.some((segment) => /^[A-Za-z0-9]{20}$/.test(segment));
   if (!hasFirebaseID) return;
-  console.log(event.request.url);
+
   event.respondWith(handleFetchEvent(event));
 }
 

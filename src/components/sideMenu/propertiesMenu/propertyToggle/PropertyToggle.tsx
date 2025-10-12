@@ -1,6 +1,6 @@
 'use client'
 
-import * as React from 'react'
+import { useEffect,useState,ChangeEvent } from 'react'
 import { Box, Checkbox, FormControlLabel, Switch } from '@mui/material'
 import { useFrame } from '@/components/contexts/FrameManager/FrameManager'
 import { getFrameProperties, setFrameProperty } from '@/components/contexts/FrameManager/framePersistence'
@@ -20,10 +20,10 @@ export default function PropertyToggle({
   additionalPropertyLabel = ''
 }: PropertyToggleProps) {
   const { currentFrameName, receivedFirebaseResponse } = useFrame()
-  const [isEnabled, setIsEnabled] = React.useState(false)
-  const [isAdditionalChecked, setIsAdditionalChecked] = React.useState(false)
+  const [isEnabled, setIsEnabled] = useState(false)
+  const [isAdditionalChecked, setIsAdditionalChecked] = useState(false)
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!currentFrameName) return
     const properties = getFrameProperties(currentFrameName)
     const primaryOn = !!properties[propertyKey]
@@ -41,7 +41,7 @@ export default function PropertyToggle({
     }
   }, [currentFrameName, receivedFirebaseResponse, propertyKey, additionalPropertyKey])
 
-  function handleToggleChange(_: React.ChangeEvent<HTMLInputElement>, nextValue: boolean) {
+  function handleToggleChange(_: ChangeEvent<HTMLInputElement>, nextValue: boolean) {
     setIsEnabled(nextValue)
     if (!currentFrameName) return
 
@@ -60,7 +60,7 @@ export default function PropertyToggle({
     }
   }
 
-  function handleAdditionalCheckboxChange(_: React.ChangeEvent<HTMLInputElement>, checked: boolean) {
+  function handleAdditionalCheckboxChange(_: ChangeEvent<HTMLInputElement>, checked: boolean) {
     setIsAdditionalChecked(checked)
     if (!currentFrameName || !additionalPropertyKey) return
     if (!isEnabled) return

@@ -74,7 +74,6 @@ export function sendSyncFrameToChild(
     );
   }
 
-  // console.log("ORIGIN: ",getTargetOrigin(resolvedTargetWindow))
   try {
     resolvedTargetWindow.postMessage(payload, getTargetOrigin(resolvedTargetWindow));
   } catch (sendError) {

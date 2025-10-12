@@ -82,7 +82,7 @@ useEffect(() => {
       }
 
       setFrameProperties(data.frameProperties)
-      console.log("SET: ",data.frameProperties)
+   
       const incoming = data.frames as FramesByName;
       const externalRootName = window.name || "";
 

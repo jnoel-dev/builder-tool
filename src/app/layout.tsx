@@ -65,13 +65,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     cdnDomain.length > 0 && systemGuid.length > 0;
 
   const shouldForceLoadWMID = snippetProperties["uuid"] === "forceLoad";
-  console.log("FORCE:",shouldForceLoadWMID)
+
 
   const createIdentifierObject = (snippetProperties as unknown as Record<string, unknown>)["createIdentifier"] as
     | { type?: string; name?: string; value?: string; delayMs?: number }
     | undefined;
-    console.log("createa:",createIdentifierObject)
-    console.log("CDN: ",cdnDomain)
+
   const createIdentifierName = typeof createIdentifierObject?.name === "string" ? createIdentifierObject.name.trim() : "";
   const createIdentifierValue = typeof createIdentifierObject?.value === "string" ? createIdentifierObject.value.trim() : "";
   const createIdentifierType = typeof createIdentifierObject?.type === "string" ? createIdentifierObject.type.trim() : "";

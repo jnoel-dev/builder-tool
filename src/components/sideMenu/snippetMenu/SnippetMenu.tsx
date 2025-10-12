@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useEffect, useState, ChangeEvent } from "react";
 import {
   Button,
   Stack,
@@ -22,16 +22,16 @@ import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 
 export default function SnippetMenu() {
 
-  const [systemGuid, setSystemGuid] = React.useState("");
-  const [environmentPathName, setEnvironmentPathName] = React.useState("success");
-  const [cdnDomain, setCdnDomain] = React.useState("cdn.walkme.com");
-  const [loadInCdIframes, setLoadInCdIframes] = React.useState(true);
+  const [systemGuid, setSystemGuid] = useState("");
+  const [environmentPathName, setEnvironmentPathName] = useState("success");
+  const [cdnDomain, setCdnDomain] = useState("cdn.walkme.com");
+  const [loadInCdIframes, setLoadInCdIframes] = useState(true);
 
-  const [uuidType, setUuidType] = React.useState<UUIDType>(UUIDType.Default);
-  const [createIdentifierType, setCreateIdentifierType] = React.useState<CreateIdentifierType>(CreateIdentifierType.None);
-  const [createIdentiferName, setCreateIdentiferName] = React.useState("");
-  const [createIdentiferValue, setCreateIdentiferValue] = React.useState("");
-  const [createIdentiferDelayMs, setCreateIdentiferDelayMs] = React.useState("0");
+  const [uuidType, setUuidType] = useState<UUIDType>(UUIDType.Default);
+  const [createIdentifierType, setCreateIdentifierType] = useState<CreateIdentifierType>(CreateIdentifierType.None);
+  const [createIdentiferName, setCreateIdentiferName] = useState("");
+  const [createIdentiferValue, setCreateIdentiferValue] = useState("");
+  const [createIdentiferDelayMs, setCreateIdentiferDelayMs] = useState("0");
     const {
 
       receivedFirebaseResponse
@@ -39,7 +39,7 @@ export default function SnippetMenu() {
       
     } = useFrame();
 
-  React.useEffect(() => {
+  useEffect(() => {
     const existingProperties = getSnippetProperties() as SnippetProperties | undefined;
     if (!existingProperties) return;
 
@@ -91,7 +91,7 @@ const handleApply = async () => {
         label="System GUID"
         slotProps={{ inputLabel: { shrink: true } }}
         value={systemGuid}
-        onChange={(textFieldChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
+        onChange={(textFieldChangeEvent: ChangeEvent<HTMLInputElement>) =>
           setSystemGuid(textFieldChangeEvent.target.value)
         }
       />
@@ -100,7 +100,7 @@ const handleApply = async () => {
         label="Environment path name (leave empty for production)"
         slotProps={{ inputLabel: { shrink: true } }}
         value={environmentPathName}
-        onChange={(textFieldChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
+        onChange={(textFieldChangeEvent: ChangeEvent<HTMLInputElement>) =>
           setEnvironmentPathName(textFieldChangeEvent.target.value)
         }
       />
@@ -109,7 +109,7 @@ const handleApply = async () => {
         label="CDN domain"
         slotProps={{ inputLabel: { shrink: true } }}
         value={cdnDomain}
-        onChange={(textFieldChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
+        onChange={(textFieldChangeEvent: ChangeEvent<HTMLInputElement>) =>
           setCdnDomain(textFieldChangeEvent.target.value)
         }
       />
@@ -127,7 +127,7 @@ const handleApply = async () => {
         <FormHelperText sx={{ margin: 0 }}>UUID</FormHelperText>
         <RadioGroup
           value={uuidType}
-          onChange={(radioChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
+          onChange={(radioChangeEvent: ChangeEvent<HTMLInputElement>) =>
             setUuidType(radioChangeEvent.target.value as UUIDType)
           }
         >
@@ -139,7 +139,7 @@ const handleApply = async () => {
         <FormHelperText sx={{ margin: 0 }}>Create identifier on page load including all iframes and popup windows</FormHelperText>
         <RadioGroup
           value={createIdentifierType}
-          onChange={(radioChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
+          onChange={(radioChangeEvent: ChangeEvent<HTMLInputElement>) =>
             setCreateIdentifierType(radioChangeEvent.target.value as CreateIdentifierType)
           }
         >
@@ -156,7 +156,7 @@ const handleApply = async () => {
         fullWidth
         disabled={identiferWillNotBeCreated}
         value={createIdentiferName}
-        onChange={(textFieldChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
+        onChange={(textFieldChangeEvent: ChangeEvent<HTMLInputElement>) =>
           setCreateIdentiferName(textFieldChangeEvent.target.value)
         }
       />
@@ -166,7 +166,7 @@ const handleApply = async () => {
         slotProps={{ inputLabel: { shrink: true } }}
         disabled={identiferWillNotBeCreated}
         value={createIdentiferValue}
-        onChange={(textFieldChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
+        onChange={(textFieldChangeEvent: ChangeEvent<HTMLInputElement>) =>
           setCreateIdentiferValue(textFieldChangeEvent.target.value)
         }
       />
@@ -179,7 +179,7 @@ const handleApply = async () => {
         }}
         disabled={identiferWillNotBeCreated}
         value={createIdentiferDelayMs}
-        onChange={(textFieldChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
+        onChange={(textFieldChangeEvent: ChangeEvent<HTMLInputElement>) =>
           setCreateIdentiferDelayMs(textFieldChangeEvent.target.value)
         }
       />

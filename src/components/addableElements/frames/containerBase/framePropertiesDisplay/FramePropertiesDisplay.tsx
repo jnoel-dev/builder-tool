@@ -1,34 +1,36 @@
 'use client';
 
-import * as React from 'react';
+import { useEffect,useState,useRef } from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
 
 type FramePropertiesDisplayProps = {
   properties?: Record<string, unknown>;
 };
 
 export default function FramePropertiesDisplay({ properties }: FramePropertiesDisplayProps) {
-  const [isMounted, setIsMounted] = React.useState(false);
-  React.useEffect(() => {
+  const theme = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const [entryKeys, setEntryKeys] = React.useState<string[]>(Object.keys(properties ?? {}));
-  const [walkmeTimingText, setWalkmeTimingText] = React.useState<string | null>(null);
-  const [walkmeIsReady, setWalkmeIsReady] = React.useState<boolean>(false);
-  const [walkmeUserGuid, setWalkmeUserGuid] = React.useState<string | null>(null);
-  const [walkmeEnvId, setWalkmeEnvId] = React.useState<string | null>(null);
-  const [walkmeViaEditor, setWalkmeViaEditor] = React.useState<boolean>(false);
-  const [walkmeEuId, setWalkmeEuId] = React.useState<string | null>(null);
-  const [walkmeEuIdSource, setWalkmeEuIdSource] = React.useState<string | null>(null);
-  const [walkmeUnableReason, setWalkmeUnableReason] = React.useState<string | null>(null);
+  const [entryKeys, setEntryKeys] = useState<string[]>(Object.keys(properties ?? {}));
+  const [walkmeTimingText, setWalkmeTimingText] = useState<string | null>(null);
+  const [walkmeIsReady, setWalkmeIsReady] = useState<boolean>(false);
+  const [walkmeUserGuid, setWalkmeUserGuid] = useState<string | null>(null);
+  const [walkmeEnvId, setWalkmeEnvId] = useState<string | null>(null);
+  const [walkmeViaEditor, setWalkmeViaEditor] = useState<boolean>(false);
+  const [walkmeEuId, setWalkmeEuId] = useState<string | null>(null);
+  const [walkmeEuIdSource, setWalkmeEuIdSource] = useState<string | null>(null);
+  const [walkmeUnableReason, setWalkmeUnableReason] = useState<string | null>(null);
 
-  const lastSeenGuidRef = React.useRef<string | null>(null);
-  const lastSeenEnvIdRef = React.useRef<string | null>(null);
+  const lastSeenGuidRef = useRef<string | null>(null);
+  const lastSeenEnvIdRef = useRef<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const baseKeys = Object.keys(properties ?? {});
     setEntryKeys((previousKeys) => {
       const shouldKeepWl = previousKeys.includes('WL');
@@ -37,7 +39,7 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
     });
   }, [properties]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isMounted) return;
 
     let intervalId: number | undefined;
@@ -168,7 +170,7 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
 
   const hasEntries = entryKeys.length > 0;
   if (!hasEntries) {
-    return <Typography variant="body2" sx={{ color: 'white' }} />;
+    return <Typography variant="body2" sx={{ color: theme.palette.text.primary }} />;
   }
 
   const wlPresent = entryKeys.includes('WL');
@@ -187,7 +189,7 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
       <Stack spacing={0.5}>
         {wlPresent ? (
           <>
-            <Typography key="WL" variant="body2" sx={{ color: walkmeIsReady ? 'green' : 'yellow' }}>
+            <Typography key="WL" variant="body2" sx={{ color: walkmeIsReady ? theme.palette.infoDisplay.success : theme.palette.infoDisplay.warning }}>
               <strong>
                 {walkmeUnableReason
                   ? `WalkMe unable to load - ${walkmeUnableReason}`
@@ -198,7 +200,7 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
                       : loadingLabel}
               </strong>
             </Typography>
-            <Typography key="WL_EXTRA" variant="body2" sx={{ color: walkmeIsReady ? 'green' : 'yellow' }}>
+            <Typography key="WL_EXTRA" variant="body2" sx={{ color: walkmeIsReady ? theme.palette.infoDisplay.success : theme.palette.infoDisplay.warning }}>
               <strong>
                 EUID: {walkmeEuId ?? 'none'}{' '}
                 SOURCE: {walkmeEuIdSource ?? 'none'}
@@ -213,39 +215,39 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
 
           switch (propertyKey) {
             case 'cspH':
-              textColor = 'red';
+              textColor = theme.palette.infoDisplay.csp;
               displayText = 'CSP in headers';
               break;
             case 'cspM':
-              textColor = 'red';
+              textColor = theme.palette.infoDisplay.csp;
               displayText = 'CSP in meta tag';
               break;
             case 'cspMN':
-              textColor = 'red';
+              textColor = theme.palette.infoDisplay.csp;
               displayText = 'CSP in meta tag + nonce';
               break;
             case 'cspSW':
-              textColor = 'red';
+              textColor = theme.palette.infoDisplay.csp;
               displayText = 'CSP in headers via service worker';
               break;
             case 'nfGCS':
-              textColor = 'orange';
+              textColor = theme.palette.infoDisplay.nativeFunction;
               displayText = 'native getComputedStyle overriden';
               break;
             case 'nfR':
-              textColor = 'orange';
+              textColor = theme.palette.infoDisplay.nativeFunction;
               displayText = 'native Request overriden';
               break;
             case 'nfP':
-              textColor = 'orange';
+              textColor = theme.palette.infoDisplay.nativeFunction;
               displayText = 'native Promise overriden';
               break;
             case 'nfSA':
-              textColor = 'orange';
+              textColor = theme.palette.infoDisplay.nativeFunction;
               displayText = 'native Element.prototype.setAttribute overriden';
               break;
             default:
-              textColor = 'white';
+              textColor = theme.palette.text.primary;
               displayText = propertyKey;
           }
 

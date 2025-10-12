@@ -158,7 +158,6 @@ useEffect(() => {
     await persistStateToSession(applicationState);
     
     
-    console.log("TEST HERE NOW")
   })();
 }, [isTopWindow, stateKey]);
 
