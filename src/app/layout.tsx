@@ -29,7 +29,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     frameProperties = JSON.parse(framePropertiesJson) as Record<string, string>;
   } catch {}
 
- 
   let snippetProperties: Record<string, string> = {};
   try {
     snippetProperties = JSON.parse(snippetPropertiesJson) as Record<string, string>;
@@ -57,15 +56,42 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     overrideFunctionNames
   )};var api=window.NativeFunctions||window;for(var i=0;i<names.length;i++){var fn=api[names[i]];if(typeof fn==="function"){try{fn();}catch(_){}}}})();`;
 
-
   const cdnDomain = (snippetProperties["cdnDomain"] || "").trim();
   const systemGuid = (snippetProperties["systemGuid"] || "").trim();
   const environmentPathName = (snippetProperties["environmentPathName"] || "").trim();
 
   const shouldInjectWalkme =
-    cdnDomain.length > 0 && systemGuid.length > 0; 
+    cdnDomain.length > 0 && systemGuid.length > 0;
 
   const shouldForceLoadWMID = snippetProperties["uuid"] === "forceLoad";
+  console.log("FORCE:",shouldForceLoadWMID)
+
+  const createIdentifierObject = (snippetProperties as unknown as Record<string, unknown>)["createIdentifier"] as
+    | { type?: string; name?: string; value?: string; delayMs?: number }
+    | undefined;
+    console.log("createa:",createIdentifierObject)
+    console.log("CDN: ",cdnDomain)
+  const createIdentifierName = typeof createIdentifierObject?.name === "string" ? createIdentifierObject.name.trim() : "";
+  const createIdentifierValue = typeof createIdentifierObject?.value === "string" ? createIdentifierObject.value.trim() : "";
+  const createIdentifierType = typeof createIdentifierObject?.type === "string" ? createIdentifierObject.type.trim() : "";
+  const createIdentifierDelayMs =
+    typeof createIdentifierObject?.delayMs === "number" ? createIdentifierObject.delayMs : Number.NaN;
+
+  const shouldCreateIdentifier =
+    createIdentifierName.length > 0 && createIdentifierValue.length > 0;
+
+  const inlineCreateIdentifier =
+    shouldCreateIdentifier
+      ? `(function(){var cfg=${JSON.stringify({
+          type: createIdentifierType,
+          name: createIdentifierName,
+          value: createIdentifierValue,
+          delayMs: Number.isFinite(createIdentifierDelayMs) ? createIdentifierDelayMs : 0
+        })};
+var setWindowVar=function(){if(cfg.type==="variable"){setTimeout(function(){try{window[cfg.name]=cfg.value;}catch(_){}}, cfg.delayMs);}};
+var setCookie=function(){if(cfg.type==="cookie"){setTimeout(function(){try{document.cookie=encodeURIComponent(cfg.name)+"="+encodeURIComponent(cfg.value)+"; path=/";}catch(_){}}, cfg.delayMs);}};
+setWindowVar();setCookie();})();`
+      : "";
 
   const walkmeSrc = shouldInjectWalkme
     ? (environmentPathName.length > 0
@@ -89,23 +115,27 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script suppressHydrationWarning nonce={nonceValue} dangerouslySetInnerHTML={{ __html: inlineApply }} />
       </>
     ) : null}
-  {shouldForceLoadWMID ? (
-<script suppressHydrationWarning src="/forceLoadWMID.js" nonce={nonceValue}></script>
 
+    {shouldForceLoadWMID ? (
+      <script suppressHydrationWarning src="/forceLoadWMID.js" nonce={nonceValue}></script>
+    ) : null}
 
-) : null}
+    {shouldCreateIdentifier ? (
+      <script
+        suppressHydrationWarning
+        type="text/javascript"
+        nonce={nonceValue}
+        dangerouslySetInnerHTML={{ __html: inlineCreateIdentifier }}
+      />
+    ) : null}
 
     {shouldInjectWalkme ? (
-   
-
-
-        <script
-          suppressHydrationWarning
-          type="text/javascript"
-          nonce={nonceValue}
-          dangerouslySetInnerHTML={{ __html: inlineWalkme }}
-        />
-     
+      <script
+        suppressHydrationWarning
+        type="text/javascript"
+        nonce={nonceValue}
+        dangerouslySetInnerHTML={{ __html: inlineWalkme }}
+      />
     ) : null}
   </head>
   <body>
@@ -114,6 +144,5 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     </BackgroundManager>
   </body>
 </html>
-
   );
 }

@@ -243,12 +243,14 @@ export function getFrameProperties(frameName: string): Record<string, unknown> {
   return properties && typeof properties === "object" ? { ...properties } : {};
 }
 
-export function setSnippetProperties(snippetProperties: SnippetProperties): void {
-  if (typeof window === "undefined") return;
+export function setSnippetProperties(snippetProperties: SnippetProperties): Promise<boolean> {
+  if (typeof window === "undefined") return Promise.resolve(false);
   const existingSession = (readSession() || {}) as AppState;
   const nextSessionState = { ...existingSession, snippetProperties: { ...snippetProperties } };
-  writeSession(nextSessionState);
+  return writeSession(nextSessionState);
 }
+
+
 
 export function getSnippetProperties(): SnippetProperties | undefined {
   const sessionValue = readSession() as AppState | null;

@@ -63,26 +63,26 @@ export default function SnippetMenu() {
 
   const identiferWillNotBeCreated = createIdentifierType === CreateIdentifierType.None;
 
-  const handleApply = () => {
-    const parsedDelay = Number(createIdentiferDelayMs);
-    const payload: SnippetProperties = {
-      systemGuid,
-      environmentPathName,
-      cdnDomain,
-      loadInCdIframes,
-      uuid: uuidType,
-      createIdentifier: {
-        type: createIdentifierType,
-        name: createIdentiferName,
-        value: createIdentiferValue,
-        delayMs: parsedDelay
-      }
-    };
-
-    setSnippetProperties(payload);
-    window.location.reload();
-    
+const handleApply = async () => {
+  const parsedDelay = Number(createIdentiferDelayMs);
+  const payload: SnippetProperties = {
+    systemGuid,
+    environmentPathName,
+    cdnDomain,
+    loadInCdIframes,
+    uuid: uuidType,
+    createIdentifier: {
+      type: createIdentifierType,
+      name: createIdentiferName,
+      value: createIdentiferValue,
+      delayMs: parsedDelay
+    }
   };
+
+  await setSnippetProperties(payload);
+  window.location.reload();
+};
+
 
   return (
     <Stack spacing={1}>
@@ -132,22 +132,11 @@ export default function SnippetMenu() {
           }
         >
           <FormControlLabel value={UUIDType.Default} control={<Radio />} label="Default" />
-          <Tooltip
-            followCursor
-            placement="top"
-            arrow
-            title={
-              <>
-                Loads immediately.
-                <br />
-                Ignores name, value, and delay.
-              </>
-            }
-          >
-            <FormControlLabel value={UUIDType.ForceLoad} control={<Radio />} label="Force load WMID" />
-          </Tooltip>
+
+          <FormControlLabel value={UUIDType.ForceLoad} control={<Radio />} label="Force load WMID (bypass IDP, waitfor, server storage)" />
+         
           </RadioGroup>
-        <FormHelperText sx={{ margin: 0 }}>Create identifier on page load</FormHelperText>
+        <FormHelperText sx={{ margin: 0 }}>Create identifier on page load including all iframes and popup windows</FormHelperText>
         <RadioGroup
           value={createIdentifierType}
           onChange={(radioChangeEvent: React.ChangeEvent<HTMLInputElement>) =>
@@ -200,3 +189,5 @@ export default function SnippetMenu() {
     </Stack>
   );
 }
+
+//90da529e8e564e66924b8617e100c36e

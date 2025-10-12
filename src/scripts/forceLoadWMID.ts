@@ -24,7 +24,7 @@ function setIdpInactive(updatedObject: any): void {
   }
 }
 
-function transformConfigForWalkMe(inputObject: unknown): unknown {
+function overrideWalkMeConfig(inputObject: unknown): unknown {
   if (inputObject && typeof inputObject === "object" && !Array.isArray(inputObject)) {
     const updatedObject: any = { ...(inputObject as any) };
     updatedObject["EndUserSettings"] = {
@@ -33,20 +33,40 @@ function transformConfigForWalkMe(inputObject: unknown): unknown {
       FallbackDisabled: true,
       CollectDataDisabled: true
     };
-    setIdpInactive(updatedObject);
+
+    const existingExcluded = updatedObject["ExcludedRuntimeFeatures"];
+    let excludedList: string[] = Array.isArray(existingExcluded)
+      ? existingExcluded.filter((item) => typeof item === "string")
+      : [];
+    if (!excludedList.includes("waitForEndUser")) {
+      excludedList = [...excludedList, "waitForEndUser"];
+    }
+    updatedObject["ExcludedRuntimeFeatures"] = excludedList;
+
     return updatedObject;
   }
   return inputObject;
 }
 
-function transformConfigForFixed(inputObject: unknown): unknown {
+
+function overrideWalkMeSettings(inputObject: unknown): unknown {
   if (inputObject && typeof inputObject === "object" && !Array.isArray(inputObject)) {
     const updatedObject: any = { ...(inputObject as any) };
     setIdpInactive(updatedObject);
+
+    const storageConfig = (updatedObject as any)["Storage"];
+    if (storageConfig && typeof storageConfig === "object") {
+      const sessionStorageFlag = (storageConfig as any)["ss"];
+      if (sessionStorageFlag === "true" || sessionStorageFlag === true) {
+        (storageConfig as any)["ss"] = false;
+      }
+    }
+
     return updatedObject;
   }
   return inputObject;
 }
+
 
 function createWrappedCallback(originalCallback: Function, label: string, transformer: (o: unknown) => unknown) {
   function wrappedCallback(this: unknown, ...argumentList: any[]) {
@@ -90,8 +110,8 @@ function interceptGlobalCallback(
 }
 
 function installWalkmeInterceptors(): void {
-  interceptGlobalCallback("WalkMeConfigCallback", "WalkMeConfigCallback", transformConfigForWalkMe);
-  interceptGlobalCallback("fixedCallback", "fixedCallback", transformConfigForFixed);
+  interceptGlobalCallback("WalkMeConfigCallback", "WalkMeConfigCallback", overrideWalkMeConfig);
+  interceptGlobalCallback("fixedCallback", "fixedCallback", overrideWalkMeSettings);
 }
 
 if (typeof window !== "undefined") {

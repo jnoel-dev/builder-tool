@@ -30,7 +30,6 @@ import ContainerSelector from "../elementsMenu/containerSelector/ContainerSelect
 
 import { PagesByOrigin } from "@/components/contexts/FrameManager/frameUtils";
 
-
 function isTopFrame(name: string): boolean {
   return /topframe/i.test(name);
 }
@@ -70,7 +69,6 @@ function findOriginForFrameName(
     }
   });
 
-
   function isSameHost(hostname: string): boolean {
     return currentHost !== "" && hostname === currentHost;
   }
@@ -83,12 +81,10 @@ function findOriginForFrameName(
   }
 
   if (frameNameLower.includes("topframe")) {
-
     return originUrls[0];
   } else if (frameNameLower.includes("samedomain")) {
     return originUrls[1];
   } else if (frameNameLower.includes("crossdomain")) {
-
     return originUrls[2];
   } else {
     for (const parentName in childMap) {
@@ -102,7 +98,6 @@ function findOriginForFrameName(
   }
 }
 
-
 export default function NavigationMenu() {
   const {
     currentFrameName,
@@ -113,31 +108,19 @@ export default function NavigationMenu() {
     addElementToCurrentFrame,
     knownFrameOrigins,
     receivedFirebaseResponse
-    
-
-    
   } = useFrame();
 
   function getInitialPagesByOrigin(): Record<string, string[]> {
-  const origins = knownFrameOrigins;
-  const pages: Record<string, string[]> = {};
-  for (const origin of origins) pages[origin] = ["Home Page"];
-  return pages;
-}
-
-
+    const origins = knownFrameOrigins;
+    const pages: Record<string, string[]> = {};
+    for (const origin of origins) pages[origin] = ["Home Page"];
+    return pages;
+  }
 
   const [pagesByOrigin, setPagesByOrigin] = useState<PagesByOrigin>(getInitialPagesByOrigin());
-
-
-
-
-
-
   const [selectedOriginUrl, setSelectedOriginUrl] = useState("");
   const [selectedPageName, setSelectedPageName] = useState("Home Page");
   const [navigationMode, setNavigationMode] = useState<NavigationType>(NavigationType.Full);
-
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>(
     Object.entries(getInitialPagesByOrigin()).flatMap(([originUrl, pageTitles]) => [
       originUrl,
@@ -145,34 +128,31 @@ export default function NavigationMenu() {
     ])
   );
 
-useEffect(() => {
-  let cancelled = false;
-
-  (async () => {
-    const defaults: PagesByOrigin = Object.fromEntries(
-      knownFrameOrigins.map((originUrl) => [originUrl, ["Home Page"]])
-    );
-
-    const loaded = await loadPagesByOriginWithDefaults(defaults);
-    if (cancelled) return;
-
-    setPagesByOrigin(loaded);
-    setSelectedOriginUrl(Object.keys(loaded)[0] ?? "");
-    setExpandedItemIds(
-      Object.entries(loaded).flatMap(([originUrl, pageTitles]) => [
-        originUrl,
-        ...pageTitles.map((title) => `${originUrl}-${title}`),
-      ])
-    );
-  })();
-
-  return () => { cancelled = true; };
-}, [knownFrameOrigins, receivedFirebaseResponse]);
-
-
-  
   useEffect(() => {
-   
+    let cancelled = false;
+
+    (async () => {
+      const defaults: PagesByOrigin = Object.fromEntries(
+        knownFrameOrigins.map((originUrl) => [originUrl, ["Home Page"]])
+      );
+
+      const loaded = await loadPagesByOriginWithDefaults(defaults);
+      if (cancelled) return;
+
+      setPagesByOrigin(loaded);
+      setSelectedOriginUrl(Object.keys(loaded)[0] ?? "");
+      setExpandedItemIds(
+        Object.entries(loaded).flatMap(([originUrl, pageTitles]) => [
+          originUrl,
+          ...pageTitles.map((title) => `${originUrl}-${title}`),
+        ])
+      );
+    })();
+
+    return () => { cancelled = true; };
+  }, [knownFrameOrigins, receivedFirebaseResponse]);
+
+  useEffect(() => {
     const allOriginUrls = Object.keys(pagesByOrigin);
     if (allOriginUrls.length === 0) return;
 
@@ -186,7 +166,7 @@ useEffect(() => {
         ...(pagesByOrigin[originUrl] || []).map((pageTitle) => `${originUrl}-${pageTitle}`),
       ])
     );
-  }, [pagesByOrigin]); 
+  }, [pagesByOrigin]);
 
   const [destinationOriginUrl, setDestinationOriginUrl] = useState<string>(Object.keys(getInitialPagesByOrigin())[0]);
 
@@ -206,41 +186,44 @@ useEffect(() => {
     setSelectedPageName(pagesForDestination[0] || "Home Page");
   }, [destinationOriginUrl, pagesByOrigin]);
 
-  function addNewPage(): void {
+  function computeNextPageTitleForOrigin(originUrl: string): string {
     const baseTitle = "Page";
     let nextNumber = 1;
-    const currentOriginPages = pagesByOrigin[selectedOriginUrl];
+    const currentPages = pagesByOrigin[originUrl] || [];
+    while (currentPages.includes(`${baseTitle}${nextNumber}`)) nextNumber++;
+    return `${baseTitle}${nextNumber}`;
+  }
 
-    while (currentOriginPages.includes(`${baseTitle}${nextNumber}`)) nextNumber++;
-
-    const newPageTitle = `${baseTitle}${nextNumber}`;
-
+  function addNewPageForDestination(originUrl: string, pageTitle: string): void {
     setPagesByOrigin(previous => {
-      const currentPages = previous[selectedOriginUrl] ?? [];
-      const next = { ...previous, [selectedOriginUrl]: [...currentPages, newPageTitle] };
+      const currentPages = previous[originUrl] ?? [];
+      const next = { ...previous, [originUrl]: [...currentPages, pageTitle] };
       persistPagesByOrigin(next);
       return next;
     });
-
-
-
-    
-
-    setExpandedItemIds((prev) => [...prev, `${selectedOriginUrl}-${newPageTitle}`]);
-    setSelectedPageName(newPageTitle);
+    setExpandedItemIds((prev) => [...prev, `${originUrl}-${pageTitle}`]);
   }
 
   function handleAddNavigationButton(): void {
+    const isCreateSelection = typeof selectedPageName === "string" && selectedPageName.startsWith("__CREATE__:");
+    let finalPageName = selectedPageName;
+
+    if (isCreateSelection) {
+      const parsedTitle = selectedPageName.replace("__CREATE__:", "");
+      addNewPageForDestination(destinationOriginUrl, parsedTitle);
+      setSelectedPageName(parsedTitle);
+      finalPageName = parsedTitle;
+    }
+
     const isFrameOrContainer = false;
 
     const knownOrigins = Object.keys(pagesByOrigin);
     const originIndex = Math.max(0, knownOrigins.indexOf(destinationOriginUrl));
 
-    const isHomePage = selectedPageName === "Home Page";
-    const pageName = isHomePage ? undefined : selectedPageName;
+    const isHomePage = finalPageName === "Home Page";
+    const pageName = isHomePage ? undefined : finalPageName;
 
     const navTargetFrameName = resolveNavTargetFrame(currentFrameName, frameElementsByFrameName as any);
-
     const isChildFrame = isIframe(navTargetFrameName) || isPopupWindow(navTargetFrameName);
 
     const navigationTarget = {
@@ -255,85 +238,37 @@ useEffect(() => {
     });
   }
 
-function removePage(originUrl: string, pageTitle: string): void {
-  setPagesByOrigin(previous => {
-    const updatedPages = {
-      ...previous,
-      [originUrl]: previous[originUrl].filter(title => title !== pageTitle),
-    };
-    persistPagesByOrigin(updatedPages);
-    return updatedPages;
-  });
+  function removePage(originUrl: string, pageTitle: string): void {
+    setPagesByOrigin(previous => {
+      const updatedPages = {
+        ...previous,
+        [originUrl]: previous[originUrl].filter(title => title !== pageTitle),
+      };
+      persistPagesByOrigin(updatedPages);
+      return updatedPages;
+    });
 
-  if (selectedPageName === pageTitle) {
-    setSelectedPageName("Home Page");
+    if (selectedPageName === pageTitle) {
+      setSelectedPageName("Home Page");
+    }
   }
-}
-
 
   const availableDestinationPages = pagesByOrigin[destinationOriginUrl] || ["Home Page"];
-  function maskIdInPath(rawUrl: string): string {
-  const idPattern = /^[A-Za-z0-9]{20}$/;
-  return rawUrl
-    .split("/")
-    .map((segment) => (idPattern.test(segment) ? "{ID}" : segment))
-    .join("/");
-}
-  
 
+  function maskIdInPath(rawUrl: string): string {
+    const idPattern = /^[A-Za-z0-9]{20}$/;
+    return rawUrl
+      .split("/")
+      .map((segment) => (idPattern.test(segment) ? "{ID}" : segment))
+      .join("/");
+  }
+
+  const nextCreatableTitle = computeNextPageTitleForOrigin(destinationOriginUrl);
+  const createValue = `__CREATE__:${nextCreatableTitle}`;
+  const createLabel = `Create new Page ${nextCreatableTitle.replace("Page", "")}`;
 
   return (
     <Stack>
-      <Box sx={{ width: "100%", mb: 2 }}>
-        <FormHelperText>Pages</FormHelperText>
-        <SimpleTreeView
-          expandedItems={expandedItemIds}
-          onExpandedItemsChange={(event, newExpandedIds) => setExpandedItemIds(newExpandedIds)}
-        >
-        {Object.entries(pagesByOrigin).map(([originUrl, pageTitles]) => (
-          <TreeItem key={originUrl} itemId={originUrl} label={maskIdInPath(originUrl)}>
-            {pageTitles.map((pageTitle) => (
-              <TreeItem
-                key={pageTitle}
-                itemId={`${originUrl}-${pageTitle}`}
-                label={
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <Typography sx={{ flex: 1 }}>{pageTitle}</Typography>
-                    {pageTitle !== "Home Page" && (
-                      <IconButton size="small" onClick={() => removePage(originUrl, pageTitle)}>
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                    )}
-                  </Box>
-                }
-              />
-            ))}
-          </TreeItem>
-        ))}
-        </SimpleTreeView>
-      </Box>
-
-      <FormControl size="small" fullWidth sx={{ mb: 1 }}>
-        <FormHelperText>Select origin for new page</FormHelperText>
-        <Select
-          value={selectedOriginUrl}
-          onChange={(event: SelectChangeEvent<string>) => setSelectedOriginUrl(event.target.value)}
-          sx={{ textAlign: "center" }}
-        >
-        {Object.keys(pagesByOrigin).map((originUrl) => (
-          <MenuItem key={originUrl} value={originUrl}>
-            {maskIdInPath(originUrl)}
-          </MenuItem>
-        ))}
-        </Select>
-      </FormControl>
-
-      <Button variant="contained" color="secondary" fullWidth onClick={addNewPage}>
-        Add New Page
-      </Button>
-
-      <Divider sx={{ my: 2 }} />
-
       <ContainerSelector/>
 
       <FormControl size="small" fullWidth sx={{ mb: 1 }}>
@@ -350,6 +285,9 @@ function removePage(originUrl: string, pageTitle: string): void {
               {pageOption.toUpperCase()}
             </MenuItem>
           ))}
+          <MenuItem key={createValue} value={createValue}>
+            {createLabel.toUpperCase()}
+          </MenuItem>
         </Select>
       </FormControl>
 

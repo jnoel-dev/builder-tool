@@ -49,9 +49,10 @@ export default function NavigationButton({
     knownFrameOrigins
   } = useFrame();
 
-  useEffect(() => {
-    setButtonLabel(formatButtonLabel(navigationTarget));
-  },[knownFrameOrigins])
+useEffect(() => {
+  setButtonLabel(formatButtonLabel(navigationTarget) ?? "");
+}, [knownFrameOrigins]);
+
 
 
   function buildRelativeDestinationPath(target: NavigationTarget): string {
@@ -63,11 +64,11 @@ export default function NavigationButton({
   return path;
 }
 
-function formatButtonLabel(target: NavigationTarget): string {
-  const origins = knownFrameOrigins;
-  const base = origins[target.originIndex] ?? origins[0] ?? "";
-  const withFrame = target.frameId ? `${base}${target.frameId}` : base;
-  return target.pageName ? `${withFrame}/${target.pageName}` : withFrame;
+function formatButtonLabel(target: NavigationTarget): string | undefined{
+  // const origins = knownFrameOrigins;
+  // const base = origins[target.originIndex] ?? origins[0] ?? "";
+  // const withFrame = target.frameId ? `${base}${target.frameId}` : base;
+  return target.pageName;
 }
 
 function handleClick(): void {

@@ -21,6 +21,9 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
   const [walkmeUserGuid, setWalkmeUserGuid] = React.useState<string | null>(null);
   const [walkmeEnvId, setWalkmeEnvId] = React.useState<string | null>(null);
   const [walkmeViaEditor, setWalkmeViaEditor] = React.useState<boolean>(false);
+  const [walkmeEuId, setWalkmeEuId] = React.useState<string | null>(null);
+  const [walkmeEuIdSource, setWalkmeEuIdSource] = React.useState<string | null>(null);
+  const [walkmeUnableReason, setWalkmeUnableReason] = React.useState<string | null>(null);
 
   const lastSeenGuidRef = React.useRef<string | null>(null);
   const lastSeenEnvIdRef = React.useRef<string | null>(null);
@@ -45,6 +48,10 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
         setWalkmeIsReady(false);
         setWalkmeUserGuid(null);
         setWalkmeEnvId(null);
+        setWalkmeViaEditor(false);
+        setWalkmeEuId(null);
+        setWalkmeEuIdSource(null);
+        setWalkmeUnableReason(null);
         lastSeenGuidRef.current = null;
         lastSeenEnvIdRef.current = null;
         return;
@@ -59,12 +66,22 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
 
       const hasWmPlaySnippetData = Boolean((window as any).wmPlaySnippetData);
 
+      try {
+        const value = internals?.removeWalkMeReason;
+        const normalized = value != null && String(value).trim() !== '' ? String(value) : null;
+        setWalkmeUnableReason(normalized);
+      } catch {
+        setWalkmeUnableReason(null);
+      }
+
       if (!hasTimingList && !hasWmPlaySnippetData) {
         setWalkmeTimingText(null);
         setWalkmeIsReady(false);
         setWalkmeUserGuid(null);
         setWalkmeEnvId(null);
         setWalkmeViaEditor(false);
+        setWalkmeEuId(null);
+        setWalkmeEuIdSource(null);
         lastSeenGuidRef.current = null;
         lastSeenEnvIdRef.current = null;
         return;
@@ -94,6 +111,18 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
       setWalkmeViaEditor(hasWmPlaySnippetData);
 
       setEntryKeys((previousKeys) => (previousKeys.includes('WL') ? previousKeys : ['WL', ...previousKeys]));
+
+      try {
+        const provider = internals?.ctx?.get?.('EventCollectorWalkMeDataProvider');
+        const data = provider?.getWalkMeData?.();
+        const nextEuId = data?.euId ? String(data.euId) : null;
+        const nextEuIdSource = data?.euIdSource ? String(data.euIdSource) : null;
+        setWalkmeEuId(nextEuId);
+        setWalkmeEuIdSource(nextEuIdSource);
+      } catch {
+        setWalkmeEuId(null);
+        setWalkmeEuIdSource(null);
+      }
 
       if (isReadyDetected || hasWmPlaySnippetData) {
         setWalkmeTimingText('walkmeReady');
@@ -150,22 +179,32 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
       ? ` - GUID:${walkmeUserGuid ?? ''}${walkmeUserGuid && walkmeEnvId ? ' - ' : ''}ENV:${walkmeEnvId ?? ''}`
       : '';
 
-  const loadingLabel = walkmeViaEditor ? 'WalkMe loading via editor' : 'WalkMe loading';
-  const loadedLabel = walkmeViaEditor ? 'WalkMe loaded via editor' : 'WalkMe loaded';
+  const loadingLabel = walkmeViaEditor ? 'WalkMe not fully loaded - Editor connected' : 'WalkMe not fully loaded';
+  const loadedLabel = walkmeViaEditor ? 'WalkMe loaded - Editor connected' : 'WalkMe loaded';
 
   return (
     <Box sx={{ position: 'absolute', top: 0, left: 0 }}>
       <Stack spacing={0.5}>
         {wlPresent ? (
-          <Typography key="WL" variant="body2" sx={{ color: walkmeIsReady ? 'green' : 'yellow' }}>
-            <strong>
-              {walkmeIsReady
-                ? `${loadedLabel}${loadedSuffix}`
-                : walkmeTimingText
-                  ? `${loadingLabel} - ${walkmeTimingText}`
-                  : loadingLabel}
-            </strong>
-          </Typography>
+          <>
+            <Typography key="WL" variant="body2" sx={{ color: walkmeIsReady ? 'green' : 'yellow' }}>
+              <strong>
+                {walkmeUnableReason
+                  ? `WalkMe unable to load - ${walkmeUnableReason}`
+                  : walkmeIsReady
+                    ? `${loadedLabel}${loadedSuffix}`
+                    : `Last loaded: ${walkmeTimingText}`
+                      ? `${loadingLabel} - Last loaded: ${walkmeTimingText}`
+                      : loadingLabel}
+              </strong>
+            </Typography>
+            <Typography key="WL_EXTRA" variant="body2" sx={{ color: walkmeIsReady ? 'green' : 'yellow' }}>
+              <strong>
+                EUID: {walkmeEuId ?? 'none'}{' '}
+                SOURCE: {walkmeEuIdSource ?? 'none'}
+              </strong>
+            </Typography>
+          </>
         ) : null}
 
         {otherKeys.map((propertyKey) => {
