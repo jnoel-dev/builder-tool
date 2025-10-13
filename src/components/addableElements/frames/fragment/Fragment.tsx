@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import ContainerBase from "../containerBase/ContainerBase";
@@ -24,61 +24,66 @@ export default function Fragment({
   const [isExpanded, setIsExpanded] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     const closed = sessionStorage.getItem(closedFlagKey) === "1";
-    return closed ? false : true; // default open so frameReady runs
+    return closed ? false : true;
   });
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  function updateSize(): void {
+  const updateSize = useCallback((): void => {
     const isTopWindow = typeof window !== "undefined" && window.top === window;
 
     if (isTopWindow) {
       const topFrameElement = containerRefs["TopFrame"]?.current;
       if (topFrameElement) {
-        const rect = topFrameElement.getBoundingClientRect();
-        setDimensions({ width: rect.width / 2, height: rect.height / 2 });
+        const boundingRect = topFrameElement.getBoundingClientRect();
+        setDimensions({
+          width: boundingRect.width / 2,
+          height: boundingRect.height / 2,
+        });
         return;
       }
     }
 
-    const w = document.documentElement.clientWidth || window.innerWidth || 0;
-    const h = document.documentElement.clientHeight || window.innerHeight || 0;
-    setDimensions({ width: w / 2, height: h / 2 });
-  }
+    const viewportWidth =
+      document.documentElement.clientWidth || window.innerWidth || 0;
+    const viewportHeight =
+      document.documentElement.clientHeight || window.innerHeight || 0;
+    setDimensions({ width: viewportWidth / 2, height: viewportHeight / 2 });
+  }, [containerRefs]);
 
   useEffect(() => {
     updateSize();
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
-  }, [containerRefs]);
+  }, [updateSize]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    // persist open/closed for this session
     sessionStorage.setItem(closedFlagKey, isExpanded ? "0" : "1");
 
-    // add hash on open, remove on close
-    const next = isExpanded
+    const nextUrl = isExpanded
       ? `${window.location.pathname}${window.location.search}#${savedName}`
       : `${window.location.pathname}${window.location.search}`;
-    window.history.replaceState(null, "", next);
-  }, [isExpanded, savedName]);
+    window.history.replaceState(null, "", nextUrl);
+  }, [isExpanded, savedName, closedFlagKey]);
 
-  // Clear session flag and hash if this fragment owned it
   useEffect(() => {
     return () => {
       try {
         sessionStorage.removeItem(closedFlagKey);
-        if (typeof window !== "undefined" && window.location.hash === `#${savedName}`) {
-          const next = `${window.location.pathname}${window.location.search}`;
-          window.history.replaceState(null, "", next);
+        if (
+          typeof window !== "undefined" &&
+          window.location.hash === `#${savedName}`
+        ) {
+          const nextUrl = `${window.location.pathname}${window.location.search}`;
+          window.history.replaceState(null, "", nextUrl);
         }
       } catch {}
     };
   }, [closedFlagKey, savedName]);
 
   function handleToggle(): void {
-    setIsExpanded(prev => !prev);
+    setIsExpanded((previous) => !previous);
   }
 
   return (

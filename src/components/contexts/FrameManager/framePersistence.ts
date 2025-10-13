@@ -1,67 +1,125 @@
 "use client";
 
 import { AppState, SnippetProperties, PagesByOrigin } from "./frameUtils";
-import { doc,getDoc,setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { firestoreDatabase } from "./firebaseConfig";
-
-
 
 const SESSION_KEY_STATE = "SB_STATE";
 
-
-
 export const SAME_ORIGIN_TARGET =
-  process.env.NODE_ENV === "production" ? "https://build.jonnoel.dev/" : "http://localhost:3000/";
+  process.env.NODE_ENV === "production"
+    ? "https://build.jonnoel.dev/"
+    : "http://localhost:3000/";
 
 export const CROSS_ORIGIN_TARGET =
-  process.env.NODE_ENV === "production" ? "https://frame.jonnoel.dev/" : "http://localhost:3001/";
+  process.env.NODE_ENV === "production"
+    ? "https://frame.jonnoel.dev/"
+    : "http://localhost:3001/";
 
 let knownFrameOrigins: string[] = [];
 
-export function setPersistenceKnownFrameOrigins(frameOrigins: string[]): void{
-  knownFrameOrigins = frameOrigins ;
+export function setPersistenceKnownFrameOrigins(frameOrigins: string[]): void {
+  knownFrameOrigins = frameOrigins;
 }
 
 function cleanPageList(pageNames: string[]): string[] {
   const seenPages = new Set<string>();
   const cleanedList: string[] = [];
   for (const pageName of pageNames) {
-    if (!pageName || pageName.trim() === "" || seenPages.has(pageName)) continue;
+    if (!pageName || pageName.trim() === "" || seenPages.has(pageName))
+      continue;
     seenPages.add(pageName);
     cleanedList.push(pageName);
   }
   return cleanedList;
 }
 
-function readSession(): any | null {
+function readSession(): AppState | null {
   try {
     const sessionJson = sessionStorage.getItem(SESSION_KEY_STATE);
     if (!sessionJson) return null;
-    return JSON.parse(sessionJson);
+    return JSON.parse(sessionJson) as AppState;
   } catch {
     return null;
   }
 }
 
-async function writeSession(stateToPersist: any): Promise<boolean> {
+function stableSerialize(inputValue: unknown): string {
+  const sortValue = (unsortedValue: unknown): unknown => {
+    if (Array.isArray(unsortedValue)) {
+      return unsortedValue.map(sortValue);
+    }
+    if (unsortedValue && typeof unsortedValue === "object") {
+      const sortedObject: Record<string, unknown> = {};
+      const sortedKeys = Object.keys(
+        unsortedValue as Record<string, unknown>,
+      ).sort();
+      for (const sortedKey of sortedKeys) {
+        sortedObject[sortedKey] = sortValue(
+          (unsortedValue as Record<string, unknown>)[sortedKey],
+        );
+      }
+      return sortedObject;
+    }
+    return unsortedValue;
+  };
+  return JSON.stringify(sortValue(inputValue));
+}
+
+async function writeSession(stateToPersist: AppState): Promise<boolean> {
+  try {
+    const existingJson = sessionStorage.getItem(SESSION_KEY_STATE);
+    const existingComparable = existingJson
+      ? stableSerialize(JSON.parse(existingJson))
+      : null;
+    const nextComparable = stableSerialize(stateToPersist);
+    if (existingComparable !== null && existingComparable === nextComparable) {
+      return true;
+    }
+  } catch {}
   try {
     sessionStorage.setItem(SESSION_KEY_STATE, JSON.stringify(stateToPersist));
   } catch {}
   try {
-    const wasSynced = await sendAppStateToFirebase(stateToPersist as AppState);
+    const wasSynced = await sendAppStateToFirebase(stateToPersist);
     return wasSynced;
   } catch {
     return false;
   }
 }
 
-
-export async function loadInitialState(frameToLoad: string, defaultFrameName: string, defaultPageName: string): Promise<AppState | null> {
+export async function loadInitialState(
+  frameToLoad: string,
+  defaultFrameName: string,
+  defaultPageName: string,
+): Promise<AppState | null> {
   if (typeof window === "undefined") return null;
 
-  const sessionState = readSession() as AppState | null;
+  const sessionState = readSession();
   if (sessionState) {
-    return {
+    if (frameToLoad !== defaultFrameName) {
+      const framesCopy = { ...sessionState.frames };
+      delete (framesCopy as Record<string, unknown>)["TopFrame"];
+      if (framesCopy[frameToLoad]) {
+        const sourceFrame = framesCopy[frameToLoad];
+        delete framesCopy[frameToLoad];
+        framesCopy[defaultFrameName] = {
+          ...sourceFrame,
+          name: defaultFrameName,
+        };
+      }
+      const remapped: AppState = {
+        rootPage: sessionState.rootPage,
+        frames: framesCopy,
+        frameOrder: sessionState.frameOrder,
+        currentFrame: defaultFrameName,
+        pagesByOrigin: sessionState.pagesByOrigin,
+        snippetProperties: sessionState.snippetProperties,
+      };
+      writeSession(remapped);
+      return remapped;
+    }
+    const out: AppState = {
       rootPage: sessionState.rootPage,
       frames: sessionState.frames,
       frameOrder: sessionState.frameOrder,
@@ -69,6 +127,8 @@ export async function loadInitialState(frameToLoad: string, defaultFrameName: st
       pagesByOrigin: sessionState.pagesByOrigin,
       snippetProperties: sessionState.snippetProperties,
     };
+    writeSession(out);
+    return out;
   }
 
   const initialState: AppState = {
@@ -91,12 +151,13 @@ export async function loadInitialState(frameToLoad: string, defaultFrameName: st
 
   if (/^[A-Za-z0-9]{20}$/.test(documentId)) {
     try {
-      const snapshot = await getDoc(doc(firestoreDatabase, "sbStates", documentId));
+      const snapshot = await getDoc(
+        doc(firestoreDatabase, "sbStates", documentId),
+      );
       if (snapshot.exists()) {
         const data = snapshot.data() as { stateJson?: string };
         const stateJsonString = (data?.stateJson ?? "").trim();
         if (stateJsonString === "") {
-          await sendAppStateToFirebase(initialState);
           writeSession(initialState);
           return initialState;
         } else {
@@ -110,11 +171,13 @@ export async function loadInitialState(frameToLoad: string, defaultFrameName: st
             if (frameToLoad !== defaultFrameName) {
               const newFrames = { ...parsedState.frames };
               delete (newFrames as Record<string, unknown>)["TopFrame"];
-
               if (newFrames[frameToLoad]) {
                 const targetFrame = newFrames[frameToLoad];
                 delete newFrames[frameToLoad];
-                newFrames[defaultFrameName] = { ...targetFrame, name: defaultFrameName };
+                newFrames[defaultFrameName] = {
+                  ...targetFrame,
+                  name: defaultFrameName,
+                };
               }
               const remappedState: AppState = {
                 rootPage: parsedState.rootPage,
@@ -124,10 +187,9 @@ export async function loadInitialState(frameToLoad: string, defaultFrameName: st
                 pagesByOrigin: parsedState.pagesByOrigin,
                 snippetProperties: parsedState.snippetProperties,
               };
-              
+              writeSession(remappedState);
               return remappedState;
             }
-
             const fullState: AppState = {
               rootPage: parsedState.rootPage,
               frames: parsedState.frames,
@@ -148,9 +210,9 @@ export async function loadInitialState(frameToLoad: string, defaultFrameName: st
   return initialState;
 }
 
-
-
-export async function persistStateToSession(appState: AppState): Promise<boolean> {
+export async function persistStateToSession(
+  appState: AppState,
+): Promise<boolean> {
   if (typeof window === "undefined") return false;
   const existingSession = (readSession() || {}) as AppState;
   const nextSessionState: AppState = {
@@ -160,17 +222,19 @@ export async function persistStateToSession(appState: AppState): Promise<boolean
     frameOrder: appState.frameOrder,
     currentFrame: appState.currentFrame,
     pagesByOrigin: appState.pagesByOrigin ?? existingSession.pagesByOrigin,
-    snippetProperties: appState.snippetProperties ?? existingSession.snippetProperties,
+    snippetProperties:
+      appState.snippetProperties ?? existingSession.snippetProperties,
   };
   const wasSynced = await writeSession(nextSessionState);
   return wasSynced;
 }
 
-
-export function loadPagesByOriginWithDefaults(defaultPagesByOrigin: PagesByOrigin): PagesByOrigin {
+export function loadPagesByOriginWithDefaults(
+  defaultPagesByOrigin: PagesByOrigin,
+): PagesByOrigin {
   if (typeof window === "undefined") return { ...defaultPagesByOrigin };
 
-  const sessionValue = readSession() as AppState | null;
+  const sessionValue = readSession();
   const knownOriginList = knownFrameOrigins;
 
   const mergedPagesByOrigin: PagesByOrigin = {};
@@ -178,17 +242,23 @@ export function loadPagesByOriginWithDefaults(defaultPagesByOrigin: PagesByOrigi
     mergedPagesByOrigin[originUrl] = ["Home Page"];
   }
 
-  const storedPagesByOrigin = sessionValue?.pagesByOrigin as PagesByOrigin | undefined;
+  const storedPagesByOrigin = sessionValue?.pagesByOrigin as
+    | PagesByOrigin
+    | undefined;
   if (storedPagesByOrigin) {
     for (const [originUrl, pageNames] of Object.entries(storedPagesByOrigin)) {
-      const uniquePages = Array.from(new Set<string>(["Home Page", ...cleanPageList(pageNames || [])]));
+      const uniquePages = Array.from(
+        new Set<string>(["Home Page", ...cleanPageList(pageNames || [])]),
+      );
       mergedPagesByOrigin[originUrl] = uniquePages;
     }
   }
 
   for (const [originUrl, pageNames] of Object.entries(defaultPagesByOrigin)) {
     const existingList = mergedPagesByOrigin[originUrl] || ["Home Page"];
-    const uniquePages = Array.from(new Set<string>([...existingList, ...cleanPageList(pageNames || [])]));
+    const uniquePages = Array.from(
+      new Set<string>([...existingList, ...cleanPageList(pageNames || [])]),
+    );
     mergedPagesByOrigin[originUrl] = uniquePages;
   }
 
@@ -198,14 +268,21 @@ export function loadPagesByOriginWithDefaults(defaultPagesByOrigin: PagesByOrigi
 export function persistPagesByOrigin(pagesByOrigin: PagesByOrigin): void {
   if (typeof window === "undefined") return;
   const existingSession = (readSession() || {}) as AppState;
-  const stateToWrite = { ...existingSession, pagesByOrigin: { ...pagesByOrigin } };
+  const stateToWrite = {
+    ...existingSession,
+    pagesByOrigin: { ...pagesByOrigin },
+  };
   writeSession(stateToWrite);
 }
 
-export function setFrameProperty(frameName: string, propertyName: string, isEnabled: boolean): void {
+export function setFrameProperty(
+  frameName: string,
+  propertyName: string,
+  isEnabled: boolean,
+): void {
   if (typeof window === "undefined") return;
 
-  const sessionValue = readSession() as AppState | null;
+  const sessionValue = readSession();
   if (!sessionValue?.frames?.[frameName]) return;
 
   const nextSession: AppState = {
@@ -218,7 +295,9 @@ export function setFrameProperty(frameName: string, propertyName: string, isEnab
 
   const frameNode = nextSession.frames[frameName];
   const nextProperties =
-    frameNode.properties && typeof frameNode.properties === "object" ? { ...frameNode.properties } : {};
+    frameNode.properties && typeof frameNode.properties === "object"
+      ? { ...frameNode.properties }
+      : {};
 
   if (isEnabled) {
     nextProperties[propertyName] = true;
@@ -233,43 +312,53 @@ export function setFrameProperty(frameName: string, propertyName: string, isEnab
   }
 
   writeSession(nextSession);
-  
 }
 
 export function getFrameProperties(frameName: string): Record<string, unknown> {
-  const sessionValue = readSession() as AppState | null;
+  const sessionValue = readSession();
   const frameNode = sessionValue?.frames?.[frameName];
   const properties = frameNode?.properties;
   return properties && typeof properties === "object" ? { ...properties } : {};
 }
 
-export function setSnippetProperties(snippetProperties: SnippetProperties): Promise<boolean> {
+export function setSnippetProperties(
+  snippetProperties: SnippetProperties,
+): Promise<boolean> {
   if (typeof window === "undefined") return Promise.resolve(false);
   const existingSession = (readSession() || {}) as AppState;
-  const nextSessionState = { ...existingSession, snippetProperties: { ...snippetProperties } };
+  const nextSessionState = {
+    ...existingSession,
+    snippetProperties: { ...snippetProperties },
+  };
   return writeSession(nextSessionState);
 }
 
-
-
 export function getSnippetProperties(): SnippetProperties | undefined {
-  const sessionValue = readSession() as AppState | null;
-  const stored = sessionValue?.snippetProperties as SnippetProperties | undefined;
+  const sessionValue = readSession();
+  const stored = sessionValue?.snippetProperties as
+    | SnippetProperties
+    | undefined;
   return stored && typeof stored === "object" ? { ...stored } : undefined;
 }
 
-async function sendAppStateToFirebase(applicationState: AppState): Promise<boolean> {
+async function sendAppStateToFirebase(
+  applicationState: AppState,
+): Promise<boolean> {
   const pathSegments = window.location.pathname.split("/").filter(Boolean);
   const documentId = pathSegments[0] ?? "";
   if (!/^[A-Za-z0-9]{20}$/.test(documentId)) return false;
 
   const stateJsonString = JSON.stringify(applicationState);
   try {
-    await setDoc(doc(firestoreDatabase, "sbStates", documentId), { stateJson: stateJsonString }, { merge: true });
+    console.warn("SET FIREBASE");
+    await setDoc(
+      doc(firestoreDatabase, "sbStates", documentId),
+      { stateJson: stateJsonString },
+      { merge: true },
+    );
     return true;
-  } catch (error){
+  } catch (error) {
     console.error("firebase:setDoc failed", error);
     return false;
   }
 }
-

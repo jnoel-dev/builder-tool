@@ -6,9 +6,11 @@ type NativeFunctionsMap = {
 };
 
 function getFunctionNamesFromCurrentScript(): string[] {
-  const currentScriptElement = document.currentScript as HTMLScriptElement | null;
+  const currentScriptElement =
+    document.currentScript as HTMLScriptElement | null;
   if (!currentScriptElement) return [];
-  const rawFunctionNames = currentScriptElement.getAttribute("data-names") || "";
+  const rawFunctionNames =
+    currentScriptElement.getAttribute("data-names") || "";
   const functionNames = rawFunctionNames
     .split(",")
     .map((name) => name.trim())
@@ -18,10 +20,15 @@ function getFunctionNamesFromCurrentScript(): string[] {
 
 function applyNativeOverrides(functionNames: string[]): void {
   const nativeFunctionsApi =
-    ((window as unknown as { NativeFunctions?: NativeFunctionsMap }).NativeFunctions as NativeFunctionsMap | undefined) ||
-    ((window as unknown) as NativeFunctionsMap);
+    ((window as unknown as { NativeFunctions?: NativeFunctionsMap })
+      .NativeFunctions as NativeFunctionsMap | undefined) ||
+    (window as unknown as NativeFunctionsMap);
 
-  for (let functionIndex = 0; functionIndex < functionNames.length; functionIndex++) {
+  for (
+    let functionIndex = 0;
+    functionIndex < functionNames.length;
+    functionIndex++
+  ) {
     const functionName = functionNames[functionIndex];
     const functionReference = nativeFunctionsApi[functionName];
     if (typeof functionReference === "function") {

@@ -1,5 +1,5 @@
-import React from 'react';
-import { useTheme } from '@mui/material/styles';
+import React from "react";
+import { useTheme } from "@mui/material/styles";
 
 export default function PanelSVG() {
   const theme = useTheme();
@@ -9,7 +9,7 @@ export default function PanelSVG() {
   const spacingBetweenBoxes = 16;
   const marginSides = 16;
 
-  const labels = ['1', '2', '3'];
+  const labels = ["1", "2", "3"];
 
   const totalWidth =
     marginSides * 2 +
@@ -19,10 +19,10 @@ export default function PanelSVG() {
   const svgHeight = boxHeight + 32; // include top padding
 
   const textStyle: React.CSSProperties = {
-    fontSize: '1.5rem',
+    fontSize: "1.5rem",
     fill: theme.palette.text.primary,
-    dominantBaseline: 'middle',
-    textAnchor: 'middle',
+    dominantBaseline: "middle",
+    textAnchor: "middle",
   };
 
   return (
@@ -31,12 +31,11 @@ export default function PanelSVG() {
       height={svgHeight}
       style={{
         backgroundColor: theme.palette.primary.main,
-        display: 'block',
+        display: "block",
       }}
     >
       {labels.map((label, index) => {
-        const xOffset =
-          marginSides + index * (boxWidth + spacingBetweenBoxes);
+        const xOffset = marginSides + index * (boxWidth + spacingBetweenBoxes);
 
         return (
           <g key={label} transform={`translate(${xOffset}, 16)`}>

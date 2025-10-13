@@ -1,27 +1,27 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { CssBaseline } from '@mui/material';
-import Box from '@mui/material/Box';
-import ContainerBase from '@/components/addableElements/frames/containerBase/ContainerBase';
-import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
-import createCache from '@emotion/cache';
-import { CacheProvider } from '@emotion/react';
+import React, { useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { CssBaseline } from "@mui/material";
+import Box from "@mui/material/Box";
+import ContainerBase from "@/components/addableElements/frames/containerBase/ContainerBase";
+import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
+import createCache, { EmotionCache } from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
 
 interface ShadowRootProps {
-  shadowRootType?: 'open' | 'closed';
+  shadowRootType?: "open" | "closed";
   savedName: string;
 }
 
 export default function ShadowRoot({
-  shadowRootType = 'open',
+  shadowRootType = "open",
   savedName,
 }: ShadowRootProps) {
   const { frameElementsByFrameName, containerRefs } = useFrame();
   const shadowHostRef = useRef<HTMLDivElement>(null);
   const [shadowRootNode, setShadowRootNode] = useState<ShadowRoot | null>(null);
-  const [emotionCache, setEmotionCache] = useState<any>(null);
+  const [emotionCache, setEmotionCache] = useState<EmotionCache>();
   const hasChildren = (frameElementsByFrameName[savedName] || []).length > 0;
   const hasAttachedShadowRootRef = useRef(false);
 
@@ -32,12 +32,12 @@ export default function ShadowRoot({
     const root = host.attachShadow({ mode: shadowRootType });
     hasAttachedShadowRootRef.current = true;
 
-    const styleContainer = document.createElement('div');
+    const styleContainer = document.createElement("div");
     root.appendChild(styleContainer);
 
     //mui uses emotion to allow sx styling. this creates cache so our inline sx style is preserved in shadowroot
     const cache = createCache({
-      key: 'shadow',
+      key: "shadow",
       container: styleContainer,
     });
     setEmotionCache(cache);
@@ -48,19 +48,22 @@ export default function ShadowRoot({
     <Box
       ref={containerRefs[savedName]}
       sx={{
-        border: '1px solid MediumPurple',
-        display: 'flex',
-        flexDirection: 'column',
-        maxWidth: '100%',
-        padding: '10px',
+        border: "1px solid MediumPurple",
+        display: "flex",
+        flexDirection: "column",
+        maxWidth: "100%",
+        padding: "10px",
       }}
     >
-      <ContainerBase connectedFrameName={savedName} disableElementControlsForChildren/>
+      <ContainerBase
+        connectedFrameName={savedName}
+        disableElementControlsForChildren
+      />
       {!hasChildren && (
         <Box
           sx={{
-            wordBreak: 'break-word',
-            textAlign: 'center',
+            wordBreak: "break-word",
+            textAlign: "center",
             width: 200,
           }}
         >

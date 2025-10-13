@@ -1,13 +1,13 @@
-import React, { useRef, useState } from 'react';
-import Box from '@mui/material/Box';
-import { Stack, Button } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import React, { useRef, useState } from "react";
+import Box from "@mui/material/Box";
+import { Stack, Button } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 
 export default function InputReact() {
   const theme = useTheme();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [text, setText] = useState('');
-  const [displayText, setDisplayText] = useState('');
+  const [text, setText] = useState("");
+  const [displayText, setDisplayText] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setText(e.target.value);
@@ -22,7 +22,6 @@ export default function InputReact() {
       sx={{
         backgroundColor: theme.palette.primary.main,
         padding: 2,
-        
       }}
     >
       <Stack direction="column" spacing={2}>
@@ -33,7 +32,7 @@ export default function InputReact() {
           placeholder="insert text here..."
           style={{
             backgroundColor: theme.palette.background.paper,
-            padding: '8px',
+            padding: "8px",
             color: theme.palette.text.primary,
             flex: 1,
           }}
@@ -43,7 +42,7 @@ export default function InputReact() {
           <Button
             variant="contained"
             color="secondary"
-            sx={{ color: theme.palette.text.primary,width: '100%' }}
+            sx={{ color: theme.palette.text.primary, width: "100%" }}
             onClick={handleShowClick}
           >
             show text
@@ -53,7 +52,7 @@ export default function InputReact() {
               sx={{
                 backgroundColor: theme.palette.background.paper,
                 color: theme.palette.text.primary,
-                padding: '8px',
+                padding: "8px",
               }}
             >
               {displayText}

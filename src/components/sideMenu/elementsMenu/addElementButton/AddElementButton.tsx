@@ -22,7 +22,7 @@ export default function AddElementButton({
 }: AddElementButtonProps) {
   const { addElementToCurrentFrame } = useFrame();
   const [selectedComponentName, setSelectedComponentName] = useState<string>(
-    componentNames[0] || displayName
+    componentNames[0] || displayName,
   );
 
   function handleAdd(): void {
@@ -44,10 +44,10 @@ export default function AddElementButton({
           <RadioGroup
             row
             value={selectedComponentName}
-            onChange={event => setSelectedComponentName(event.target.value)}
+            onChange={(event) => setSelectedComponentName(event.target.value)}
             sx={{ gap: 1, ml: 2 }}
           >
-            {componentNames.map(componentOption => (
+            {componentNames.map((componentOption) => (
               <FormControlLabel
                 key={componentOption}
                 value={componentOption}
@@ -55,7 +55,10 @@ export default function AddElementButton({
                 label={componentOption.replace(displayName, "")}
                 sx={{
                   margin: 0,
-                  "& .MuiFormControlLabel-label": { marginLeft: 0, lineHeight: 1 },
+                  "& .MuiFormControlLabel-label": {
+                    marginLeft: 0,
+                    lineHeight: 1,
+                  },
                 }}
               />
             ))}

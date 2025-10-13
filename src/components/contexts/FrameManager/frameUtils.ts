@@ -7,13 +7,13 @@ export type PagesByOrigin = Record<string, string[]>;
 
 export enum UUIDType {
   ForceLoad = "forceLoad",
-  Default = "default"
+  Default = "default",
 }
 
 export enum CreateIdentifierType {
   None = "none",
   Variable = "variable",
-  Cookie = "cookie"
+  Cookie = "cookie",
 }
 export type CreateIdentifier = {
   type: CreateIdentifierType;
@@ -31,14 +31,13 @@ export type SnippetProperties = {
   createIdentifier: CreateIdentifier;
 };
 
-
 export type FrameElement = {
   id: string;
   componentName: string;
   xPercent: number;
   yPercent: number;
   isFrameOrContainer: boolean;
-  customProps?: Record<string, any>;
+  customProps?: Record<string, unknown>;
 };
 
 export type PageState = { elements: FrameElement[] };
@@ -54,13 +53,12 @@ export type FrameNode = {
   properties?: FrameProperties;
 };
 
-
 export type AppState = {
   rootPage: string;
   frames: Record<string, FrameNode>;
   frameOrder: string[];
   currentFrame: string;
-  pagesByOrigin?: PagesByOrigin
+  pagesByOrigin?: PagesByOrigin;
   snippetProperties?: SnippetProperties;
 };
 
@@ -71,7 +69,9 @@ export function getMaxSuffixFromId(idValue: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function rebuildIdCountersFromState(appState: AppState): Record<string, number> {
+export function rebuildIdCountersFromState(
+  appState: AppState,
+): Record<string, number> {
   const counters: Record<string, number> = {};
   for (const frameName of Object.keys(appState.frames)) {
     const frameNode = appState.frames[frameName];
@@ -99,11 +99,16 @@ export function getCurrentPageFromFrameName(frameName: string): string {
   } else if (frameName === "TopFrame") {
     return pageNameFromPath(window.location.pathname);
   } else {
-    return getKnownChildWindowInfoByFrameName(frameName)?.currentPage || "HomePage";
+    return (
+      getKnownChildWindowInfoByFrameName(frameName)?.currentPage || "HomePage"
+    );
   }
 }
 
-export function getElementsForFrame(appState: AppState, frameName: string): FrameElement[] {
+export function getElementsForFrame(
+  appState: AppState,
+  frameName: string,
+): FrameElement[] {
   const frameNode = appState.frames[frameName];
   if (!frameNode) return [];
   const pageKey = getCurrentPageFromFrameName(frameName);

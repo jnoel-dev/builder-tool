@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, {
   ReactNode,
@@ -6,19 +6,19 @@ import React, {
   useEffect,
   useState,
   CSSProperties,
-} from 'react';
+  useCallback,
+} from "react";
 import {
   useFrame,
   POST_MESSAGE_LOG_ENABLED,
-} from '@/components/contexts/FrameManager/FrameManager';
-import { FrameElement } from '@/components/contexts/FrameManager/frameUtils';
-import IconButton from '@mui/material/IconButton';
-import Stack from '@mui/material/Stack';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import CloseIcon from '@mui/icons-material/Close';
-import { useTheme } from '@mui/material';
-import { SAME_ORIGIN_TARGET } from '@/components/contexts/FrameManager/framePersistence';
-
+} from "@/components/contexts/FrameManager/FrameManager";
+import { FrameElement } from "@/components/contexts/FrameManager/frameUtils";
+import IconButton from "@mui/material/IconButton";
+import Stack from "@mui/material/Stack";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import CloseIcon from "@mui/icons-material/Close";
+import { useTheme } from "@mui/material";
+import { SAME_ORIGIN_TARGET } from "@/components/contexts/FrameManager/framePersistence";
 
 interface ElementControllerProps {
   elementToControl: FrameElement;
@@ -32,17 +32,13 @@ interface ElementControllerProps {
 export default function ElementController({
   elementToControl,
   controlsDisabled,
-  shouldShowName,
   containerRef,
   connectedFrameOrContainerName,
   children,
 }: ElementControllerProps) {
   const theme = useTheme();
-  const {
-    updateElementPosition,
-    removeElementFromFrame,
-    unregisterFrame,
-  } = useFrame();
+  const { updateElementPosition, removeElementFromFrame, unregisterFrame } =
+    useFrame();
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -52,6 +48,7 @@ export default function ElementController({
     x: elementToControl.xPercent,
     y: elementToControl.yPercent,
   });
+  const latestPositionRef = useRef(positionPercent);
 
   useEffect(() => {
     setPositionPercent({
@@ -60,8 +57,9 @@ export default function ElementController({
     });
   }, [elementToControl.xPercent, elementToControl.yPercent]);
 
-  const clamp = (value: number, min: number, max: number) =>
-    Math.min(Math.max(value, min), max);
+  useEffect(() => {
+    latestPositionRef.current = positionPercent;
+  }, [positionPercent]);
 
   function onDragStart(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -81,113 +79,127 @@ export default function ElementController({
     isDragging.current = true;
   }
 
-  function onDragMove(event: MouseEvent) {
-    if (!isDragging.current) return;
-    const containerEl = containerRef.current;
-    if (!containerEl) return;
-    const containerRect = containerEl.getBoundingClientRect();
+  const onDragMove = useCallback(
+    (event: MouseEvent) => {
+      if (!isDragging.current) return;
+      const containerEl = containerRef.current;
+      if (!containerEl) return;
+      const containerRect = containerEl.getBoundingClientRect();
 
-    const wrapperEl = wrapperRef.current;
-    if (!wrapperEl) return;
-    const wrapperRect = wrapperEl.getBoundingClientRect();
+      const wrapperEl = wrapperRef.current;
+      if (!wrapperEl) return;
+      const wrapperRect = wrapperEl.getBoundingClientRect();
 
-    const widthPercent = (wrapperRect.width / containerRect.width) * 100;
-    const heightPercent = (wrapperRect.height / containerRect.height) * 100;
+      const widthPercent = (wrapperRect.width / containerRect.width) * 100;
+      const heightPercent = (wrapperRect.height / containerRect.height) * 100;
 
-    const cursorPercentX =
-      ((event.clientX - containerRect.left) / containerRect.width) * 100;
-    const cursorPercentY =
-      ((event.clientY - containerRect.top) / containerRect.height) * 100;
+      const cursorPercentX =
+        ((event.clientX - containerRect.left) / containerRect.width) * 100;
+      const cursorPercentY =
+        ((event.clientY - containerRect.top) / containerRect.height) * 100;
 
-    const newX = cursorPercentX - dragOffsetPercent.current.x;
-    const newY = cursorPercentY - dragOffsetPercent.current.y;
+      const newX = cursorPercentX - dragOffsetPercent.current.x;
+      const newY = cursorPercentY - dragOffsetPercent.current.y;
 
-    setPositionPercent({
-      x: clamp(newX, widthPercent / 2, 100 - widthPercent / 2),
-      y: clamp(newY, heightPercent / 2, 100 - heightPercent / 2),
-    });
-  }
+      const clampValue = (value: number, min: number, max: number) =>
+        Math.min(Math.max(value, min), max);
 
-  function onDragEnd() {
+      setPositionPercent({
+        x: clampValue(newX, widthPercent / 2, 100 - widthPercent / 2),
+        y: clampValue(newY, heightPercent / 2, 100 - heightPercent / 2),
+      });
+    },
+    [containerRef],
+  );
+
+  const onDragEnd = useCallback(() => {
     if (!isDragging.current) return;
     isDragging.current = false;
 
+    const latest = latestPositionRef.current;
+
     if (window.top !== window || window.top.opener) {
       const frameNameForTop =
-        connectedFrameOrContainerName === 'TopFrame'
-          ? (window.name)
+        connectedFrameOrContainerName === "TopFrame"
+          ? window.name
           : connectedFrameOrContainerName;
       const targetWindow = window.top?.opener ? window.top.opener : window.top;
       const segments = document.location.pathname.split("/").filter(Boolean);
-      const pageName = segments[1] === "frame" ? (segments[3] || "HomePage") : (segments[1] || "HomePage");
+      const pageName =
+        segments[1] === "frame"
+          ? segments[3] || "HomePage"
+          : segments[1] || "HomePage";
       const msg = {
-        type: 'updateElementPosition',
+        type: "updateElementPosition",
         frameName: frameNameForTop,
         elementId: elementToControl.id,
-        xPercent: Math.round(positionPercent.x * 100) / 100,
-        yPercent: Math.round(positionPercent.y * 100) / 100,
-        pageName: pageName
+        xPercent: Math.round(latest.x * 100) / 100,
+        yPercent: Math.round(latest.y * 100) / 100,
+        pageName: pageName,
       };
 
       if (POST_MESSAGE_LOG_ENABLED) {
         console.log(
           `[PostMessage Send] from "${window.name}" to "TopFrame" | type: updateElementPosition | content:`,
-          msg
+          msg,
         );
       }
 
       targetWindow.postMessage(msg, SAME_ORIGIN_TARGET);
-
     }
 
-    // Top window mutation
     updateElementPosition(
       elementToControl.id,
-      Math.round(positionPercent.x * 100) / 100,
-      Math.round(positionPercent.y * 100) / 100,
-      connectedFrameOrContainerName
+      Math.round(latest.x * 100) / 100,
+      Math.round(latest.y * 100) / 100,
+      connectedFrameOrContainerName,
     );
-  }
+  }, [
+    connectedFrameOrContainerName,
+    elementToControl.id,
+    updateElementPosition,
+  ]);
 
   useEffect(() => {
-    document.addEventListener('mousemove', onDragMove);
-    document.addEventListener('mouseup', onDragEnd);
+    document.addEventListener("mousemove", onDragMove);
+    document.addEventListener("mouseup", onDragEnd);
     return () => {
-      document.removeEventListener('mousemove', onDragMove);
-      document.removeEventListener('mouseup', onDragEnd);
+      document.removeEventListener("mousemove", onDragMove);
+      document.removeEventListener("mouseup", onDragEnd);
     };
-  }, [positionPercent]);
+  }, [onDragMove, onDragEnd]);
 
   function onRemoveClick() {
     if (window.top !== window || window.top.opener) {
       const frameNameForTop =
-        connectedFrameOrContainerName === 'TopFrame'
-          ? (window.name)
+        connectedFrameOrContainerName === "TopFrame"
+          ? window.name
           : connectedFrameOrContainerName;
 
       const targetWindow = window.top?.opener ? window.top.opener : window.top;
       const segments = document.location.pathname.split("/").filter(Boolean);
-      const pageName = segments[1] === "frame" ? (segments[3] || "HomePage") : (segments[1] || "HomePage");
+      const pageName =
+        segments[1] === "frame"
+          ? segments[3] || "HomePage"
+          : segments[1] || "HomePage";
       const msg = {
-        type: 'removeElement',
+        type: "removeElement",
         frameName: frameNameForTop,
         elementId: elementToControl.id,
         isFrameOrContainer: elementToControl.isFrameOrContainer,
-        pageName: pageName
+        pageName: pageName,
       };
 
       if (POST_MESSAGE_LOG_ENABLED) {
         console.log(
           `[PostMessage Send] from "${window.name}" to "TopFrame" | type: removeElement | content:`,
-          msg
+          msg,
         );
       }
 
       targetWindow.postMessage(msg, SAME_ORIGIN_TARGET);
-
     }
 
-    // Top window mutation
     removeElementFromFrame(elementToControl.id, connectedFrameOrContainerName);
     if (elementToControl.isFrameOrContainer) {
       unregisterFrame(elementToControl);
@@ -195,12 +207,12 @@ export default function ElementController({
   }
 
   const wrapperStyle: CSSProperties = controlsDisabled
-    ? { position: 'relative', width: 'fit-content' }
+    ? { position: "relative", width: "fit-content" }
     : {
-        position: 'absolute',
+        position: "absolute",
         left: `${positionPercent.x}%`,
         top: `${positionPercent.y}%`,
-        transform: 'translate(-50%, -50%)',
+        transform: "translate(-50%, -50%)",
       };
 
   return (
@@ -209,10 +221,10 @@ export default function ElementController({
       ref={wrapperRef}
       style={{
         ...wrapperStyle,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        width: 'max-content',
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-end",
+        width: "max-content",
       }}
     >
       <Stack direction="row-reverse" sx={{ color: theme.palette.text.primary }}>
@@ -226,9 +238,9 @@ export default function ElementController({
             onMouseDown={onDragStart}
             sx={{
               padding: 0,
-              cursor: 'grab',
-              '&:hover': { cursor: 'grab' },
-              '&:active': { cursor: 'grabbing' },
+              cursor: "grab",
+              "&:hover": { cursor: "grab" },
+              "&:active": { cursor: "grabbing" },
             }}
           >
             <DragIndicatorIcon />

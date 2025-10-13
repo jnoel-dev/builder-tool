@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useRef, useEffect } from 'react';
-import { useTheme } from '@mui/material/styles';
-import Box from '@mui/material/Box';
+import React, { useRef, useEffect } from "react";
+import { useTheme } from "@mui/material/styles";
+import Box from "@mui/material/Box";
 
 export default function PanelCanvas() {
   const theme = useTheme();
@@ -16,7 +16,8 @@ export default function PanelCanvas() {
     const SPACING = PADDING;
 
     const fullBoxSize = BOX_CONTENT_SIZE + PADDING * 2;
-    const panelWidth = PADDING * 2 + fullBoxSize * BOX_COUNT + SPACING * (BOX_COUNT - 1);
+    const panelWidth =
+      PADDING * 2 + fullBoxSize * BOX_COUNT + SPACING * (BOX_COUNT - 1);
     const panelHeight = PADDING * 2 + fullBoxSize;
 
     const scaledWidth = Math.round(panelWidth * SCALE_FACTOR);
@@ -27,16 +28,16 @@ export default function PanelCanvas() {
     canvas.width = scaledWidth;
     canvas.height = scaledHeight;
 
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext("2d");
     if (!context) return;
 
     context.scale(SCALE_FACTOR, SCALE_FACTOR);
     context.fillStyle = theme.palette.primary.main;
     context.fillRect(0, 0, panelWidth, panelHeight);
 
-    context.font = '1.5rem sans-serif';
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
+    context.font = "1.5rem sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
 
     for (let boxIndex = 0; boxIndex < BOX_COUNT; boxIndex++) {
       const boxXPosition = PADDING + boxIndex * (fullBoxSize + SPACING);
@@ -55,14 +56,13 @@ export default function PanelCanvas() {
   return (
     <Box
       sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
         backgroundColor: theme.palette.background.default,
-       
       }}
     >
-      <canvas ref={canvasRef} style={{ display: 'block' }} />
+      <canvas ref={canvasRef} style={{ display: "block" }} />
     </Box>
   );
 }

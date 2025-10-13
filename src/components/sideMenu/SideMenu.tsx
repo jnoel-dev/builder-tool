@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import ElementsMenu from "./elementsMenu/ElementsMenu";
 import MenuBase from "./menuBase/MenuBase";
-import SettingsMenu from './settingsMenu/SettingsMenu';
-import NavigationMenu from './navigationMenu/NavigationMenu';
-import PropertiesMenu from './propertiesMenu/PropertiesMenu';
-import SnippetMenu from './snippetMenu/SnippetMenu';
+import SettingsMenu from "./settingsMenu/SettingsMenu";
+import NavigationMenu from "./navigationMenu/NavigationMenu";
+import PropertiesMenu from "./propertiesMenu/PropertiesMenu";
+import SnippetMenu from "./snippetMenu/SnippetMenu";
 
 export default function SideMenu() {
   const [expanded, setExpanded] = useState<string | false>(false);
@@ -20,36 +20,36 @@ export default function SideMenu() {
         top: 0,
         height: "100%",
         overflowY: "auto",
-        minWidth: "475px"
+        minWidth: "475px",
       }}
     >
       <MenuBase
         menuName="Elements"
-        menuComponent={ElementsMenu}
+        menuComponent={() => <ElementsMenu />}
         expanded={expanded}
         setExpanded={setExpanded}
       />
       <MenuBase
         menuName="Properties"
-        menuComponent={PropertiesMenu}
+        menuComponent={({ expanded }) => PropertiesMenu(expanded)}
         expanded={expanded}
         setExpanded={setExpanded}
       />
       <MenuBase
         menuName="Navigation"
-        menuComponent={NavigationMenu}
+        menuComponent={() => <NavigationMenu />}
         expanded={expanded}
         setExpanded={setExpanded}
       />
       <MenuBase
         menuName="Snippet"
-        menuComponent={SnippetMenu}
+        menuComponent={() => <SnippetMenu />}
         expanded={expanded}
         setExpanded={setExpanded}
       />
       <MenuBase
         menuName="Settings"
-        menuComponent={SettingsMenu}
+        menuComponent={() => <SettingsMenu />}
         expanded={expanded}
         setExpanded={setExpanded}
       />

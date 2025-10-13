@@ -1,29 +1,30 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useRef } from 'react';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
-import { useTheme } from '@mui/material/styles';
-import { useFrame } from '@/components/contexts/FrameManager/FrameManager';
-import { POST_MESSAGE_LOG_ENABLED } from '@/components/contexts/FrameManager/FrameManager';
-import { SAME_ORIGIN_TARGET } from '@/components/contexts/FrameManager/framePersistence';
-import { FrameProperties } from '@/components/contexts/FrameManager/frameUtils';
-import { getFrameProperties } from '@/components/contexts/FrameManager/framePersistence';
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import { useTheme } from "@mui/material/styles";
+import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
+import { POST_MESSAGE_LOG_ENABLED } from "@/components/contexts/FrameManager/FrameManager";
 
 interface FrameProps {
   savedName: string;
-  frameType: 'sameDomain' | 'crossDomain' | 'popupSameDomain' | 'popupCrossDomain';
+  frameType:
+    | "sameDomain"
+    | "crossDomain"
+    | "popupSameDomain"
+    | "popupCrossDomain";
 }
 
-const LOCAL_SAME_DOMAIN_ORIGIN = 'http://localhost:3000';
-const PROD_SAME_DOMAIN_ORIGIN = 'https://build.jonnoel.dev';
-const LOCAL_CROSS_DOMAIN_ORIGIN = 'http://localhost:3001';
-const PROD_CROSS_DOMAIN_ORIGIN = 'https://frame.jonnoel.dev';
-const FRAME_PATH = '/frame/';
+const LOCAL_SAME_DOMAIN_ORIGIN = "http://localhost:3000";
+const PROD_SAME_DOMAIN_ORIGIN = "https://build.jonnoel.dev";
+const LOCAL_CROSS_DOMAIN_ORIGIN = "http://localhost:3001";
+const PROD_CROSS_DOMAIN_ORIGIN = "https://frame.jonnoel.dev";
+const FRAME_PATH = "/frame/";
 
-const MESSAGE_CHILD_READY = 'child:ready';
-const MESSAGE_CHILD_NAVIGATING = 'child:navigating';
+const MESSAGE_CHILD_READY = "child:ready";
+const MESSAGE_CHILD_NAVIGATING = "child:navigating";
 
 export default function Frame({ savedName, frameType }: FrameProps) {
   const { containerRefs, registerFrame, firebaseID } = useFrame();
@@ -32,20 +33,23 @@ export default function Frame({ savedName, frameType }: FrameProps) {
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const popupWindowRef = useRef<Window | null>(null);
-  const lastPopupPayloadJsonRef = useRef<string>('');
+  const lastPopupPayloadJsonRef = useRef<string>("");
   const registeredFramesRef = useRef<Set<string>>(new Set());
 
-  const isPopup = frameType === 'popupSameDomain' || frameType === 'popupCrossDomain';
-  const isSameDomain = frameType === 'sameDomain' || frameType === 'popupSameDomain';
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isPopup =
+    frameType === "popupSameDomain" || frameType === "popupCrossDomain";
+  const isSameDomain =
+    frameType === "sameDomain" || frameType === "popupSameDomain";
+  const isDevelopment = process.env.NODE_ENV === "development";
   const theme = useTheme();
 
   const childOrigin = isSameDomain
-    ? (isDevelopment ? LOCAL_SAME_DOMAIN_ORIGIN : PROD_SAME_DOMAIN_ORIGIN)
-    : (isDevelopment ? LOCAL_CROSS_DOMAIN_ORIGIN : PROD_CROSS_DOMAIN_ORIGIN);
-
-  const [frameProperties, setFrameProperties] = useState<FrameProperties>();
-
+    ? isDevelopment
+      ? LOCAL_SAME_DOMAIN_ORIGIN
+      : PROD_SAME_DOMAIN_ORIGIN
+    : isDevelopment
+      ? LOCAL_CROSS_DOMAIN_ORIGIN
+      : PROD_CROSS_DOMAIN_ORIGIN;
 
   const iframeSrc = `${childOrigin}/${firebaseID}${FRAME_PATH}${savedName}`;
 
@@ -53,9 +57,13 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     const popupWidth = window.innerWidth / 2;
     const popupHeight = window.innerHeight / 2;
     const popupUrl = `${childOrigin}/${firebaseID}${FRAME_PATH}${savedName}`;
-    const popup = window.open(popupUrl, savedName, `width=${popupWidth},height=${popupHeight}`);
+    const popup = window.open(
+      popupUrl,
+      savedName,
+      `width=${popupWidth},height=${popupHeight}`,
+    );
     popupWindowRef.current = popup || null;
-    lastPopupPayloadJsonRef.current = '';
+    lastPopupPayloadJsonRef.current = "";
   };
 
   useEffect(() => {
@@ -63,34 +71,38 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     if (registeredFramesRef.current.has(savedName)) return;
     registeredFramesRef.current.add(savedName);
     registerFrame(savedName);
-  }, []);
+  }, [savedName, registerFrame]);
 
   useEffect(() => {
     function updateSize() {
-      const topElement = containerRefs['TopFrame']?.current;
+      const topElement = containerRefs["TopFrame"]?.current;
       if (!topElement) return;
       const { width, height } = topElement.getBoundingClientRect();
       setIframeSize({ width: width / 2, height: height / 2 });
     }
     updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
   }, [containerRefs]);
 
-  useEffect(() => {
-    function handleChildMessage(messageEvent: MessageEvent) {
+  const handleChildMessage = useCallback(
+    (messageEvent: MessageEvent) => {
       const isFromIframeWindow =
         iframeRef.current?.contentWindow &&
         messageEvent.source === iframeRef.current.contentWindow;
       if (!isFromIframeWindow) return;
       if (messageEvent.origin !== childOrigin) return;
 
-      const receivedMessage = messageEvent.data as { type?: string; frameName?: string };
+      const receivedMessage = messageEvent.data as {
+        type?: string;
+        frameName?: string;
+      };
       const messageType = receivedMessage?.type;
       const messageFrameName = receivedMessage?.frameName;
 
       const isLoadingMessage =
-        messageType === MESSAGE_CHILD_READY || messageType === MESSAGE_CHILD_NAVIGATING;
+        messageType === MESSAGE_CHILD_READY ||
+        messageType === MESSAGE_CHILD_NAVIGATING;
       if (!isLoadingMessage) return;
 
       if (messageFrameName !== savedName) return;
@@ -98,7 +110,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
       if (POST_MESSAGE_LOG_ENABLED) {
         console.log(
           `[PostMessage Receive] at "Parent" from "Iframe" | type: ${messageType} | content:`,
-          receivedMessage
+          receivedMessage,
         );
       }
 
@@ -107,25 +119,29 @@ export default function Frame({ savedName, frameType }: FrameProps) {
       } else {
         setIsIframeReady(false);
       }
-    }
+    },
+    [childOrigin, savedName],
+  );
 
+  useEffect(() => {
     window.addEventListener("message", handleChildMessage);
     return () => window.removeEventListener("message", handleChildMessage);
-  }, []);
-
-
-
-
-
+  }, [handleChildMessage]);
 
   if (isPopup) {
     return (
-      <Box sx={{ backgroundColor: theme.palette.primary.main, color: theme.palette.text.primary, padding: 2 }}>
+      <Box
+        sx={{
+          backgroundColor: theme.palette.primary.main,
+          color: theme.palette.text.primary,
+          padding: 2,
+        }}
+      >
         <Button
           variant="contained"
           onClick={openPopup}
           color="secondary"
-          sx={{ color: theme.palette.text.primary, width: '100%', px: 5 }}
+          sx={{ color: theme.palette.text.primary, width: "100%", px: 5 }}
         >
           Open Popup Window
         </Button>
@@ -133,35 +149,35 @@ export default function Frame({ savedName, frameType }: FrameProps) {
     );
   }
 
-  const showSpinner =  !isIframeReady;
+  const showSpinner = !isIframeReady;
 
   return (
     <Box>
       <Box
         ref={containerRefs[savedName]}
         id="iframeContainer"
-        sx={{ border: 'dashed', display: 'flex', position: 'relative' }}
+        sx={{ border: "dashed", display: "flex", position: "relative" }}
       >
         {showSpinner && (
           <Box
             sx={{
-              position: 'absolute',
+              position: "absolute",
               inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               zIndex: 1,
-              background: 'rgba(0,0,0,0.5)',
+              background: "rgba(0,0,0,0.5)",
             }}
           >
             <CircularProgress />
           </Box>
         )}
-        {(
+        {
           <div style={{ position: "relative" }}>
-            <Box sx={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}>
-             
-            </Box>
+            <Box
+              sx={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}
+            ></Box>
 
             <iframe
               ref={iframeRef}
@@ -172,7 +188,7 @@ export default function Frame({ savedName, frameType }: FrameProps) {
               style={{ border: "none", flex: "0 0 auto" }}
             />
           </div>
-        )}
+        }
       </Box>
     </Box>
   );

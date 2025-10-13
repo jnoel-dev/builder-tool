@@ -1,26 +1,24 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-import { Box, Button, Stack } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import Panel from '../../panels/panel/Panel';
+import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { Box, Button, Stack } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import Panel from "../../panels/panel/Panel";
 
-// prevents loading on server (as forge needs window object to initalize)
 const ForgeDialog = dynamic(
-  () => import('@tylertech/forge-react').then((mod) => mod.ForgeDialog),
-  { ssr: false }
+  () => import("@tylertech/forge-react").then((mod) => mod.ForgeDialog),
+  { ssr: false },
 );
 
 export default function DialogForge() {
   const [isOpen, setIsOpen] = useState(false);
   const theme = useTheme();
 
-// import after render/hydration
   useEffect(() => {
-    import('@tylertech/forge')
+    import("@tylertech/forge")
       .then((mod) => mod.defineComponents())
-      .catch((err) => console.error('Failed to load Forge:', err));
+      .catch((err) => console.error("Failed to load Forge:", err));
   }, []);
 
   const openDialog = () => setIsOpen(true);
@@ -32,7 +30,7 @@ export default function DialogForge() {
         <Button
           variant="contained"
           color="secondary"
-          sx={{ color: theme.palette.text.primary, width:'100%'  }}
+          sx={{ color: theme.palette.text.primary, width: "100%" }}
           onClick={openDialog}
         >
           Open Dialog

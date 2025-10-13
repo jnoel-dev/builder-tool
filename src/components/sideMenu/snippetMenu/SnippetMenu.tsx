@@ -11,36 +11,37 @@ import {
   RadioGroup,
   FormHelperText,
   InputAdornment,
-  Tooltip,
   Switch,
-  Divider,
 } from "@mui/material";
-import { setSnippetProperties, getSnippetProperties} from "@/components/contexts/FrameManager/framePersistence";
-import { CreateIdentifierType, SnippetProperties, UUIDType } from "@/components/contexts/FrameManager/frameUtils";
+import {
+  setSnippetProperties,
+  getSnippetProperties,
+} from "@/components/contexts/FrameManager/framePersistence";
+import {
+  CreateIdentifierType,
+  SnippetProperties,
+  UUIDType,
+} from "@/components/contexts/FrameManager/frameUtils";
 import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 
-
 export default function SnippetMenu() {
-
   const [systemGuid, setSystemGuid] = useState("");
   const [environmentPathName, setEnvironmentPathName] = useState("success");
   const [cdnDomain, setCdnDomain] = useState("cdn.walkme.com");
   const [loadInCdIframes, setLoadInCdIframes] = useState(true);
 
   const [uuidType, setUuidType] = useState<UUIDType>(UUIDType.Default);
-  const [createIdentifierType, setCreateIdentifierType] = useState<CreateIdentifierType>(CreateIdentifierType.None);
+  const [createIdentifierType, setCreateIdentifierType] =
+    useState<CreateIdentifierType>(CreateIdentifierType.None);
   const [createIdentiferName, setCreateIdentiferName] = useState("");
   const [createIdentiferValue, setCreateIdentiferValue] = useState("");
   const [createIdentiferDelayMs, setCreateIdentiferDelayMs] = useState("0");
-    const {
-
-      receivedFirebaseResponse
-
-      
-    } = useFrame();
+  const { receivedFirebaseResponse } = useFrame();
 
   useEffect(() => {
-    const existingProperties = getSnippetProperties() as SnippetProperties | undefined;
+    const existingProperties = getSnippetProperties() as
+      | SnippetProperties
+      | undefined;
     if (!existingProperties) return;
 
     setSystemGuid(existingProperties.systemGuid ?? "");
@@ -52,37 +53,42 @@ export default function SnippetMenu() {
     setCreateIdentiferName(existingProperties.createIdentifier?.name ?? "");
     setCreateIdentiferValue(existingProperties.createIdentifier?.value ?? "");
     setCreateIdentiferDelayMs(
-      typeof existingProperties.createIdentifier?.delayMs === "number" && Number.isFinite(existingProperties.createIdentifier.delayMs)
+      typeof existingProperties.createIdentifier?.delayMs === "number" &&
+        Number.isFinite(existingProperties.createIdentifier.delayMs)
         ? String(existingProperties.createIdentifier.delayMs)
-        : "0"
+        : "0",
     );
   }, [receivedFirebaseResponse]);
 
   const dynamicLabel =
-    createIdentifierType === CreateIdentifierType.Variable ? "Variable name" : createIdentifierType === CreateIdentifierType.Cookie ? "Cookie name" : "Name";
+    createIdentifierType === CreateIdentifierType.Variable
+      ? "Variable name"
+      : createIdentifierType === CreateIdentifierType.Cookie
+        ? "Cookie name"
+        : "Name";
 
-  const identiferWillNotBeCreated = createIdentifierType === CreateIdentifierType.None;
+  const identiferWillNotBeCreated =
+    createIdentifierType === CreateIdentifierType.None;
 
-const handleApply = async () => {
-  const parsedDelay = Number(createIdentiferDelayMs);
-  const payload: SnippetProperties = {
-    systemGuid,
-    environmentPathName,
-    cdnDomain,
-    loadInCdIframes,
-    uuid: uuidType,
-    createIdentifier: {
-      type: createIdentifierType,
-      name: createIdentiferName,
-      value: createIdentiferValue,
-      delayMs: parsedDelay
-    }
+  const handleApply = async () => {
+    const parsedDelay = Number(createIdentiferDelayMs);
+    const payload: SnippetProperties = {
+      systemGuid,
+      environmentPathName,
+      cdnDomain,
+      loadInCdIframes,
+      uuid: uuidType,
+      createIdentifier: {
+        type: createIdentifierType,
+        name: createIdentiferName,
+        value: createIdentiferValue,
+        delayMs: parsedDelay,
+      },
+    };
+
+    await setSnippetProperties(payload);
+    window.location.reload();
   };
-
-  await setSnippetProperties(payload);
-  window.location.reload();
-};
-
 
   return (
     <Stack spacing={1}>
@@ -117,7 +123,9 @@ const handleApply = async () => {
         control={
           <Switch
             checked={loadInCdIframes}
-            onChange={(_switchChangeEvent, isChecked) => setLoadInCdIframes(isChecked)}
+            onChange={(_switchChangeEvent, isChecked) =>
+              setLoadInCdIframes(isChecked)
+            }
           />
         }
         label="Load in CD iframes and popup windows"
@@ -131,22 +139,44 @@ const handleApply = async () => {
             setUuidType(radioChangeEvent.target.value as UUIDType)
           }
         >
-          <FormControlLabel value={UUIDType.Default} control={<Radio />} label="Default" />
+          <FormControlLabel
+            value={UUIDType.Default}
+            control={<Radio />}
+            label="Default"
+          />
 
-          <FormControlLabel value={UUIDType.ForceLoad} control={<Radio />} label="Force load WMID (bypass IDP, waitfor, server storage)" />
-         
-          </RadioGroup>
-        <FormHelperText sx={{ margin: 0 }}>Create identifier on page load including all iframes and popup windows</FormHelperText>
+          <FormControlLabel
+            value={UUIDType.ForceLoad}
+            control={<Radio />}
+            label="Force load WMID (bypass IDP, waitfor, server storage)"
+          />
+        </RadioGroup>
+        <FormHelperText sx={{ margin: 0 }}>
+          Create identifier on page load including all iframes and popup windows
+        </FormHelperText>
         <RadioGroup
           value={createIdentifierType}
           onChange={(radioChangeEvent: ChangeEvent<HTMLInputElement>) =>
-            setCreateIdentifierType(radioChangeEvent.target.value as CreateIdentifierType)
+            setCreateIdentifierType(
+              radioChangeEvent.target.value as CreateIdentifierType,
+            )
           }
         >
-         
-          <FormControlLabel value={CreateIdentifierType.None} control={<Radio />} label="None" />
-          <FormControlLabel value={CreateIdentifierType.Variable} control={<Radio />} label="Create variable" />
-          <FormControlLabel value={CreateIdentifierType.Cookie} control={<Radio />} label="Create cookie" />
+          <FormControlLabel
+            value={CreateIdentifierType.None}
+            control={<Radio />}
+            label="None"
+          />
+          <FormControlLabel
+            value={CreateIdentifierType.Variable}
+            control={<Radio />}
+            label="Create variable"
+          />
+          <FormControlLabel
+            value={CreateIdentifierType.Cookie}
+            control={<Radio />}
+            label="Create cookie"
+          />
         </RadioGroup>
       </FormControl>
       <TextField
@@ -175,7 +205,10 @@ const handleApply = async () => {
         label="Delay UUID on document load"
         slotProps={{
           inputLabel: { shrink: true },
-          input: { endAdornment: <InputAdornment position="end">ms</InputAdornment>, inputMode: "numeric" },
+          input: {
+            endAdornment: <InputAdornment position="end">ms</InputAdornment>,
+            inputMode: "numeric",
+          },
         }}
         disabled={identiferWillNotBeCreated}
         value={createIdentiferDelayMs}
@@ -183,7 +216,12 @@ const handleApply = async () => {
           setCreateIdentiferDelayMs(textFieldChangeEvent.target.value)
         }
       />
-      <Button variant="contained" color="secondary" fullWidth onClick={handleApply}>
+      <Button
+        variant="contained"
+        color="secondary"
+        fullWidth
+        onClick={handleApply}
+      >
         Apply
       </Button>
     </Stack>

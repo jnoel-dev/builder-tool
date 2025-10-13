@@ -1,117 +1,194 @@
 export {};
 
+type IdpConfig = { active?: boolean | "true" | "false" };
+type IcConfig = { idp?: IdpConfig; [key: string]: unknown };
+type ExternalConfig = { IcConfig?: IcConfig; [key: string]: unknown };
+type EndUserSettings = {
+  Parameters: Record<string, unknown>;
+  Method: string;
+  FallbackDisabled: boolean;
+  CollectDataDisabled: boolean;
+};
+type StorageConfig = {
+  ss?: boolean | "true" | "false";
+  [key: string]: unknown;
+};
+type WalkMeConfig = {
+  ExternalConfig?: ExternalConfig;
+  EndUserSettings?: EndUserSettings;
+  ExcludedRuntimeFeatures?: unknown;
+  Storage?: StorageConfig;
+  [key: string]: unknown;
+};
+
 declare global {
   interface Window {
-    WalkMeConfigCallback?: (...args: any[]) => any;
-    fixedCallback?: (...args: any[]) => any;
-    __lastInterceptedConfig?: unknown;
+    WalkMeConfigCallback?: (
+      config: WalkMeConfig,
+      ...rest: unknown[]
+    ) => unknown;
+    fixedCallback?: (config: WalkMeConfig, ...rest: unknown[]) => unknown;
+    __lastInterceptedConfig?: WalkMeConfig | null;
   }
 }
 
-function setIdpInactive(updatedObject: any): void {
-  const externalConfig = updatedObject["ExternalConfig"];
+function setIdpInactive(updatedObject: WalkMeConfig): void {
+  const externalConfig = updatedObject.ExternalConfig;
   if (externalConfig && typeof externalConfig === "object") {
-    const icConfig = (externalConfig as any)["IcConfig"] || (externalConfig as any)["ICConfig"];
+    const icConfig = externalConfig.IcConfig;
     if (icConfig && typeof icConfig === "object") {
-      const idpConfig = (icConfig as any)["idp"] || (icConfig as any)["Idp"] || (icConfig as any)["IDP"];
+      const idpConfig = icConfig.idp;
       if (idpConfig && typeof idpConfig === "object") {
-        const activeValue = (idpConfig as any)["active"];
+        const activeValue = idpConfig.active;
         if (activeValue === "true" || activeValue === true) {
-          (idpConfig as any)["active"] = false;
+          idpConfig.active = false;
         }
       }
     }
   }
 }
 
-function overrideWalkMeConfig(inputObject: unknown): unknown {
-  if (inputObject && typeof inputObject === "object" && !Array.isArray(inputObject)) {
-    const updatedObject: any = { ...(inputObject as any) };
-    updatedObject["EndUserSettings"] = {
+function overrideWalkMeConfig(inputObject: WalkMeConfig): WalkMeConfig {
+  if (
+    inputObject &&
+    typeof inputObject === "object" &&
+    !Array.isArray(inputObject)
+  ) {
+    const updatedObject: WalkMeConfig = { ...inputObject };
+    updatedObject.EndUserSettings = {
       Parameters: {},
       Method: "walkme",
       FallbackDisabled: true,
-      CollectDataDisabled: true
+      CollectDataDisabled: true,
     };
-
-    const existingExcluded = updatedObject["ExcludedRuntimeFeatures"];
+    const existingExcluded = updatedObject.ExcludedRuntimeFeatures as unknown;
     let excludedList: string[] = Array.isArray(existingExcluded)
-      ? existingExcluded.filter((item) => typeof item === "string")
+      ? (existingExcluded as unknown[]).filter(
+          (item): item is string => typeof item === "string",
+        )
       : [];
     if (!excludedList.includes("waitForEndUser")) {
       excludedList = [...excludedList, "waitForEndUser"];
     }
-    updatedObject["ExcludedRuntimeFeatures"] = excludedList;
-
+    updatedObject.ExcludedRuntimeFeatures = excludedList;
     return updatedObject;
   }
   return inputObject;
 }
 
-
-function overrideWalkMeSettings(inputObject: unknown): unknown {
-  if (inputObject && typeof inputObject === "object" && !Array.isArray(inputObject)) {
-    const updatedObject: any = { ...(inputObject as any) };
+function overrideWalkMeSettings(inputObject: WalkMeConfig): WalkMeConfig {
+  if (
+    inputObject &&
+    typeof inputObject === "object" &&
+    !Array.isArray(inputObject)
+  ) {
+    const updatedObject: WalkMeConfig = { ...inputObject };
     setIdpInactive(updatedObject);
-
-    const storageConfig = (updatedObject as any)["Storage"];
+    const storageConfig = updatedObject.Storage;
     if (storageConfig && typeof storageConfig === "object") {
-      const sessionStorageFlag = (storageConfig as any)["ss"];
+      const sessionStorageFlag = storageConfig.ss;
       if (sessionStorageFlag === "true" || sessionStorageFlag === true) {
-        (storageConfig as any)["ss"] = false;
+        storageConfig.ss = false;
       }
     }
-
     return updatedObject;
   }
   return inputObject;
 }
 
-
-function createWrappedCallback(originalCallback: Function, label: string, transformer: (o: unknown) => unknown) {
-  function wrappedCallback(this: unknown, ...argumentList: any[]) {
-    if (argumentList.length > 0) {
-      argumentList[0] = transformer(argumentList[0]);
+function createWrappedCallback(
+  originalCallback: (config: WalkMeConfig, ...rest: unknown[]) => unknown,
+  label: string,
+  transformer: (configObject: WalkMeConfig) => WalkMeConfig,
+) {
+  function wrappedCallback(this: unknown, ...argumentList: unknown[]) {
+    const argumentTuple = argumentList as [WalkMeConfig, ...unknown[]];
+    if (argumentTuple.length > 0) {
+      argumentTuple[0] = transformer(argumentTuple[0]);
     }
-    const updatedFirstArgument = argumentList[0];
-    if (updatedFirstArgument && typeof updatedFirstArgument === "object" && !Array.isArray(updatedFirstArgument)) {
+    const updatedFirstArgument = argumentTuple[0];
+    if (
+      updatedFirstArgument &&
+      typeof updatedFirstArgument === "object" &&
+      !Array.isArray(updatedFirstArgument)
+    ) {
       window.__lastInterceptedConfig = updatedFirstArgument;
-      console.info("[Intercept]", label, "config updated", updatedFirstArgument);
+      console.info(
+        "[Intercept]",
+        label,
+        "config updated",
+        updatedFirstArgument,
+      );
     } else {
-      console.info("[Intercept]", label, "non-object first argument", updatedFirstArgument);
+      console.info(
+        "[Intercept]",
+        label,
+        "non-object first argument",
+        updatedFirstArgument,
+      );
     }
-    return originalCallback.apply(this, argumentList);
+    return (
+      originalCallback as (
+        ...callArgumentTuple: [WalkMeConfig, ...unknown[]]
+      ) => unknown
+    ).apply(this, argumentTuple);
   }
-  return wrappedCallback;
+  return wrappedCallback as (
+    config: WalkMeConfig,
+    ...rest: unknown[]
+  ) => unknown;
 }
 
 function interceptGlobalCallback(
   callbackKey: "WalkMeConfigCallback" | "fixedCallback",
   label: string,
-  transformer: (o: unknown) => unknown
+  transformer: (configObject: WalkMeConfig) => WalkMeConfig,
 ): void {
-  const existingCallback = (window as any)[callbackKey];
+  const existingCallback = window[callbackKey];
   if (typeof existingCallback === "function") {
-    (window as any)[callbackKey] = createWrappedCallback(existingCallback, label, transformer);
+    window[callbackKey] = createWrappedCallback(
+      existingCallback,
+      label,
+      transformer,
+    ) as (typeof window)[typeof callbackKey];
     return;
   }
-  let storedCallbackValue: any;
-  Object.defineProperty(window as any, callbackKey, {
+  let storedCallbackValue:
+    | ((config: WalkMeConfig, ...rest: unknown[]) => unknown)
+    | undefined;
+  Object.defineProperty(window, callbackKey, {
     configurable: true,
     enumerable: true,
     get: function getCallback() {
       return storedCallbackValue;
     },
-    set: function setCallback(assignedValue: any) {
+    set: function setCallback(assignedValue) {
       storedCallbackValue =
-        typeof assignedValue === "function" ? createWrappedCallback(assignedValue, label, transformer) : assignedValue;
-    }
+        typeof assignedValue === "function"
+          ? createWrappedCallback(
+              assignedValue as (
+                config: WalkMeConfig,
+                ...rest: unknown[]
+              ) => unknown,
+              label,
+              transformer,
+            )
+          : undefined;
+    },
   });
 }
 
 function installWalkmeInterceptors(): void {
-  interceptGlobalCallback("WalkMeConfigCallback", "WalkMeConfigCallback", overrideWalkMeConfig);
-  interceptGlobalCallback("fixedCallback", "fixedCallback", overrideWalkMeSettings);
+  interceptGlobalCallback(
+    "WalkMeConfigCallback",
+    "WalkMeConfigCallback",
+    overrideWalkMeConfig,
+  );
+  interceptGlobalCallback(
+    "fixedCallback",
+    "fixedCallback",
+    overrideWalkMeSettings,
+  );
 }
 
 if (typeof window !== "undefined") {

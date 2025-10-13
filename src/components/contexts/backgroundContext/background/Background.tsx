@@ -1,22 +1,21 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Canvas, useFrame, useThree, extend, ThreeElements } from "@react-three/fiber";
+import { Canvas, useFrame, useThree, extend } from "@react-three/fiber";
 import * as THREE from "three";
 import { DitherMaterial } from "./ditherShader";
 import { useThemeColors } from "../../themeManager/ThemeManager";
 
 extend({ DitherMaterial });
 
-declare global {
-  namespace React.JSX {
-    interface IntrinsicElements {
-      ditherMaterial: ThreeElements["shaderMaterial"];
-    }
+declare module "@react-three/fiber" {
+  interface ThreeElements {
+    ditherMaterial: ThreeElements["shaderMaterial"];
   }
 }
 
-interface DitherMaterialUniforms extends Record<string, THREE.IUniform<unknown>> {
+interface DitherMaterialUniforms
+  extends Record<string, THREE.IUniform<unknown>> {
   time: { value: number };
   resolution: { value: THREE.Vector2 };
   mousePosition: { value: THREE.Vector2 };
@@ -33,11 +32,17 @@ interface DitherMaterialType extends THREE.ShaderMaterial {
 }
 
 function FullscreenPlane(): React.JSX.Element {
-  const ref = useRef<THREE.Mesh<THREE.PlaneGeometry, DitherMaterialType> | null>(null);
+  const ref = useRef<THREE.Mesh<
+    THREE.PlaneGeometry,
+    DitherMaterialType
+  > | null>(null);
   const { viewport, size } = useThree();
-  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
+    x: 0.5,
+    y: 0.5,
+  });
 
-  const { colors } = useThemeColors(); 
+  const { colors } = useThemeColors();
 
   useEffect(() => {
     const updateMousePosition = (event: MouseEvent): void => {
@@ -52,11 +57,7 @@ function FullscreenPlane(): React.JSX.Element {
     return () => window.removeEventListener("mousemove", updateMousePosition);
   }, [size]);
 
-
-
-
   useFrame(({ clock }) => {
-  
     if (ref.current) {
       const material = ref.current.material;
       material.uniforms.time.value = clock.getElapsedTime() * 0.1;
@@ -69,12 +70,12 @@ function FullscreenPlane(): React.JSX.Element {
       for (let i = 1; i <= 5; i++) {
         const brighterColor = baseColor.clone();
         brighterColor.multiplyScalar(1 + (5 - i) * 0.5);
-        (material.uniforms[`globalColor${i + 1}`].value as THREE.Color).copy(brighterColor);
+        (material.uniforms[`globalColor${i + 1}`].value as THREE.Color).copy(
+          brighterColor,
+        );
       }
     }
   });
-
-
 
   return (
     <mesh ref={ref} scale={[viewport.width, viewport.height, 1]}>

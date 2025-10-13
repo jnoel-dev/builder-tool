@@ -1,81 +1,101 @@
-'use client'
+"use client";
 
-import { useEffect,useState,ChangeEvent } from 'react'
-import { Box, Checkbox, FormControlLabel, Switch } from '@mui/material'
-import { useFrame } from '@/components/contexts/FrameManager/FrameManager'
-import { getFrameProperties, setFrameProperty } from '@/components/contexts/FrameManager/framePersistence'
-
+import { useEffect, useState, ChangeEvent } from "react";
+import { Box, Checkbox, FormControlLabel, Switch } from "@mui/material";
+import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
+import {
+  getFrameProperties,
+  setFrameProperty,
+} from "@/components/contexts/FrameManager/framePersistence";
 
 type PropertyToggleProps = {
-  propertyKey: string
-  label: string
-  additionalPropertyKey?: string
-  additionalPropertyLabel?: string
-}
+  propertyKey: string;
+  label: string;
+  additionalPropertyKey?: string;
+  additionalPropertyLabel?: string;
+};
 
 export default function PropertyToggle({
   propertyKey,
   label,
-  additionalPropertyKey = '',
-  additionalPropertyLabel = ''
+  additionalPropertyKey = "",
+  additionalPropertyLabel = "",
 }: PropertyToggleProps) {
-  const { currentFrameName, receivedFirebaseResponse } = useFrame()
-  const [isEnabled, setIsEnabled] = useState(false)
-  const [isAdditionalChecked, setIsAdditionalChecked] = useState(false)
+  const { currentFrameName, receivedFirebaseResponse } = useFrame();
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [isAdditionalChecked, setIsAdditionalChecked] = useState(false);
 
   useEffect(() => {
-    if (!currentFrameName) return
-    const properties = getFrameProperties(currentFrameName)
-    const primaryOn = !!properties[propertyKey]
-    const additionalOn = additionalPropertyKey ? !!properties[additionalPropertyKey] : false
+    if (!currentFrameName) return;
+    const properties = getFrameProperties(currentFrameName);
+    const primaryOn = !!properties[propertyKey];
+    const additionalOn = additionalPropertyKey
+      ? !!properties[additionalPropertyKey]
+      : false;
 
     if (additionalOn) {
-      setIsAdditionalChecked(true)
-      setIsEnabled(true)
+      setIsAdditionalChecked(true);
+      setIsEnabled(true);
     } else if (primaryOn) {
-      setIsAdditionalChecked(false)
-      setIsEnabled(true)
+      setIsAdditionalChecked(false);
+      setIsEnabled(true);
     } else {
-      setIsAdditionalChecked(false)
-      setIsEnabled(false)
+      setIsAdditionalChecked(false);
+      setIsEnabled(false);
     }
-  }, [currentFrameName, receivedFirebaseResponse, propertyKey, additionalPropertyKey])
+  }, [
+    currentFrameName,
+    receivedFirebaseResponse,
+    propertyKey,
+    additionalPropertyKey,
+  ]);
 
-  function handleToggleChange(_: ChangeEvent<HTMLInputElement>, nextValue: boolean) {
-    setIsEnabled(nextValue)
-    if (!currentFrameName) return
+  function handleToggleChange(
+    _: ChangeEvent<HTMLInputElement>,
+    nextValue: boolean,
+  ) {
+    setIsEnabled(nextValue);
+    if (!currentFrameName) return;
 
     if (!nextValue) {
-      setFrameProperty(currentFrameName, propertyKey, false)
-      if (additionalPropertyKey) setFrameProperty(currentFrameName, additionalPropertyKey, false)
-      return
+      setFrameProperty(currentFrameName, propertyKey, false);
+      if (additionalPropertyKey)
+        setFrameProperty(currentFrameName, additionalPropertyKey, false);
+      return;
     }
 
-    const key = isAdditionalChecked && additionalPropertyKey ? additionalPropertyKey : propertyKey
-    setFrameProperty(currentFrameName, key, true)
+    const key =
+      isAdditionalChecked && additionalPropertyKey
+        ? additionalPropertyKey
+        : propertyKey;
+    setFrameProperty(currentFrameName, key, true);
 
     if (additionalPropertyKey) {
-      if (key === additionalPropertyKey) setFrameProperty(currentFrameName, propertyKey, false)
-      else setFrameProperty(currentFrameName, additionalPropertyKey, false)
+      if (key === additionalPropertyKey)
+        setFrameProperty(currentFrameName, propertyKey, false);
+      else setFrameProperty(currentFrameName, additionalPropertyKey, false);
     }
   }
 
-  function handleAdditionalCheckboxChange(_: ChangeEvent<HTMLInputElement>, checked: boolean) {
-    setIsAdditionalChecked(checked)
-    if (!currentFrameName || !additionalPropertyKey) return
-    if (!isEnabled) return
+  function handleAdditionalCheckboxChange(
+    _: ChangeEvent<HTMLInputElement>,
+    checked: boolean,
+  ) {
+    setIsAdditionalChecked(checked);
+    if (!currentFrameName || !additionalPropertyKey) return;
+    if (!isEnabled) return;
 
     if (checked) {
-      setFrameProperty(currentFrameName, additionalPropertyKey, true)
-      setFrameProperty(currentFrameName, propertyKey, false)
+      setFrameProperty(currentFrameName, additionalPropertyKey, true);
+      setFrameProperty(currentFrameName, propertyKey, false);
     } else {
-      setFrameProperty(currentFrameName, propertyKey, true)
-      setFrameProperty(currentFrameName, additionalPropertyKey, false)
+      setFrameProperty(currentFrameName, propertyKey, true);
+      setFrameProperty(currentFrameName, additionalPropertyKey, false);
     }
   }
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       <FormControlLabel
         control={<Switch checked={isEnabled} onChange={handleToggleChange} />}
         label={label}
@@ -95,5 +115,5 @@ export default function PropertyToggle({
         />
       ) : null}
     </Box>
-  )
+  );
 }

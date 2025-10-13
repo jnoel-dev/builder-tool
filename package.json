@@ -35,24 +35,26 @@
     "lz-string": "^1.5.0",
     "mui-color-input": "^7.0.0",
     "next": "^15.5.4",
-    "postcss": "^8.5.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "three": "^0.174.0",
     "zone.js": "^0.15.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.0.12",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.174.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
+    "@typescript-eslint/parser": "^8.46.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",
     "esbuild": "^0.25.9",
-    "eslint": "^9",
     "eslint-config-next": "15.2.1",
-    "tailwindcss": "^4.1.11",
-    "typescript": "^5"
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-unused-imports": "^4.2.0",
+    "lint-staged": "^16.2.4",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
   }
 }

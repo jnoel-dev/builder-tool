@@ -16,10 +16,19 @@ enum TabIndex {
   Dialogs,
 }
 
-function CustomTabPanel(props: { children?: React.ReactNode; index: number; value: number }) {
+function CustomTabPanel(props: {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}) {
   const { children, value, index, ...other } = props;
   return (
-    <div role="tabpanel" hidden={value !== index} id={`simple-tabpanel-${index}`} {...other}>
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      {...other}
+    >
       {value === index && <Box>{children}</Box>}
     </div>
   );

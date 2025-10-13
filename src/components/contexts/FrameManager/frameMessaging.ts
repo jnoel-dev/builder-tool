@@ -1,15 +1,22 @@
 import { POST_MESSAGE_LOG_ENABLED } from "./FrameManager";
 import type { FrameElement } from "./frameUtils";
-import { SAME_ORIGIN_TARGET, CROSS_ORIGIN_TARGET, getFrameProperties } from "./framePersistence";
+import {
+  SAME_ORIGIN_TARGET,
+  CROSS_ORIGIN_TARGET,
+  getFrameProperties,
+} from "./framePersistence";
 import { FrameProperties } from "./frameUtils";
-
 
 export type FramesByName = Record<
   string,
   { elements: FrameElement[]; properties: FrameProperties }
 >;
 
-type RequestSyncMessage = { type: "requestSync"; frameName: string; pageName?: string };
+type RequestSyncMessage = {
+  type: "requestSync";
+  frameName: string;
+  pageName?: string;
+};
 type UpdatePositionMessage = {
   type: "updateElementPosition";
   frameName: string;
@@ -24,21 +31,18 @@ type RemoveElementMessage = {
   isFrameOrContainer: boolean;
 };
 
-
 type TopIncomingMessage =
   | RequestSyncMessage
   | UpdatePositionMessage
-  | RemoveElementMessage
+  | RemoveElementMessage;
 
 type ChildWindowInfo = {
   childWindow: Window;
   currentPage: string;
-  
-}
+};
 const childWindowsByName = new Map<string, ChildWindowInfo>();
 
 export function getTargetOrigin(win: Window | null | undefined): string {
- 
   try {
     void win?.location.origin;
     return SAME_ORIGIN_TARGET;
@@ -47,105 +51,129 @@ export function getTargetOrigin(win: Window | null | undefined): string {
   }
 }
 
-
 export function sendSyncFrameToChild(
   targetFrameName: string,
   frames: FramesByName,
-  explicitTargetWindow?: Window | null
+  explicitTargetWindow?: Window | null,
 ): void {
   if (!targetFrameName || targetFrameName === "TopFrame") return;
 
-  const resolvedTargetWindow = explicitTargetWindow ?? getKnownChildWindowInfoByFrameName(targetFrameName)?.childWindow;
+  const resolvedTargetWindow =
+    explicitTargetWindow ??
+    getKnownChildWindowInfoByFrameName(targetFrameName)?.childWindow;
   if (!resolvedTargetWindow) {
     if (POST_MESSAGE_LOG_ENABLED) {
-      console.warn(`[PostMessage Send] No contentWindow found for "${targetFrameName}"`);
+      console.warn(
+        `[PostMessage Send] No contentWindow found for "${targetFrameName}"`,
+      );
     }
     return;
   }
 
-  const frameProperties = getFrameProperties(targetFrameName)
+  const frameProperties = getFrameProperties(targetFrameName);
 
-  const payload = { type: "syncFrame", frameName: targetFrameName, frames, frameProperties  } as const;
+  const payload = {
+    type: "syncFrame",
+    frameName: targetFrameName,
+    frames,
+    frameProperties,
+  } as const;
 
   if (POST_MESSAGE_LOG_ENABLED) {
     console.log(
       `[PostMessage Send] from "${window.name || "TopFrame"}" to "${targetFrameName}" | type: syncFrame | content:`,
-      payload
+      payload,
     );
   }
 
   try {
-    resolvedTargetWindow.postMessage(payload, getTargetOrigin(resolvedTargetWindow));
+    resolvedTargetWindow.postMessage(
+      payload,
+      getTargetOrigin(resolvedTargetWindow),
+    );
   } catch (sendError) {
     if (POST_MESSAGE_LOG_ENABLED) {
-      console.warn(`[PostMessage Send] failed to post to "${targetFrameName}":`, sendError);
+      console.warn(
+        `[PostMessage Send] failed to post to "${targetFrameName}":`,
+        sendError,
+      );
     }
   }
 }
 
-
-
 export function installTopMessageHandler(
-  getFramesForFrameName: (externalFrameName: string, requestedPageName?: string) => FramesByName,
+  getFramesForFrameName: (
+    externalFrameName: string,
+    requestedPageName?: string,
+  ) => FramesByName,
   registerFrameByName: (externalFrameName: string) => void,
-  updateElementPositionTop: (elementId: string, x: number, y: number, frameName: string) => void,
+  updateElementPositionTop: (
+    elementId: string,
+    x: number,
+    y: number,
+    frameName: string,
+  ) => void,
   removeElementTop: (elementId: string, frameName: string) => void,
-  unregisterFrameById: (frameId: string) => void
-): () => void { 
+  unregisterFrameById: (frameId: string) => void,
+): () => void {
   if (window.top !== window) return () => {};
 
   function onMessage(event: MessageEvent) {
-    const incoming = event.data as TopIncomingMessage | { type?: unknown };
+    const incoming = event.data as Partial<TopIncomingMessage> & {
+      type?: string;
+      frameName?: string;
+      pageName?: string;
+    };
 
+    if (!incoming || typeof incoming.type !== "string") return;
 
-
-
-    if (!incoming || typeof (incoming as any).type !== "string") return;
-
-    const messageType = (incoming as any).type as TopIncomingMessage["type"];
+    const messageType = incoming.type as TopIncomingMessage["type"];
     if (
       messageType !== "requestSync" &&
       messageType !== "updateElementPosition" &&
-      messageType !== "removeElement" 
+      messageType !== "removeElement"
     )
       return;
 
-    const fromFrameName = (incoming as any).frameName ?? "Unknown";
+    const fromFrameName = incoming.frameName ?? "Unknown";
 
     if (POST_MESSAGE_LOG_ENABLED) {
       console.log(
         `[PostMessage Receive] at "TopFrame" from "${fromFrameName}" | type: ${messageType} | content:`,
-        incoming
+        incoming,
       );
     }
-    
-    if ("frameName" in incoming && (incoming as any).frameName && event.source ) {
-      registerChildWindow((incoming as any).frameName as string, event.source as Window,(incoming as any).pageName);
+
+    if ("frameName" in incoming && incoming.frameName && event.source) {
+      registerChildWindow(
+        incoming.frameName,
+        event.source as Window,
+        incoming.pageName ?? "",
+      );
     }
 
     switch (messageType) {
       case "requestSync": {
         const { frameName, pageName } = incoming as RequestSyncMessage;
         registerFrameByName(frameName);
-        
         const frames = getFramesForFrameName(frameName, pageName);
         sendSyncFrameToChild(frameName, frames, event.source as Window);
         break;
       }
 
       case "updateElementPosition": {
-        const { frameName, elementId, xPercent, yPercent } = incoming as UpdatePositionMessage;
+        const { frameName, elementId, xPercent, yPercent } =
+          incoming as UpdatePositionMessage;
         updateElementPositionTop(elementId, xPercent, yPercent, frameName);
         break;
       }
       case "removeElement": {
-        const { frameName, elementId, isFrameOrContainer } = incoming as RemoveElementMessage;
+        const { frameName, elementId, isFrameOrContainer } =
+          incoming as RemoveElementMessage;
         if (isFrameOrContainer) unregisterFrameById(elementId);
         removeElementTop(elementId, frameName);
         break;
       }
-
-
     }
   }
 
@@ -153,13 +181,19 @@ export function installTopMessageHandler(
   return () => window.removeEventListener("message", onMessage);
 }
 
-export function registerChildWindow(frameName: string, childWindow: Window, currentPage: string) {
+export function registerChildWindow(
+  frameName: string,
+  childWindow: Window,
+  currentPage: string,
+) {
   childWindowsByName.set(frameName, {
     childWindow: childWindow,
-    currentPage: currentPage
+    currentPage: currentPage,
   });
 }
 
-export function getKnownChildWindowInfoByFrameName(frameName: string): ChildWindowInfo | undefined {
-return childWindowsByName.get(frameName);
+export function getKnownChildWindowInfoByFrameName(
+  frameName: string,
+): ChildWindowInfo | undefined {
+  return childWindowsByName.get(frameName);
 }

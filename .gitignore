@@ -12,3 +12,4 @@ public/nativeFunctions.js
 public/serviceWorker.js
 public/zone.min.js
 public/forceLoadWMID.js
+.eslintcache

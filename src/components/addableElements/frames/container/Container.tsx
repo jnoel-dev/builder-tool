@@ -1,15 +1,12 @@
-import React, { useRef } from 'react';
+import React from "react";
 import Box from "@mui/material/Box";
 import ContainerBase from "@/components/addableElements/frames/containerBase/ContainerBase";
 import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
-
 
 interface ContainerProps {
   containerType: string;
   savedName: string;
 }
-
-
 
 export default function Container({
   containerType = "vertical",
@@ -22,19 +19,22 @@ export default function Container({
     <Box
       ref={containerRefs[savedName]}
       sx={{
-        border: '1px solid',
-        display: 'flex', 
+        border: "1px solid",
+        display: "flex",
         flexDirection: containerType === "horizontal" ? "row" : "column",
-        maxWidth: '100%',
-        padding: '10px',
+        maxWidth: "100%",
+        padding: "10px",
       }}
     >
-      <ContainerBase connectedFrameName={savedName} disableElementControlsForChildren={true}/>
+      <ContainerBase
+        connectedFrameName={savedName}
+        disableElementControlsForChildren={true}
+      />
       {!hasChildren && (
         <Box
           sx={{
-            wordBreak: 'break-word',
-            textAlign: 'center',
+            wordBreak: "break-word",
+            textAlign: "center",
             width: 200,
           }}
         >

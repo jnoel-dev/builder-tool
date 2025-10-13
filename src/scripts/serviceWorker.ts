@@ -1,17 +1,26 @@
 /// <reference lib="webworker" />
 
 function getCrossOriginForOrigin(currentOrigin: string): string {
-  if (currentOrigin.startsWith("http://localhost:3000")) return "http://localhost:3001";
-  if (currentOrigin.startsWith("http://localhost:3001")) return "http://localhost:3000";
-  if (currentOrigin.startsWith("https://build.jonnoel.dev")) return "https://frame.jonnoel.dev";
-  if (currentOrigin.startsWith("https://frame.jonnoel.dev")) return "https://build.jonnoel.dev";
+  if (currentOrigin.startsWith("http://localhost:3000"))
+    return "http://localhost:3001";
+  if (currentOrigin.startsWith("http://localhost:3001"))
+    return "http://localhost:3000";
+  if (currentOrigin.startsWith("https://build.jonnoel.dev"))
+    return "https://frame.jonnoel.dev";
+  if (currentOrigin.startsWith("https://frame.jonnoel.dev"))
+    return "https://build.jonnoel.dev";
   return currentOrigin;
 }
 
 function buildCspHeaderValue(requestUrl: URL): string {
   const sameOrigin = requestUrl.origin;
   const crossOrigin = getCrossOriginForOrigin(sameOrigin);
-  const allowedScriptSources = ["'self'", "'unsafe-inline'", sameOrigin, crossOrigin];
+  const allowedScriptSources = [
+    "'self'",
+    "'unsafe-inline'",
+    sameOrigin,
+    crossOrigin,
+  ];
   return `script-src ${allowedScriptSources.join(" ")};`;
 }
 
@@ -22,7 +31,10 @@ function shouldConsiderRequest(request: Request): boolean {
   return true;
 }
 
-async function cloneResponseWithCsp(originalResponse: Response, cspHeaderValue: string): Promise<Response> {
+async function cloneResponseWithCsp(
+  originalResponse: Response,
+  cspHeaderValue: string,
+): Promise<Response> {
   const responseHeaders = new Headers(originalResponse.headers);
   responseHeaders.set("Content-Security-Policy", cspHeaderValue);
   return new Response(originalResponse.body, {
@@ -43,7 +55,6 @@ async function handleFetchEvent(fetchEvent: FetchEvent): Promise<Response> {
   const cspSwHeader = originalResponse.headers.get("x-csp-sw");
   const isCspEnabledForResponse = cspSwHeader === "1";
 
-
   if (!isCspEnabledForResponse) {
     return originalResponse;
   }
@@ -55,24 +66,25 @@ async function handleFetchEvent(fetchEvent: FetchEvent): Promise<Response> {
 }
 
 function onInstall(_event: ExtendableEvent): void {
-
   (self as unknown as ServiceWorkerGlobalScope).skipWaiting();
 }
 
 function onActivate(event: ExtendableEvent): void {
- 
-  event.waitUntil((self as unknown as ServiceWorkerGlobalScope).clients.claim());
+  event.waitUntil(
+    (self as unknown as ServiceWorkerGlobalScope).clients.claim(),
+  );
 }
 
 function onFetch(event: FetchEvent): void {
   const requestUrl = new URL(event.request.url);
   const pathSegments = requestUrl.pathname.split("/").filter(Boolean);
-  const hasFirebaseID = pathSegments.some((segment) => /^[A-Za-z0-9]{20}$/.test(segment));
+  const hasFirebaseID = pathSegments.some((segment) =>
+    /^[A-Za-z0-9]{20}$/.test(segment),
+  );
   if (!hasFirebaseID) return;
 
   event.respondWith(handleFetchEvent(event));
 }
-
 
 self.addEventListener("install", onInstall as EventListener);
 self.addEventListener("activate", onActivate as EventListener);

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import Box from "@mui/material/Box";
-import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import { MuiColorInput } from "mui-color-input";
@@ -15,16 +14,21 @@ export default function SettingsMenu() {
   const localStorageKey = "themeColors";
 
   useEffect(() => {
-    if (!initialColorsRef.current) initialColorsRef.current = [...colors];
+    if (initialColorsRef.current === null) {
+      initialColorsRef.current = [...colors];
+    }
+  }, [colors]);
+
+  useEffect(() => {
     try {
       const storedJson = localStorage.getItem(localStorageKey);
       if (!storedJson) return;
       const parsed = JSON.parse(storedJson);
-      if (Array.isArray(parsed) && parsed.every((value) => typeof value === "string")) {
+      if (Array.isArray(parsed) && parsed.every((v) => typeof v === "string")) {
         setColors(parsed as string[]);
       }
     } catch {}
-  }, []);
+  }, [setColors, localStorageKey]);
 
   function updateColorByIndex(index: number, newColor: string) {
     const updatedColors = [...colors];
@@ -62,20 +66,14 @@ export default function SettingsMenu() {
     "CSP",
     "Success",
     "Warning",
-    "NativeFunction"
+    "NativeFunction",
   ];
 
   return (
     <Box
       component="ul"
-      sx={{
-        padding: "0px",
-        margin: "0px",
-        listStyle: "none",
-      }}
+      sx={{ padding: "0px", margin: "0px", listStyle: "none" }}
     >
-
-
       {colors.map((currentColor, index) => {
         const label = colorLabels[index];
         const onColorChange = createColorChangeHandler(index);
@@ -84,11 +82,7 @@ export default function SettingsMenu() {
           <Box
             key={label}
             component="li"
-            sx={{
-              marginBottom: "8px",
-              display: "flex",
-              alignItems: "center",
-            }}
+            sx={{ marginBottom: "8px", display: "flex", alignItems: "center" }}
           >
             <Typography
               variant="caption"
@@ -106,15 +100,24 @@ export default function SettingsMenu() {
           </Box>
         );
       })}
-        <Stack spacing={.5}>
-        <Button variant="contained" color="secondary" onClick={handleSaveColors} fullWidth>
+      <Stack spacing={0.5}>
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handleSaveColors}
+          fullWidth
+        >
           Save to localStorage
         </Button>
-        <Button variant="outlined" color="secondary" onClick={handleResetToDefault} fullWidth>
+        <Button
+          variant="outlined"
+          color="secondary"
+          onClick={handleResetToDefault}
+          fullWidth
+        >
           Reset To Default
         </Button>
-        </Stack>
-      
+      </Stack>
     </Box>
   );
 }

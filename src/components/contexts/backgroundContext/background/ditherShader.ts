@@ -114,7 +114,7 @@ const DitherMaterial = shaderMaterial(
         vec3 finalColor = mix(baseColor, hazeColor, applyDither * ditherMask);
         gl_FragColor = vec4(finalColor, 1.0);
     }
-  `
+  `,
 );
 
 export { DitherMaterial };

@@ -1,23 +1,50 @@
-'use client';
+"use client";
 
-import { useEffect,useState,useRef } from 'react';
-import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
+import { useEffect, useState, useRef } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { useTheme } from "@mui/material/styles";
 
 type FramePropertiesDisplayProps = {
   properties?: Record<string, unknown>;
 };
 
-export default function FramePropertiesDisplay({ properties }: FramePropertiesDisplayProps) {
+type WalkMeTimingEntry = string | { name: string };
+type WalkMeData = { euId?: string | null; euIdSource?: string | null };
+type WalkMeDataProvider = {
+  getWalkMeData: () => WalkMeData | null | undefined;
+};
+type WalkMeCtx = {
+  get: (key: string) => WalkMeDataProvider | null | undefined;
+};
+type WalkMeInternals = {
+  timing?: { list?: WalkMeTimingEntry[] };
+  ctx?: WalkMeCtx;
+  removeWalkMeReason?: string | null;
+};
+type WalkMeApi = {
+  getUserGuid: () => string | null;
+  getEnvId: () => string | null;
+};
+type WindowWithWalkMe = Window & {
+  _walkmeInternals?: WalkMeInternals;
+  _walkMe?: WalkMeApi;
+  wmPlaySnippetData?: unknown;
+};
+
+export default function FramePropertiesDisplay({
+  properties,
+}: FramePropertiesDisplayProps) {
   const theme = useTheme();
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const [entryKeys, setEntryKeys] = useState<string[]>(Object.keys(properties ?? {}));
+  const [entryKeys, setEntryKeys] = useState<string[]>(
+    Object.keys(properties ?? {}),
+  );
   const [walkmeTimingText, setWalkmeTimingText] = useState<string | null>(null);
   const [walkmeIsReady, setWalkmeIsReady] = useState<boolean>(false);
   const [walkmeUserGuid, setWalkmeUserGuid] = useState<string | null>(null);
@@ -25,7 +52,9 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
   const [walkmeViaEditor, setWalkmeViaEditor] = useState<boolean>(false);
   const [walkmeEuId, setWalkmeEuId] = useState<string | null>(null);
   const [walkmeEuIdSource, setWalkmeEuIdSource] = useState<string | null>(null);
-  const [walkmeUnableReason, setWalkmeUnableReason] = useState<string | null>(null);
+  const [walkmeUnableReason, setWalkmeUnableReason] = useState<string | null>(
+    null,
+  );
 
   const lastSeenGuidRef = useRef<string | null>(null);
   const lastSeenEnvIdRef = useRef<string | null>(null);
@@ -33,8 +62,10 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
   useEffect(() => {
     const baseKeys = Object.keys(properties ?? {});
     setEntryKeys((previousKeys) => {
-      const shouldKeepWl = previousKeys.includes('WL');
-      const merged = shouldKeepWl ? Array.from(new Set(['WL', ...baseKeys])) : baseKeys;
+      const shouldKeepWl = previousKeys.includes("WL");
+      const merged = shouldKeepWl
+        ? Array.from(new Set(["WL", ...baseKeys]))
+        : baseKeys;
       return merged;
     });
   }, [properties]);
@@ -42,10 +73,8 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
   useEffect(() => {
     if (!isMounted) return;
 
-    let intervalId: number | undefined;
-
     function refreshWalkmeStatus(): void {
-      if (typeof window === 'undefined') {
+      if (typeof window === "undefined") {
         setWalkmeTimingText(null);
         setWalkmeIsReady(false);
         setWalkmeUserGuid(null);
@@ -59,18 +88,20 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
         return;
       }
 
-      const internals = (window as any)._walkmeInternals;
+      const windowWithWalkMe = window as WindowWithWalkMe;
+      const internals = windowWithWalkMe._walkmeInternals;
       const hasTimingList =
-        internals &&
-        internals.timing &&
+        !!internals &&
+        !!internals.timing &&
         Array.isArray(internals.timing.list) &&
         internals.timing.list.length > 0;
 
-      const hasWmPlaySnippetData = Boolean((window as any).wmPlaySnippetData);
+      const hasWmPlaySnippetData = Boolean(windowWithWalkMe.wmPlaySnippetData);
 
       try {
         const value = internals?.removeWalkMeReason;
-        const normalized = value != null && String(value).trim() !== '' ? String(value) : null;
+        const normalized =
+          value != null && String(value).trim() !== "" ? String(value) : null;
         setWalkmeUnableReason(normalized);
       } catch {
         setWalkmeUnableReason(null);
@@ -92,33 +123,50 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
       let isReadyDetected = false;
 
       if (hasTimingList) {
-        const walkmeList = internals.timing.list as any[];
-        const readyIndex = walkmeList.findIndex((eventItem: any) => {
-          const eventName =
-            eventItem && typeof eventItem === 'object' && 'name' in eventItem ? String(eventItem.name) : String(eventItem);
-          return eventName === 'walkmeReady';
-        });
+        const walkmeList = internals?.timing?.list as
+          | WalkMeTimingEntry[]
+          | undefined;
+        const readyIndex =
+          walkmeList?.findIndex((eventItem: WalkMeTimingEntry) => {
+            const eventName =
+              typeof eventItem === "object" &&
+              eventItem !== null &&
+              "name" in eventItem
+                ? String((eventItem as { name: string }).name)
+                : String(eventItem);
+            return eventName === "walkmeReady";
+          }) ?? -1;
 
         if (readyIndex >= 0) {
           isReadyDetected = true;
-        } else {
+        } else if (walkmeList && walkmeList.length > 0) {
           const lastIndex = walkmeList.length - 1;
           const lastEntry = walkmeList[lastIndex];
           const lastName =
-            lastEntry && typeof lastEntry === 'object' && 'name' in lastEntry ? String(lastEntry.name) : String(lastEntry);
+            typeof lastEntry === "object" &&
+            lastEntry !== null &&
+            "name" in lastEntry
+              ? String((lastEntry as { name: string }).name)
+              : String(lastEntry);
           setWalkmeTimingText(lastName);
         }
       }
 
       setWalkmeViaEditor(hasWmPlaySnippetData);
 
-      setEntryKeys((previousKeys) => (previousKeys.includes('WL') ? previousKeys : ['WL', ...previousKeys]));
+      setEntryKeys((previousKeys) =>
+        previousKeys.includes("WL") ? previousKeys : ["WL", ...previousKeys],
+      );
 
       try {
-        const provider = internals?.ctx?.get?.('EventCollectorWalkMeDataProvider');
+        const provider = internals?.ctx?.get?.(
+          "EventCollectorWalkMeDataProvider",
+        );
         const data = provider?.getWalkMeData?.();
         const nextEuId = data?.euId ? String(data.euId) : null;
-        const nextEuIdSource = data?.euIdSource ? String(data.euIdSource) : null;
+        const nextEuIdSource = data?.euIdSource
+          ? String(data.euIdSource)
+          : null;
         setWalkmeEuId(nextEuId);
         setWalkmeEuIdSource(nextEuIdSource);
       } catch {
@@ -127,13 +175,17 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
       }
 
       if (isReadyDetected || hasWmPlaySnippetData) {
-        setWalkmeTimingText('walkmeReady');
+        setWalkmeTimingText("walkmeReady");
         setWalkmeIsReady(true);
 
-        const walkmeApi = (window as any)._walkMe;
+        const walkmeApi = windowWithWalkMe._walkMe;
         try {
-          const nextGuidValue = walkmeApi ? String(walkmeApi.getUserGuid()) : null;
-          const nextEnvIdValue = walkmeApi ? String(walkmeApi.getEnvId()) : null;
+          const nextGuidValue = walkmeApi
+            ? String(walkmeApi.getUserGuid())
+            : null;
+          const nextEnvIdValue = walkmeApi
+            ? String(walkmeApi.getEnvId())
+            : null;
 
           if (lastSeenGuidRef.current !== nextGuidValue) {
             setWalkmeUserGuid(nextGuidValue);
@@ -159,10 +211,10 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
     }
 
     refreshWalkmeStatus();
-    intervalId = window.setInterval(refreshWalkmeStatus, 1000);
+    const intervalId = window.setInterval(refreshWalkmeStatus, 1000);
 
     return () => {
-      if (intervalId) window.clearInterval(intervalId);
+      window.clearInterval(intervalId);
     };
   }, [isMounted]);
 
@@ -170,26 +222,40 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
 
   const hasEntries = entryKeys.length > 0;
   if (!hasEntries) {
-    return <Typography variant="body2" sx={{ color: theme.palette.text.primary }} />;
+    return (
+      <Typography variant="body2" sx={{ color: theme.palette.text.primary }} />
+    );
   }
 
-  const wlPresent = entryKeys.includes('WL');
-  const otherKeys = entryKeys.filter((keyName) => keyName !== 'WL');
+  const wlPresent = entryKeys.includes("WL");
+  const otherKeys = entryKeys.filter((keyName) => keyName !== "WL");
 
   const loadedSuffix =
     walkmeIsReady && (walkmeUserGuid || walkmeEnvId)
-      ? ` - GUID:${walkmeUserGuid ?? ''}${walkmeUserGuid && walkmeEnvId ? ' - ' : ''}ENV:${walkmeEnvId ?? ''}`
-      : '';
+      ? ` - GUID:${walkmeUserGuid ?? ""}${walkmeUserGuid && walkmeEnvId ? " - " : ""}ENV:${walkmeEnvId ?? ""}`
+      : "";
 
-  const loadingLabel = walkmeViaEditor ? 'WalkMe not fully loaded - Editor connected' : 'WalkMe not fully loaded';
-  const loadedLabel = walkmeViaEditor ? 'WalkMe loaded - Editor connected' : 'WalkMe loaded';
+  const loadingLabel = walkmeViaEditor
+    ? "WalkMe not fully loaded - Editor connected"
+    : "WalkMe not fully loaded";
+  const loadedLabel = walkmeViaEditor
+    ? "WalkMe loaded - Editor connected"
+    : "WalkMe loaded";
 
   return (
-    <Box sx={{ position: 'absolute', top: 0, left: 0 }}>
+    <Box sx={{ position: "absolute", top: 0, left: 0 }}>
       <Stack spacing={0.5}>
         {wlPresent ? (
           <>
-            <Typography key="WL" variant="body2" sx={{ color: walkmeIsReady ? theme.palette.infoDisplay.success : theme.palette.infoDisplay.warning }}>
+            <Typography
+              key="WL"
+              variant="body2"
+              sx={{
+                color: walkmeIsReady
+                  ? theme.palette.infoDisplay.success
+                  : theme.palette.infoDisplay.warning,
+              }}
+            >
               <strong>
                 {walkmeUnableReason
                   ? `WalkMe unable to load - ${walkmeUnableReason}`
@@ -200,10 +266,18 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
                       : loadingLabel}
               </strong>
             </Typography>
-            <Typography key="WL_EXTRA" variant="body2" sx={{ color: walkmeIsReady ? theme.palette.infoDisplay.success : theme.palette.infoDisplay.warning }}>
+            <Typography
+              key="WL_EXTRA"
+              variant="body2"
+              sx={{
+                color: walkmeIsReady
+                  ? theme.palette.infoDisplay.success
+                  : theme.palette.infoDisplay.warning,
+              }}
+            >
               <strong>
-                EUID: {walkmeEuId ?? 'none'}{' '}
-                SOURCE: {walkmeEuIdSource ?? 'none'}
+                EUID: {walkmeEuId ?? "none"} SOURCE:{" "}
+                {walkmeEuIdSource ?? "none"}
               </strong>
             </Typography>
           </>
@@ -214,37 +288,37 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
           let displayText: string;
 
           switch (propertyKey) {
-            case 'cspH':
+            case "cspH":
               textColor = theme.palette.infoDisplay.csp;
-              displayText = 'CSP in headers';
+              displayText = "CSP in headers";
               break;
-            case 'cspM':
+            case "cspM":
               textColor = theme.palette.infoDisplay.csp;
-              displayText = 'CSP in meta tag';
+              displayText = "CSP in meta tag";
               break;
-            case 'cspMN':
+            case "cspMN":
               textColor = theme.palette.infoDisplay.csp;
-              displayText = 'CSP in meta tag + nonce';
+              displayText = "CSP in meta tag + nonce";
               break;
-            case 'cspSW':
+            case "cspSW":
               textColor = theme.palette.infoDisplay.csp;
-              displayText = 'CSP in headers via service worker';
+              displayText = "CSP in headers via service worker";
               break;
-            case 'nfGCS':
+            case "nfGCS":
               textColor = theme.palette.infoDisplay.nativeFunction;
-              displayText = 'native getComputedStyle overriden';
+              displayText = "native getComputedStyle overriden";
               break;
-            case 'nfR':
+            case "nfR":
               textColor = theme.palette.infoDisplay.nativeFunction;
-              displayText = 'native Request overriden';
+              displayText = "native Request overriden";
               break;
-            case 'nfP':
+            case "nfP":
               textColor = theme.palette.infoDisplay.nativeFunction;
-              displayText = 'native Promise overriden';
+              displayText = "native Promise overriden";
               break;
-            case 'nfSA':
+            case "nfSA":
               textColor = theme.palette.infoDisplay.nativeFunction;
-              displayText = 'native Element.prototype.setAttribute overriden';
+              displayText = "native Element.prototype.setAttribute overriden";
               break;
             default:
               textColor = theme.palette.text.primary;
@@ -252,7 +326,11 @@ export default function FramePropertiesDisplay({ properties }: FramePropertiesDi
           }
 
           return (
-            <Typography key={propertyKey} variant="body2" sx={{ color: textColor }}>
+            <Typography
+              key={propertyKey}
+              variant="body2"
+              sx={{ color: textColor }}
+            >
               <strong>{displayText}</strong>
             </Typography>
           );

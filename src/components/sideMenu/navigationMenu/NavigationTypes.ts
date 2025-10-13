@@ -3,4 +3,3 @@ export enum NavigationType {
   SPA = "spa",
   FullReplace = "full-replace",
 }
-

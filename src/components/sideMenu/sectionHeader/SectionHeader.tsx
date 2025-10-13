@@ -1,26 +1,25 @@
-
-import AccordionSummary from '@mui/material/AccordionSummary';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import Typography from '@mui/material/Typography';
+import AccordionSummary from "@mui/material/AccordionSummary";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import Typography from "@mui/material/Typography";
 
 interface SectionHeaderProps {
   sectionName: string;
-
 }
 
 export default function SectionHeader({ sectionName }: SectionHeaderProps) {
-
-    return(
-        <div>
-        <AccordionSummary
-          expandIcon={<ExpandMoreIcon />}
-          
-          id={`panel-${sectionName}-header`}
+  return (
+    <div>
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon />}
+        id={`panel-${sectionName}-header`}
+      >
+        <Typography
+          component="span"
+          sx={{ width: "100%", textAlign: "center" }}
         >
-          <Typography component="span" sx={{ width: '100%', textAlign: 'center' }}>
-            {sectionName}
-          </Typography>
-        </AccordionSummary>
-        </div>
-    );
+          {sectionName}
+        </Typography>
+      </AccordionSummary>
+    </div>
+  );
 }

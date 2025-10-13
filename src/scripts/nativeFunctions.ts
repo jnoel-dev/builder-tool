@@ -1,9 +1,4 @@
-'use client';
-
-import * as React from 'react';
-import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
+"use client";
 
 declare global {
   interface Window {
@@ -17,16 +12,16 @@ declare global {
       overridePromiseWithZone: () => void;
       overrideSetAttribute: () => void;
     };
+    Zone?: unknown;
+    ZoneAwarePromise?: unknown;
   }
 }
 
-type FramePropertiesDisplayProps = {
-  properties?: Record<string, unknown>;
-};
-
 function getCspNonce(): string | undefined {
   if (typeof document === "undefined") return undefined;
-  const metaElement = document.querySelector('meta[name="csp-nonce"]') as HTMLMetaElement | null;
+  const metaElement = document.querySelector(
+    'meta[name="csp-nonce"]',
+  ) as HTMLMetaElement | null;
   const nonceValue = metaElement?.content;
   return nonceValue && nonceValue.length > 0 ? nonceValue : undefined;
 }
@@ -39,13 +34,13 @@ function loadScriptOnce(scriptSrc: string, scriptId: string): void {
   scriptElement.src = scriptSrc;
   scriptElement.async = false;
   const nonceValue = getCspNonce();
-  if (nonceValue) (scriptElement as any).nonce = nonceValue;
+  if (nonceValue) (scriptElement as HTMLScriptElement).nonce = nonceValue;
   document.head.appendChild(scriptElement);
 }
 
 export function overrideGetComputedStyle(): void {
   if (typeof window === "undefined") return;
-  const existingGetComputedStyle = (window as any).getComputedStyle;
+  const existingGetComputedStyle = window.getComputedStyle;
   if (typeof existingGetComputedStyle !== "function") return;
 
   const emptyString = "";
@@ -54,12 +49,12 @@ export function overrideGetComputedStyle(): void {
     return emptyString;
   }
 
-  function createEmptyIterator() {
-    return { next: function () { return { done: true, value: undefined }; } };
+  function createEmptyIterator(): Iterator<unknown> {
+    return { next: () => ({ done: true, value: undefined }) };
   }
 
   const blankComputedStyleProxy = new Proxy(Object.create(null), {
-    get: function (targetObject, propertyName) {
+    get: (_targetObject: object, propertyName: string | symbol) => {
       if (propertyName === "getPropertyValue") return returnEmptyString;
       if (propertyName === "getPropertyPriority") return returnEmptyString;
       if (propertyName === "item") return returnEmptyString;
@@ -67,86 +62,131 @@ export function overrideGetComputedStyle(): void {
       if (propertyName === Symbol.iterator) return createEmptyIterator;
       return emptyString;
     },
-    has: function () { return false; },
-    ownKeys: function () { return []; },
-    getOwnPropertyDescriptor: function () {
-      return { configurable: true, enumerable: false };
-    }
+    has: () => false,
+    ownKeys: () => [],
+    getOwnPropertyDescriptor: () => ({ configurable: true, enumerable: false }),
   });
 
-  function provideBlankComputedStyle(): any {
-    return blankComputedStyleProxy;
+  function provideBlankComputedStyle(): CSSStyleDeclaration {
+    return blankComputedStyleProxy as unknown as CSSStyleDeclaration;
   }
 
   try {
     Object.defineProperty(window, "getComputedStyle", {
       configurable: true,
       writable: true,
-      value: provideBlankComputedStyle
+      value: provideBlankComputedStyle,
     });
   } catch {
-    (window as any).getComputedStyle = provideBlankComputedStyle;
+    (
+      window as unknown as {
+        getComputedStyle: typeof provideBlankComputedStyle;
+      }
+    ).getComputedStyle = provideBlankComputedStyle;
   }
 }
 
+type RequestConstructor = new (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Request;
+
 export function overrideRequest(): void {
   if (typeof window === "undefined") return;
-  const OriginalRequest = (window as any).Request;
+
+  const OriginalRequest = window.Request as unknown as RequestConstructor;
   if (typeof OriginalRequest !== "function") return;
 
-  function OverriddenRequest(this: any, requestInput?: any, requestInit?: any) {
+  const OverriddenRequest: RequestConstructor = function (
+    requestInput: RequestInfo | URL,
+    requestInit?: RequestInit,
+  ): Request {
     const originalInstance = new OriginalRequest(requestInput, requestInit);
-    const requestUrlLower = String((originalInstance as any).url || "").toLowerCase();
+    const requestUrlLower = String(originalInstance.url || "").toLowerCase();
+
     if (requestUrlLower.includes("firestore")) {
       return originalInstance;
     }
-    return new Proxy(originalInstance, {
-      get(targetObject, propertyName, receiverObject) {
-        if (propertyName === "headers") {
-          return {};
-        }
-        return Reflect.get(targetObject, propertyName, receiverObject);
-      }
-    });
-  }
 
-  (OverriddenRequest as any).prototype = OriginalRequest.prototype;
-  (window as any).Request = OverriddenRequest as any;
+    const proxiedInstance = new Proxy(originalInstance, {
+      get(
+        targetObject: Request,
+        propertyName: string | symbol,
+        receiverObject: unknown,
+      ) {
+        if (propertyName === "headers") {
+          return new Headers();
+        }
+        return Reflect.get(
+          targetObject as unknown as object,
+          propertyName,
+          receiverObject,
+        );
+      },
+    });
+
+    return proxiedInstance;
+  } as unknown as RequestConstructor;
+
+  (OverriddenRequest as unknown as { prototype: Request }).prototype = (
+    OriginalRequest as unknown as {
+      prototype: Request;
+    }
+  ).prototype;
+
+  (window as unknown as { Request: RequestConstructor }).Request =
+    OverriddenRequest;
 }
 
 export function overridePromiseWithZone(): void {
   if (typeof window === "undefined") return;
-  const windowAny = window as any;
-  if (windowAny.Zone || windowAny.ZoneAwarePromise) return;
+  if (window.Zone || window.ZoneAwarePromise) return;
   loadScriptOnce("/zone.min.js", "zonejs-core");
 }
 
 export function overrideSetAttribute(): void {
   if (typeof window === "undefined") return;
-  const elementPrototype = (window as any).Element && (window as any).Element.prototype;
-  if (!elementPrototype || typeof elementPrototype.setAttribute !== "function") return;
+  const elementPrototype: Element["constructor"]["prototype"] | undefined = (
+    window as unknown as {
+      Element?: { prototype?: Element };
+    }
+  ).Element?.prototype as Element | undefined;
+  if (
+    !elementPrototype ||
+    typeof (elementPrototype as Element).setAttribute !== "function"
+  )
+    return;
 
-  const originalSetAttribute = elementPrototype.setAttribute;
+  const originalSetAttribute = (elementPrototype as Element).setAttribute.bind(
+    elementPrototype as Element,
+  );
 
-  function sanitizedSetAttribute(this: Element, attributeName: string, attributeValue: any): void {
+  function sanitizedSetAttribute(
+    this: Element,
+    attributeName: string,
+    attributeValue: string,
+  ): void {
     const attributeNameLower = String(attributeName).toLowerCase();
     if (attributeNameLower === "style") {
       if (this.hasAttribute("style")) this.removeAttribute("style");
       return;
     }
-    originalSetAttribute.call(this, attributeName, attributeValue);
+    originalSetAttribute(attributeName, attributeValue);
     if (this.hasAttribute("style")) this.removeAttribute("style");
   }
-
 
   try {
     Object.defineProperty(elementPrototype, "setAttribute", {
       configurable: true,
       writable: true,
-      value: sanitizedSetAttribute
+      value: sanitizedSetAttribute,
     });
   } catch {
-    elementPrototype.setAttribute = sanitizedSetAttribute as any;
+    (
+      elementPrototype as unknown as {
+        setAttribute: typeof sanitizedSetAttribute;
+      }
+    ).setAttribute = sanitizedSetAttribute;
   }
 }
 
@@ -159,7 +199,7 @@ if (typeof window !== "undefined") {
     overrideGetComputedStyle,
     overrideRequest,
     overridePromiseWithZone,
-    overrideSetAttribute
+    overrideSetAttribute,
   };
 }
 
@@ -167,6 +207,6 @@ const NativeFunctions = {
   overrideGetComputedStyle,
   overrideRequest,
   overridePromiseWithZone,
-  overrideSetAttribute
+  overrideSetAttribute,
 };
 export default NativeFunctions;

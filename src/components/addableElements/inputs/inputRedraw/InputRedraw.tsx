@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Box from '@mui/material/Box';
-import { useTheme } from '@mui/material/styles';
+import React, { useState, useEffect, useRef } from "react";
+import Box from "@mui/material/Box";
+import { useTheme } from "@mui/material/styles";
 
 export default function InputRedraw() {
   const [key, setKey] = useState(0);
@@ -9,7 +9,7 @@ export default function InputRedraw() {
 
   const handleClick = () => {
     //forces react to re-render element
-    setKey(prev => prev + 1);
+    setKey((prev) => prev + 1);
   };
 
   useEffect(() => {
@@ -31,10 +31,10 @@ export default function InputRedraw() {
         placeholder="insert text here..."
         style={{
           backgroundColor: theme.palette.background.paper,
-          padding: '8px',
+          padding: "8px",
           color: theme.palette.text.primary,
           flex: 1,
-          width: '100%'
+          width: "100%",
         }}
       />
     </Box>

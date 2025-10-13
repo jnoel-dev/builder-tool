@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Box, Button, Stack, Dialog } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import Panel from '../../panels/panel/Panel';
+import React, { useState } from "react";
+import { Box, Button, Stack, Dialog } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import Panel from "../../panels/panel/Panel";
 
 interface DialogMUIProps {
   shouldFocus?: boolean;
@@ -23,7 +23,7 @@ export default function DialogMUI({ shouldFocus = false }: DialogMUIProps) {
           variant="contained"
           onClick={openDialog}
           color="secondary"
-          sx={{ color: theme.palette.text.primary, width: '100%', px: 4 }}
+          sx={{ color: theme.palette.text.primary, width: "100%", px: 4 }}
         >
           Open Dialog
         </Button>
@@ -32,7 +32,9 @@ export default function DialogMUI({ shouldFocus = false }: DialogMUIProps) {
       <Dialog
         open={isDialogOpen}
         onClose={closeDialog}
-        {...(!shouldFocus ? { disableEnforceFocus: true, disableRestoreFocus: true } : {})}
+        {...(!shouldFocus
+          ? { disableEnforceFocus: true, disableRestoreFocus: true }
+          : {})}
       >
         <Box
           sx={{

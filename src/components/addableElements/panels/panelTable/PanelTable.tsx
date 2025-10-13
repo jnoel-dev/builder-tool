@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Table,
@@ -17,36 +17,40 @@ import {
   Stack,
   IconButton,
   SelectChangeEvent,
-} from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import CloseIcon from '@mui/icons-material/Close';
+} from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import CloseIcon from "@mui/icons-material/Close";
 
 export default function PanelTable() {
   const theme = useTheme();
 
   const initialOptions = [
-    { name: 'Alpha', value: '100' },
-    { name: 'Beta', value: '200' },
-    { name: 'Gamma', value: '300' },
-    { name: 'Delta', value: '400' },
+    { name: "Alpha", value: "100" },
+    { name: "Beta", value: "200" },
+    { name: "Gamma", value: "300" },
+    { name: "Delta", value: "400" },
   ];
 
   const initialRows = [
-    { id: 1, name: 'Alpha', value: '100' },
-    { id: 2, name: 'Beta', value: '200' },
-    { id: 3, name: 'Gamma', value: '300' },
+    { id: 1, name: "Alpha", value: "100" },
+    { id: 2, name: "Beta", value: "200" },
+    { id: 3, name: "Gamma", value: "300" },
   ];
 
   const [tableRows, setTableRows] = useState(initialRows);
   const [nextRowId, setNextRowId] = useState(4);
   const [selectedOption, setSelectedOption] = useState(initialOptions[0]);
 
-  function updateRowValue(rowIndex: number, fieldName: string, newValue: string) {
+  function updateRowValue(
+    rowIndex: number,
+    fieldName: string,
+    newValue: string,
+  ) {
     const updatedRows = [...tableRows];
     const targetRow = updatedRows[rowIndex];
-    if (fieldName === 'name') {
+    if (fieldName === "name") {
       targetRow.name = newValue;
-    } else if (fieldName === 'value') {
+    } else if (fieldName === "value") {
       targetRow.value = newValue;
     }
     setTableRows(updatedRows);
@@ -69,7 +73,9 @@ export default function PanelTable() {
 
   function updateSelectedOption(event: SelectChangeEvent<string>) {
     const selectedName = event.target.value;
-    const matchingOption = initialOptions.find((option) => option.name === selectedName);
+    const matchingOption = initialOptions.find(
+      (option) => option.name === selectedName,
+    );
     if (matchingOption) {
       setSelectedOption(matchingOption);
     }
@@ -80,9 +86,9 @@ export default function PanelTable() {
       sx={{
         backgroundColor: theme.palette.primary.main,
         padding: 2,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
         gap: 2,
       }}
     >
@@ -128,9 +134,15 @@ export default function PanelTable() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ color: theme.palette.text.primary }}>ID</TableCell>
-              <TableCell sx={{ color: theme.palette.text.primary }}>Name</TableCell>
-              <TableCell sx={{ color: theme.palette.text.primary }}>Value</TableCell>
+              <TableCell sx={{ color: theme.palette.text.primary }}>
+                ID
+              </TableCell>
+              <TableCell sx={{ color: theme.palette.text.primary }}>
+                Name
+              </TableCell>
+              <TableCell sx={{ color: theme.palette.text.primary }}>
+                Value
+              </TableCell>
               <TableCell />
             </TableRow>
           </TableHead>
@@ -138,13 +150,15 @@ export default function PanelTable() {
             {tableRows.map((row, rowIndex) => {
               return (
                 <TableRow key={row.id}>
-                  <TableCell sx={{ color: theme.palette.text.primary }}>{row.id}</TableCell>
+                  <TableCell sx={{ color: theme.palette.text.primary }}>
+                    {row.id}
+                  </TableCell>
                   <TableCell>
                     <TextField
                       variant="standard"
                       value={row.name}
                       onChange={function handleNameChange(event) {
-                        updateRowValue(rowIndex, 'name', event.target.value);
+                        updateRowValue(rowIndex, "name", event.target.value);
                       }}
                       sx={{ input: { color: theme.palette.text.primary } }}
                     />
@@ -154,7 +168,7 @@ export default function PanelTable() {
                       variant="standard"
                       value={row.value}
                       onChange={function handleValueChange(event) {
-                        updateRowValue(rowIndex, 'value', event.target.value);
+                        updateRowValue(rowIndex, "value", event.target.value);
                       }}
                       sx={{ input: { color: theme.palette.text.primary } }}
                     />
