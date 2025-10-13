@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Button from "@mui/material/Button";
 import { NavigationType } from "../NavigationTypes";
 
@@ -46,7 +46,7 @@ export default function NavigationButton({
   navigationType: NavigationType;
 }) {
   const router = useRouter();
-  const [buttonLabel, setButtonLabel] = React.useState<string>("");
+  const [buttonLabel, setButtonLabel] = useState<string>("");
   const { knownFrameOrigins } = useFrame();
 
   useEffect(() => {

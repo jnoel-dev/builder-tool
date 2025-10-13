@@ -1,6 +1,7 @@
 "use client";
 
 import SideMenu from "../sideMenu/SideMenu";
+import SyncStatusWidget from "./syncStatusWidget/SyncStatusWidget";
 import TopFrame from "./topFrame/TopFrame";
 
 export default function BuilderPage() {
@@ -19,6 +20,7 @@ export default function BuilderPage() {
       }}
     >
       <TopFrame />
+      <SyncStatusWidget />
       <SideMenu />
     </div>
   );

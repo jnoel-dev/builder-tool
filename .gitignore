@@ -13,3 +13,4 @@ public/serviceWorker.js
 public/zone.min.js
 public/forceLoadWMID.js
 .eslintcache
+tsconfig.tsbuildinfo

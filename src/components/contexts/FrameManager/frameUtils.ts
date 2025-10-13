@@ -60,6 +60,7 @@ export type AppState = {
   currentFrame: string;
   pagesByOrigin?: PagesByOrigin;
   snippetProperties?: SnippetProperties;
+  isLocked: boolean;
 };
 
 export function getMaxSuffixFromId(idValue: string): number {

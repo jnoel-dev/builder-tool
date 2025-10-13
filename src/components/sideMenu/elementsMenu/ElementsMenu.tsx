@@ -1,7 +1,7 @@
 // src/components/sideMenu/elementsMenu/ElementsMenu.tsx
 "use client";
 
-import * as React from "react";
+import { useState } from "react";
 import Divider from "@mui/material/Divider";
 import AddElementButton from "@/components/sideMenu/elementsMenu/addElementButton/AddElementButton";
 import Tabs from "@mui/material/Tabs";
@@ -39,7 +39,7 @@ function getTabProps(index: number) {
 }
 
 export default function ElementsMenu() {
-  const [selectedTab, setSelectedTab] = React.useState(TabIndex.Frames);
+  const [selectedTab, setSelectedTab] = useState(TabIndex.Frames);
 
   function handleTabChange(_: React.SyntheticEvent, tabIndex: number) {
     setSelectedTab(tabIndex);

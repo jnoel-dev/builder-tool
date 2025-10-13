@@ -1,6 +1,6 @@
 "use client";
 
-import React, {
+import {
   createContext,
   useContext,
   useRef,
@@ -10,6 +10,7 @@ import React, {
   createRef,
   RefObject,
   useCallback,
+  useMemo,
 } from "react";
 
 import {
@@ -91,8 +92,9 @@ export function FrameManager({ children }: { children: ReactNode }) {
     },
     frameOrder: [DEFAULT_FRAME_NAME],
     currentFrame: DEFAULT_FRAME_NAME,
+    isLocked: false,
   });
-  const stateKey = React.useMemo(() => applicationState, [applicationState]);
+  const stateKey = useMemo(() => applicationState, [applicationState]);
   const initialAppStateRef = useRef(applicationState);
   const idCountersByComponentRef = useRef<Record<string, number>>({});
   const containerRefsRef = useRef<
@@ -105,10 +107,8 @@ export function FrameManager({ children }: { children: ReactNode }) {
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
   const [receivedFirebaseResponse, setReceivedFirebaseResponse] =
     useState(false);
-  const [firebaseID, setFirebaseID] = React.useState<string>("");
-  const [knownFrameOrigins, setKnownFrameOrigins] = React.useState<string[]>(
-    [],
-  );
+  const [firebaseID, setFirebaseID] = useState<string>("");
+  const [knownFrameOrigins, setKnownFrameOrigins] = useState<string[]>([]);
 
   const setKnownOriginsForFirebaseID = useCallback(
     (firebaseIDValue: string): void => {
