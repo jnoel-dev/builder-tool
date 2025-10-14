@@ -21,10 +21,8 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,md,css,yml,yaml}": [
-      "prettier --write",
-      "eslint --fix"
-    ]
+    "*": "prettier --write --ignore-unknown",
+    "*.{js,jsx,ts,tsx}": "eslint --fix"
   },
   "engines": {
     "node": ">=22"
