@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "typecheck": "tsc --noEmit",
     "sw:build": "esbuild src/scripts/serviceWorker.ts --bundle --platform=browser --format=iife --outfile=public/serviceWorker.js",
     "sw:watch": "esbuild src/scripts/serviceWorker.ts --bundle --platform=browser --format=iife --outfile=public/serviceWorker.js --watch",
     "nf:build": "esbuild src/scripts/nativeFunctions.ts --bundle --platform=browser --format=iife --outfile=public/nativeFunctions.js",
@@ -16,7 +17,14 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "node copy-zone.mjs",
-    "prebuild": "node copy-zone.mjs"
+    "prebuild": "node copy-zone.mjs",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md,css,scss}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -53,6 +61,7 @@
     "eslint-config-next": "15.2.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-unused-imports": "^4.2.0",
+    "husky": "^9.1.7",
     "lint-staged": "^16.2.4",
     "prettier": "^3.6.2",
     "typescript": "^5.9.3"
