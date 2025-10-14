@@ -8,6 +8,19 @@ import { MuiColorInput } from "mui-color-input";
 import { useThemeColors } from "@/components/contexts/themeManager/ThemeManager";
 import { Stack } from "@mui/material";
 
+const originalDefaultThemeColors = [
+  "#eeeeee",
+  "#bdbdbd",
+  "#212121",
+  "#424242",
+  "#fafafa",
+  "#eeeeee",
+  "#f44336",
+  "#4caf50",
+  "#ffeb3b",
+  "#ff9800",
+];
+
 export default function SettingsMenu() {
   const { colors, setColors } = useThemeColors();
   const initialColorsRef = useRef<string[] | null>(null);
@@ -15,30 +28,33 @@ export default function SettingsMenu() {
 
   useEffect(() => {
     if (initialColorsRef.current === null) {
-      initialColorsRef.current = [...colors];
+      initialColorsRef.current = [...originalDefaultThemeColors];
     }
-  }, [colors]);
+  }, []);
 
   useEffect(() => {
     try {
       const storedJson = localStorage.getItem(localStorageKey);
       if (!storedJson) return;
-      const parsed = JSON.parse(storedJson);
-      if (Array.isArray(parsed) && parsed.every((v) => typeof v === "string")) {
-        setColors(parsed as string[]);
+      const parsedValue = JSON.parse(storedJson);
+      if (
+        Array.isArray(parsedValue) &&
+        parsedValue.every((elementValue) => typeof elementValue === "string")
+      ) {
+        setColors(parsedValue as string[]);
       }
     } catch {}
-  }, [setColors, localStorageKey]);
+  }, [setColors]);
 
-  function updateColorByIndex(index: number, newColor: string) {
+  function updateColorByIndex(colorIndex: number, newColor: string) {
     const updatedColors = [...colors];
-    updatedColors[index] = newColor;
+    updatedColors[colorIndex] = newColor;
     setColors(updatedColors);
   }
 
-  function createColorChangeHandler(index: number) {
+  function createColorChangeHandler(colorIndex: number) {
     return function handleColorPickerChange(colorValue: string) {
-      updateColorByIndex(index, colorValue);
+      updateColorByIndex(colorIndex, colorValue);
     };
   }
 
@@ -49,8 +65,9 @@ export default function SettingsMenu() {
   }
 
   function handleResetToDefault(): void {
-    const defaults = initialColorsRef.current ?? colors;
-    setColors([...defaults]);
+    const defaultsToApply =
+      initialColorsRef.current ?? originalDefaultThemeColors;
+    setColors([...defaultsToApply]);
     try {
       localStorage.removeItem(localStorageKey);
     } catch {}
@@ -74,13 +91,13 @@ export default function SettingsMenu() {
       component="ul"
       sx={{ padding: "0px", margin: "0px", listStyle: "none" }}
     >
-      {colors.map((currentColor, index) => {
-        const label = colorLabels[index];
-        const onColorChange = createColorChangeHandler(index);
+      {colors.map((currentColor, colorIndex) => {
+        const labelForColor = colorLabels[colorIndex];
+        const onColorChange = createColorChangeHandler(colorIndex);
 
         return (
           <Box
-            key={label}
+            key={labelForColor}
             component="li"
             sx={{ marginBottom: "8px", display: "flex", alignItems: "center" }}
           >
@@ -88,7 +105,7 @@ export default function SettingsMenu() {
               variant="caption"
               sx={{ width: "100px", marginRight: "16px" }}
             >
-              {label}
+              {labelForColor}
             </Typography>
 
             <MuiColorInput

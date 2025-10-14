@@ -83,8 +83,8 @@ export default function SyncStatusWidget(): JSX.Element {
     syncState === "syncing"
       ? "syncing"
       : syncState === "error"
-        ? "disconnected"
-        : "connected";
+        ? "unable to sync"
+        : "synced";
 
   const lockIcon = isLocked ? <LockOutlineIcon /> : <LockOpenIcon />;
   const lockText = isLocked ? "locked" : "unlocked";
@@ -154,33 +154,23 @@ export default function SyncStatusWidget(): JSX.Element {
         </Box>
       </Tooltip>
 
-      <Tooltip
-        title={
-          "Connected: Able to sync to database\nDisconnected: Unable to sync to database"
-        }
-        followCursor
-        placement="right"
-        arrow
-        slotProps={{ tooltip: { sx: { whiteSpace: "pre-line" } } }}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          gap: 1,
+          color: "inherit",
+        }}
+        aria-label="sync-status"
       >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            gap: 1,
-            color: "inherit",
-          }}
-          aria-label="sync-status"
-        >
-          <Box sx={{ display: "inline-flex", color: "inherit" }}>
-            {statusIcon}
-          </Box>
-          <Typography variant="body2" sx={{ color: "inherit" }}>
-            {statusText}
-          </Typography>
+        <Box sx={{ display: "inline-flex", color: "inherit" }}>
+          {statusIcon}
         </Box>
-      </Tooltip>
+        <Typography variant="body2" sx={{ color: "inherit" }}>
+          {statusText}
+        </Typography>
+      </Box>
     </Box>
   );
 }
