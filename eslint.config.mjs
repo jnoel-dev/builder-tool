@@ -1,16 +1,16 @@
+import { FlatCompat } from "@eslint/eslintrc";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
 import unusedImports from "eslint-plugin-unused-imports";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const compat = new FlatCompat({ baseDirectory: __dirname });
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
+export default [
+  {
+    ignores: ["node_modules/", ".next/", "public/", "next-env.d.ts"],
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     plugins: { "unused-imports": unusedImports },
@@ -28,8 +28,5 @@ const eslintConfig = [
         },
       ],
     },
-    ignores: ["node_modules", ".next", "public", "next-env.d.ts"],
   },
 ];
-
-export default eslintConfig;
