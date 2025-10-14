@@ -34,7 +34,7 @@ class SyncStatusStore {
   setState(nextState: SyncState): void {
     if (this.currentState === nextState) return;
     this.currentState = nextState;
-    for (const notify of this.subscribers) notify();
+    for (const notifySubscriber of this.subscribers) notifySubscriber();
   }
 }
 let __setLockUI: ((next: boolean) => void) | null = null;
@@ -55,36 +55,40 @@ export function notifySyncError(): void {
 }
 
 export default function SyncStatusWidget(): JSX.Element {
-  const subscribe = useCallback(
+  const subscribeToStore = useCallback(
     (onStoreChange: () => void) => syncStatusStore.subscribe(onStoreChange),
     [],
   );
-  const getSnapshot = useCallback(() => syncStatusStore.getSnapshot(), []);
-  const syncState = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const getStoreSnapshot = useCallback(() => syncStatusStore.getSnapshot(), []);
+  const syncState = useSyncExternalStore(
+    subscribeToStore,
+    getStoreSnapshot,
+    getStoreSnapshot,
+  );
 
   const [isLocked, setIsLocked] = useState(false);
 
   const handleToggleLock = useCallback(async () => {
-    const next = !isLocked;
-    await setLocked(next);
-    setIsLocked(next);
+    const nextLocked = !isLocked;
+    await setLocked(nextLocked);
+    setIsLocked(nextLocked);
   }, [isLocked]);
 
-  const statusIcon =
-    syncState === "syncing" ? (
-      <SyncIcon sx={{ animation: "spin 1s linear infinite" }} />
-    ) : syncState === "error" ? (
-      <CancelIcon />
-    ) : (
-      <CheckCircleIcon />
-    );
+  const isEffectivelyError = isLocked || syncState === "error";
 
-  const statusText =
-    syncState === "syncing"
+  const statusIcon = isEffectivelyError ? (
+    <CancelIcon />
+  ) : syncState === "syncing" ? (
+    <SyncIcon sx={{ animation: "spin 1s linear infinite" }} />
+  ) : (
+    <CheckCircleIcon />
+  );
+
+  const statusText = isEffectivelyError
+    ? "unable to sync"
+    : syncState === "syncing"
       ? "syncing"
-      : syncState === "error"
-        ? "unable to sync"
-        : "synced";
+      : "synced";
 
   const lockIcon = isLocked ? <LockOutlineIcon /> : <LockOpenIcon />;
   const lockText = isLocked ? "locked" : "unlocked";

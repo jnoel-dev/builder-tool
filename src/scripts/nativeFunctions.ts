@@ -146,20 +146,17 @@ export function overridePromiseWithZone(): void {
 
 export function overrideSetAttribute(): void {
   if (typeof window === "undefined") return;
-  const elementPrototype: Element["constructor"]["prototype"] | undefined = (
+
+  const elementPrototype = (
     window as unknown as {
       Element?: { prototype?: Element };
     }
   ).Element?.prototype as Element | undefined;
-  if (
-    !elementPrototype ||
-    typeof (elementPrototype as Element).setAttribute !== "function"
-  )
+
+  if (!elementPrototype || typeof elementPrototype.setAttribute !== "function")
     return;
 
-  const originalSetAttribute = (elementPrototype as Element).setAttribute.bind(
-    elementPrototype as Element,
-  );
+  const originalSetAttribute = elementPrototype.setAttribute;
 
   function sanitizedSetAttribute(
     this: Element,
@@ -171,7 +168,7 @@ export function overrideSetAttribute(): void {
       if (this.hasAttribute("style")) this.removeAttribute("style");
       return;
     }
-    originalSetAttribute(attributeName, attributeValue);
+    originalSetAttribute.call(this, attributeName, attributeValue);
     if (this.hasAttribute("style")) this.removeAttribute("style");
   }
 
