@@ -22,7 +22,7 @@
   },
   "lint-staged": {
     "*": "prettier --write --ignore-unknown",
-    "*.{js,jsx,ts,tsx}": "eslint --fix"
+    "src/**/*.{ts,tsx}": "eslint --fix"
   },
   "engines": {
     "node": ">=22"
