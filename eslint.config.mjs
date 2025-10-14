@@ -1,12 +1,17 @@
+import tsParser from "@typescript-eslint/parser";
 import unusedImports from "eslint-plugin-unused-imports";
 
 export default [
   {
     files: ["src/**/*.{ts,tsx}"],
+    languageOptions: {
+      parser: tsParser,
+      ecmaVersion: "latest",
+      sourceType: "module",
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
     plugins: { "unused-imports": unusedImports },
     rules: {
-      "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
         "error",
