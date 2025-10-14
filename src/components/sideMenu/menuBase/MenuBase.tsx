@@ -1,4 +1,4 @@
-import * as React from "react";
+import { Dispatch, SetStateAction, SyntheticEvent } from "react";
 import MuiAccordion, { AccordionProps } from "@mui/material/Accordion";
 import { styled } from "@mui/material/styles";
 import { ComponentType } from "react";
@@ -12,7 +12,7 @@ interface MenuBaseProps {
   menuName: string;
   menuComponent: ComponentType<MenuComponentProps>;
   expanded: string | false;
-  setExpanded: React.Dispatch<React.SetStateAction<string | false>>;
+  setExpanded: Dispatch<SetStateAction<string | false>>;
 }
 
 const Accordion = styled((props: AccordionProps) => (
@@ -34,7 +34,7 @@ export default function MenuBase({
   const MenuComponent = menuComponent;
 
   const handleChange =
-    (panel: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
+    (panel: string) => (_event: SyntheticEvent, isExpanded: boolean) => {
       setExpanded(isExpanded ? panel : false);
     };
 

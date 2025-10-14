@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { ReactNode, Fragment } from "react";
 import Tooltip, { TooltipProps, tooltipClasses } from "@mui/material/Tooltip";
 import IconButton from "@mui/material/IconButton";
 import InfoIcon from "@mui/icons-material/Info";
@@ -8,7 +8,7 @@ import { styled } from "@mui/material";
 import Typography from "@mui/material/Typography";
 
 interface InfoIconProps {
-  infoText: React.ReactNode;
+  infoText: ReactNode;
 }
 
 export default function InfoIconWithTooltip({ infoText }: InfoIconProps) {
@@ -26,9 +26,9 @@ export default function InfoIconWithTooltip({ infoText }: InfoIconProps) {
     <HtmlTooltip
       placement="top"
       title={
-        <React.Fragment>
+        <Fragment>
           <Typography sx={{ whiteSpace: "pre-line" }}>{infoText}</Typography>
-        </React.Fragment>
+        </Fragment>
       }
       slotProps={{
         popper: {

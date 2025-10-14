@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, JSX } from "react";
 import { Canvas, useFrame, useThree, extend } from "@react-three/fiber";
 import * as THREE from "three";
 import { DitherMaterial } from "./ditherShader";
@@ -31,7 +31,7 @@ interface DitherMaterialType extends THREE.ShaderMaterial {
   uniforms: DitherMaterialUniforms;
 }
 
-function FullscreenPlane(): React.JSX.Element {
+function FullscreenPlane(): JSX.Element {
   const ref = useRef<THREE.Mesh<
     THREE.PlaneGeometry,
     DitherMaterialType

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { HTMLAttributes } from "react";
 import Box from "@mui/material/Box";
 import { Stack } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -25,7 +25,7 @@ export default function Panel({ isDisabled = false }: PanelProps) {
   };
 
   const outerBoxProps = isDisabled
-    ? ({ disabled: true } as React.HTMLAttributes<HTMLDivElement>)
+    ? ({ disabled: true } as HTMLAttributes<HTMLDivElement>)
     : {};
 
   return (

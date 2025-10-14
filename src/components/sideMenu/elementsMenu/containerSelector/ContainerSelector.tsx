@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, ComponentType, ReactNode } from "react";
 import Box from "@mui/material/Box";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
@@ -62,10 +62,7 @@ function isTrueFrameByName(
   if (frameName === defaultFrameName) return true;
   const baseName = frameName.replace(/-\d+$/, "");
   const entry = (
-    componentRegistry as Record<
-      string,
-      { component?: React.ComponentType<unknown> }
-    >
+    componentRegistry as Record<string, { component?: ComponentType<unknown> }>
   )[baseName];
   if (!entry || !entry.component) return false;
   return entry.component === Frame;
@@ -162,7 +159,7 @@ export default function ContainerSelector({
     selectedFrameValue = defaultFrameName;
   }
 
-  const menuItems: React.ReactNode[] = [];
+  const menuItems: ReactNode[] = [];
   menuItems.push(
     <ListSubheader key="this-header">Frames on this page</ListSubheader>,
   );

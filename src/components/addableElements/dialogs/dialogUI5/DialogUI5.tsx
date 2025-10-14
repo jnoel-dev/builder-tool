@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, CSSProperties } from "react";
 import { Box, Button } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import Panel from "../../panels/panel/Panel";
@@ -46,7 +46,7 @@ export default function DialogUI5() {
         style={
           {
             "--_ui5-v2-12-0_popup_block_layer_opacity": "0.5",
-          } as React.CSSProperties
+          } as CSSProperties
         }
       >
         <Box

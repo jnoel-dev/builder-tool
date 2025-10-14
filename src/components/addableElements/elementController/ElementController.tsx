@@ -1,12 +1,13 @@
 "use client";
 
-import React, {
+import {
   ReactNode,
   useRef,
   useEffect,
   useState,
   CSSProperties,
   useCallback,
+  RefObject,
 } from "react";
 import {
   useFrame,
@@ -24,7 +25,7 @@ interface ElementControllerProps {
   elementToControl: FrameElement;
   controlsDisabled: boolean;
   shouldShowName: boolean;
-  containerRef: React.RefObject<HTMLDivElement | null>;
+  containerRef: RefObject<HTMLDivElement | null>;
   connectedFrameOrContainerName: string;
   children: ReactNode;
 }

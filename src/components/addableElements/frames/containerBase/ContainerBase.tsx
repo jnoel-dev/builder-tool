@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactNode, useEffect, useState, useRef } from "react";
+import { ReactNode, useEffect, useState, useRef, ComponentType } from "react";
 import Collapse from "@mui/material/Collapse";
 import {
   useFrame,
@@ -181,7 +181,7 @@ export default function ContainerBase({
         if (!isComponentName(element.componentName)) return null;
 
         const entry = componentRegistry[element.componentName];
-        const RegistryComponent = entry.component as React.ComponentType<
+        const RegistryComponent = entry.component as ComponentType<
           Record<string, unknown>
         >;
 

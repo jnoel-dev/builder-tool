@@ -1,5 +1,6 @@
 "use client";
 
+import { Dispatch, SetStateAction } from "react";
 import { createContext, useContext, useState } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { ReactNode } from "react";
@@ -38,7 +39,7 @@ const defaultColors = [
 
 const ThemeContext = createContext<{
   colors: string[];
-  setColors: React.Dispatch<React.SetStateAction<string[]>>;
+  setColors: Dispatch<SetStateAction<string[]>>;
 }>({
   colors: defaultColors,
   setColors: () => {},

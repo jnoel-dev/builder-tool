@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { BackgroundManager } from "@/components/contexts/backgroundContext/BackgroundManager";
 import BaseLayout from "@/components/baseLayout/BaseLayout";
 import Script from "next/script";
+import { ReactNode } from "react";
 
 function getSameOriginTarget(): string {
   return process.env.NODE_ENV === "production"
@@ -32,7 +33,7 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const incomingHeaders = await headers();
   const framePropertiesJson = incomingHeaders.get("x-frame-properties") ?? "{}";

@@ -1,7 +1,7 @@
 // src/components/sideMenu/elementsMenu/ElementsMenu.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, ReactNode, SyntheticEvent } from "react";
 import Divider from "@mui/material/Divider";
 import AddElementButton from "@/components/sideMenu/elementsMenu/addElementButton/AddElementButton";
 import Tabs from "@mui/material/Tabs";
@@ -17,7 +17,7 @@ enum TabIndex {
 }
 
 function CustomTabPanel(props: {
-  children?: React.ReactNode;
+  children?: ReactNode;
   index: number;
   value: number;
 }) {
@@ -41,7 +41,7 @@ function getTabProps(index: number) {
 export default function ElementsMenu() {
   const [selectedTab, setSelectedTab] = useState(TabIndex.Frames);
 
-  function handleTabChange(_: React.SyntheticEvent, tabIndex: number) {
+  function handleTabChange(_: SyntheticEvent, tabIndex: number) {
     setSelectedTab(tabIndex);
   }
 

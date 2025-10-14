@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useCallback, useSyncExternalStore, useState } from "react";
+import {
+  useEffect,
+  useCallback,
+  useSyncExternalStore,
+  useState,
+  JSX,
+} from "react";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
@@ -48,7 +54,7 @@ export function notifySyncError(): void {
   syncStatusStore.setState("error");
 }
 
-export default function SyncStatusWidget(): React.JSX.Element {
+export default function SyncStatusWidget(): JSX.Element {
   const subscribe = useCallback(
     (onStoreChange: () => void) => syncStatusStore.subscribe(onStoreChange),
     [],

@@ -1,4 +1,4 @@
-import React from "react";
+import { CSSProperties } from "react";
 import { useTheme } from "@mui/material/styles";
 
 export default function PanelSVG() {
@@ -18,7 +18,7 @@ export default function PanelSVG() {
 
   const svgHeight = boxHeight + 32; // include top padding
 
-  const textStyle: React.CSSProperties = {
+  const textStyle: CSSProperties = {
     fontSize: "1.5rem",
     fill: theme.palette.text.primary,
     dominantBaseline: "middle",

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState, ChangeEvent } from "react";
 import Box from "@mui/material/Box";
 import { Stack, Button } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -9,8 +9,8 @@ export default function InputReact() {
   const [text, setText] = useState("");
   const [displayText, setDisplayText] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setText(e.target.value);
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setText(event.target.value);
   };
 
   const handleShowClick = () => {
