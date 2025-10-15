@@ -14,13 +14,15 @@ export default function CSPMenu() {
           alignItems: "center",
         }}
       >
-        <Divider sx={{ width: "100%" }} />
-        <div>
-          <strong>Directives:</strong> script-src
+        <div style={{ padding: "8px 0", textAlign: "center" }}>
+          <div>
+            <strong>Directives:</strong> script-src
+          </div>
+          <div>
+            <strong>Sources:</strong> self unsafe-inline
+          </div>
         </div>
-        <div>
-          <strong>Sources:</strong> self unsafe-inline
-        </div>
+
         <Divider sx={{ width: "100%" }} />
       </div>
 

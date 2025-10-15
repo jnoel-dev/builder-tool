@@ -9,20 +9,10 @@ import PropertiesMenu from "./propertiesMenu/PropertiesMenu";
 import SnippetMenu from "./snippetMenu/SnippetMenu";
 
 export default function SideMenu() {
-  const [expanded, setExpanded] = useState<string | false>(false);
+  const [expanded, setExpanded] = useState<string | false>("Elements");
 
   return (
-    <div
-      style={{
-        width: "auto",
-        position: "fixed",
-        right: 0,
-        top: 0,
-        height: "100%",
-        overflowY: "auto",
-        minWidth: "475px",
-      }}
-    >
+    <div>
       <MenuBase
         menuName="Elements"
         menuComponent={() => <ElementsMenu />}

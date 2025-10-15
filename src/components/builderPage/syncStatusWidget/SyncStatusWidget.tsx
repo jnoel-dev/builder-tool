@@ -17,6 +17,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import LockOpenIcon from "@mui/icons-material/LockOpen";
 import LockOutlineIcon from "@mui/icons-material/LockOutline";
 import { setLocked } from "@/components/contexts/FrameManager/framePersistence";
+import { setFabDisabled } from "../addElementWidget/AddElementWidget";
 
 type SyncState = "idle" | "syncing" | "error";
 type StoreSubscriber = () => void;
@@ -41,7 +42,6 @@ let __setLockUI: ((next: boolean) => void) | null = null;
 export function setLockIndicator(next: boolean) {
   __setLockUI?.(next);
 }
-
 const syncStatusStore = new SyncStatusStore();
 
 export function notifySyncStart(): void {
@@ -54,7 +54,12 @@ export function notifySyncError(): void {
   syncStatusStore.setState("error");
 }
 
-export default function SyncStatusWidget(): JSX.Element {
+export default function SyncStatusWidget(): JSX.Element | null {
+  const [isClientMounted, setIsClientMounted] = useState(false);
+  useEffect(() => {
+    setIsClientMounted(true);
+  }, []);
+
   const subscribeToStore = useCallback(
     (onStoreChange: () => void) => syncStatusStore.subscribe(onStoreChange),
     [],
@@ -72,33 +77,43 @@ export default function SyncStatusWidget(): JSX.Element {
     const nextLocked = !isLocked;
     await setLocked(nextLocked);
     setIsLocked(nextLocked);
+    setFabDisabled(nextLocked);
   }, [isLocked]);
 
-  const isEffectivelyError = isLocked || syncState === "error";
+  const showCancelIcon = isLocked || syncState === "error";
 
-  const statusIcon = isEffectivelyError ? (
+  const statusIcon = showCancelIcon ? (
     <CancelIcon />
   ) : syncState === "syncing" ? (
-    <SyncIcon sx={{ animation: "spin 1s linear infinite" }} />
+    <SyncIcon sx={{ animation: "spin 1s linear infinite reverse" }} />
   ) : (
     <CheckCircleIcon />
   );
 
-  const statusText = isEffectivelyError
-    ? "unable to sync"
-    : syncState === "syncing"
-      ? "syncing"
-      : "synced";
+  const statusText = isLocked
+    ? "will not sync"
+    : syncState === "error"
+      ? "unable to sync (error)"
+      : syncState === "syncing"
+        ? "syncing"
+        : "synced";
 
   const lockIcon = isLocked ? <LockOutlineIcon /> : <LockOpenIcon />;
   const lockText = isLocked ? "locked" : "unlocked";
 
   useEffect(() => {
     __setLockUI = setIsLocked;
+
     return () => {
       if (__setLockUI === setIsLocked) __setLockUI = null;
     };
   }, [setIsLocked]);
+
+  useEffect(() => {
+    setFabDisabled(isLocked);
+  }, [isLocked]);
+
+  if (!isClientMounted) return null;
 
   return (
     <Box
@@ -118,7 +133,7 @@ export default function SyncStatusWidget(): JSX.Element {
         bgcolor: (theme) => theme.palette.background.paper,
         color: (theme) => theme.palette.text.primary,
         textAlign: "left",
-        "& @keyframes spin": {
+        "@keyframes spin": {
           from: { transform: "rotate(0deg)" },
           to: { transform: "rotate(360deg)" },
         },

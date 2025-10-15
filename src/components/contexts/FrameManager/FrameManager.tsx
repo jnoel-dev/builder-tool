@@ -132,6 +132,14 @@ export function FrameManager({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        if (sessionStorage.getItem("SB_STATE")) {
+          sessionStorage.removeItem("SB_STATE");
+        }
+      } catch {}
+    }
+
     const segments =
       typeof window !== "undefined"
         ? window.location.pathname.split("/").filter(Boolean)
