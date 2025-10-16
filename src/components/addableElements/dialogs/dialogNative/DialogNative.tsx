@@ -6,6 +6,8 @@ import { useTheme } from "@mui/material/styles";
 import Panel from "../../panels/panel/Panel";
 
 const StyledDialog = styled("dialog")(() => ({
+  padding: 0,
+  border: "none",
   "&::backdrop": {
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
@@ -45,9 +47,6 @@ export default function DialogNative() {
         }}
         style={{
           position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
         }}
       >
         <Box
@@ -55,6 +54,7 @@ export default function DialogNative() {
             backgroundColor: theme.palette.primary.main,
             color: theme.palette.text.primary,
             padding: 2,
+            border: "none",
           }}
         >
           <Stack spacing={2}>

@@ -14,7 +14,6 @@ export default function Panel({ isDisabled = false }: PanelProps) {
 
   const innerBoxStyles = {
     backgroundColor: theme.palette.secondary.main,
-    padding: 2,
     width: "75px",
     height: "75px",
     display: "flex",

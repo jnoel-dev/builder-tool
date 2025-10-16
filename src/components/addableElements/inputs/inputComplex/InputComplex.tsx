@@ -22,7 +22,7 @@ export default function EditableInput() {
   return (
     <Box sx={{ padding: 2, backgroundColor: theme.palette.primary.main }}>
       <Stack direction="column" spacing={2} width="100%">
-        <Box sx={{ position: "relative" }}>
+        <Box sx={{ position: "relative", minWidth: "194px" }}>
           {isEmpty && (
             <Box
               sx={{
@@ -31,6 +31,7 @@ export default function EditableInput() {
                 left: 8,
                 color: theme.palette.text.disabled,
                 pointerEvents: "none",
+                whiteSpace: "nowrap",
               }}
             >
               insert text here...
@@ -52,7 +53,7 @@ export default function EditableInput() {
           <Button
             variant="contained"
             color="secondary"
-            sx={{ color: theme.palette.text.primary, width: "100%", px: 4 }}
+            sx={{ color: theme.palette.text.primary, width: "100%" }}
             onClick={handleShowClick}
           >
             show text
