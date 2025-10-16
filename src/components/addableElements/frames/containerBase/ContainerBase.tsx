@@ -118,7 +118,9 @@ export default function ContainerBase({
   }, [receivedFirebaseResponse, connectedFrameName]);
 
   function sendRequestSync(frameName: string) {
-    const targetWindow = window.top?.opener ? window.top.opener : window.top;
+    const targetWindow = window.top?.opener
+      ? window.top.opener.top
+      : window.top;
     const nameForTop = frameName === "TopFrame" ? window.name : frameName;
     const segments = document.location.pathname.split("/").filter(Boolean);
     const pageName =
