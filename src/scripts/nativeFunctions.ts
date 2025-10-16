@@ -158,16 +158,39 @@ export function overrideSetAttribute(): void {
 
   const originalSetAttribute = elementPrototype.setAttribute;
 
+  function hasWmClass(this: Element): boolean {
+    const classNameValue = (this as unknown as { className?: unknown })
+      .className;
+    if (typeof classNameValue === "string" && classNameValue.includes("wm-"))
+      return true;
+    if (
+      classNameValue &&
+      typeof (classNameValue as { baseVal?: unknown }).baseVal === "string" &&
+      (classNameValue as { baseVal: string }).baseVal.includes("wm-")
+    )
+      return true;
+    const classAttr = this.getAttribute?.("class");
+    return typeof classAttr === "string" && classAttr.includes("wm-");
+  }
+
   function sanitizedSetAttribute(
     this: Element,
     attributeName: string,
     attributeValue: string,
   ): void {
     const attributeNameLower = String(attributeName).toLowerCase();
+    const elementHasWmClass = hasWmClass.call(this);
+
+    if (!elementHasWmClass) {
+      originalSetAttribute.call(this, attributeName, attributeValue);
+      return;
+    }
+
     if (attributeNameLower === "style") {
       if (this.hasAttribute("style")) this.removeAttribute("style");
       return;
     }
+
     originalSetAttribute.call(this, attributeName, attributeValue);
     if (this.hasAttribute("style")) this.removeAttribute("style");
   }

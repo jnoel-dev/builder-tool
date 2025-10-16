@@ -118,8 +118,7 @@ export default function Fragment({
             flexDirection: fragmentType === "horizontal" ? "row" : "column",
             justifyContent: "center",
             alignItems: "center",
-            paddingTop: 15,
-            paddingLeft: 5,
+            paddingTop: 5,
           }}
         >
           <ContainerBase
