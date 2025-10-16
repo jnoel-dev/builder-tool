@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Fab from "@mui/material/Fab";
 import AddIcon from "@mui/icons-material/Add";
-import Drawer from "@mui/material/Drawer";
 import Box from "@mui/material/Box";
-import Portal from "@mui/material/Portal";
+import Popper from "@mui/material/Popper";
+import Paper from "@mui/material/Paper";
 import SideMenu from "@/components/sideMenu/SideMenu";
 
 let externalSetDisabled: ((disabled: boolean) => void) | null = null;
@@ -16,6 +16,7 @@ export function setFabDisabled(disabled: boolean): void {
 export default function AddElementWidget() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [fabDisabled, setFabDisabledState] = useState(false);
+  const fabRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     externalSetDisabled = (disabled: boolean) => {
@@ -27,64 +28,57 @@ export default function AddElementWidget() {
     };
   }, []);
 
-  const handleToggleDrawer = (): void => {
+  function handleToggleDrawer(): void {
     setDrawerOpen((previous) => !previous);
-  };
-
-  const handleCloseDrawer = (): void => {
-    setDrawerOpen(false);
-  };
+  }
 
   return (
     <>
-      <Portal>
-        <Box sx={{ position: "fixed", bottom: 16, right: 16, zIndex: 9999 }}>
-          <Fab
-            sx={(theme) => ({
-              backgroundColor: theme.palette.background.paper,
-              color: theme.palette.text.primary,
-              "&:hover": { backgroundColor: theme.palette.background.paper },
-            })}
-            onClick={handleToggleDrawer}
-            disabled={fabDisabled}
-          >
-            <AddIcon
-              sx={{
-                transition: "transform 150ms ease-in-out",
-                transform: drawerOpen ? "rotate(45deg)" : "rotate(0deg)",
-              }}
-            />
-          </Fab>
-        </Box>
-      </Portal>
+      <Box sx={{ position: "fixed", bottom: 16, right: 16, zIndex: 9999 }}>
+        <Fab
+          ref={fabRef}
+          sx={(theme) => ({
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            "&:hover": { backgroundColor: theme.palette.background.paper },
+          })}
+          onClick={handleToggleDrawer}
+          disabled={fabDisabled}
+        >
+          <AddIcon
+            sx={{
+              transition: "transform 150ms ease-in-out",
+              transform: drawerOpen ? "rotate(45deg)" : "rotate(0deg)",
+            }}
+          />
+        </Fab>
+      </Box>
 
-      <Drawer
-        anchor="right"
+      <Popper
         open={drawerOpen}
-        onClose={handleCloseDrawer}
-        hideBackdrop
-        disableAutoFocus
-        disableEnforceFocus
-        disableRestoreFocus
-        transitionDuration={{ enter: 100, exit: 100 }}
-        keepMounted={true}
-        slotProps={{
-          root: { sx: { pointerEvents: "none" } },
-          paper: {
-            sx: {
-              pointerEvents: "auto",
-              backgroundColor: "transparent",
-              backgroundImage: "none",
-              boxShadow: "none",
-              "--Paper-overlay": "none",
-            },
+        keepMounted
+        anchorEl={fabRef.current}
+        placement="top-end"
+        modifiers={[
+          { name: "offset", options: { offset: [0, 12] } },
+          {
+            name: "preventOverflow",
+            options: { padding: 8, altBoundary: true },
           },
-        }}
+        ]}
       >
-        <Box sx={{ width: "480px" }}>
+        <Paper
+          elevation={8}
+          sx={{
+            width: 480,
+            maxWidth: "90vw",
+            maxHeight: "80vh",
+            overflowY: "auto",
+          }}
+        >
           <SideMenu />
-        </Box>
-      </Drawer>
+        </Paper>
+      </Popper>
     </>
   );
 }
