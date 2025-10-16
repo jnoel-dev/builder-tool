@@ -313,43 +313,51 @@ export function persistPagesByOrigin(pagesByOrigin: PagesByOrigin): void {
   void writeSession(stateToWrite);
 }
 
-export function setFrameProperty(
-  frameName: string,
-  propertyName: string,
-  isEnabled: boolean,
-): void {
-  if (typeof window === "undefined") return;
+export async function setFrameProperties(
+  stagedMap: Record<string, Record<string, boolean>>,
+): Promise<boolean> {
+  if (typeof window === "undefined") return false;
 
   const sessionValue = readSession();
-  if (!sessionValue?.frames?.[frameName]) return;
+  if (!sessionValue?.frames) return false;
 
   const nextSession: AppState = {
     ...sessionValue,
-    frames: {
-      ...sessionValue.frames,
-      [frameName]: { ...sessionValue.frames[frameName] },
-    },
+    frames: { ...sessionValue.frames },
   };
 
-  const frameNode = nextSession.frames[frameName];
-  const nextProperties =
-    frameNode.properties && typeof frameNode.properties === "object"
-      ? { ...frameNode.properties }
-      : {};
+  const frameNames = Object.keys(stagedMap);
+  for (const frameName of frameNames) {
+    const stagedForFrame = stagedMap[frameName];
+    if (!nextSession.frames[frameName]) continue;
 
-  if (isEnabled) {
-    nextProperties[propertyName] = true;
-    frameNode.properties = nextProperties;
-  } else {
-    delete nextProperties[propertyName];
+    const frameNode = { ...nextSession.frames[frameName] };
+    const nextProperties =
+      frameNode.properties && typeof frameNode.properties === "object"
+        ? { ...frameNode.properties }
+        : {};
+
+    const propertyNames = Object.keys(stagedForFrame);
+    for (const propertyName of propertyNames) {
+      const isEnabled = stagedForFrame[propertyName];
+      if (isEnabled) {
+        nextProperties[propertyName] = true;
+      } else {
+        delete nextProperties[propertyName];
+      }
+    }
+
     if (Object.keys(nextProperties).length > 0) {
       frameNode.properties = nextProperties;
     } else {
       delete frameNode.properties;
     }
+
+    nextSession.frames[frameName] = frameNode;
   }
 
-  void writeSession(nextSession);
+  const wasSaved = await writeSession(nextSession);
+  return wasSaved;
 }
 
 export function getFrameProperties(frameName: string): Record<string, unknown> {

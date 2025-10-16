@@ -3,10 +3,11 @@
 import { useEffect, useState, ChangeEvent } from "react";
 import { Box, Checkbox, FormControlLabel, Switch } from "@mui/material";
 import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
+import { getFrameProperties } from "@/components/contexts/FrameManager/framePersistence";
 import {
-  getFrameProperties,
-  setFrameProperty,
-} from "@/components/contexts/FrameManager/framePersistence";
+  stagePropertyChange,
+  getStagedSnapshot,
+} from "@/components/sideMenu/propertiesMenu/PropertiesMenu";
 
 type PropertyToggleProps = {
   propertyKey: string;
@@ -27,10 +28,21 @@ export default function PropertyToggle({
 
   useEffect(() => {
     if (!currentFrameName) return;
-    const properties = getFrameProperties(currentFrameName);
-    const primaryOn = !!properties[propertyKey];
+
+    const baseProperties = getFrameProperties(currentFrameName);
+    const stagedSnapshot = getStagedSnapshot();
+    const stagedForFrame = stagedSnapshot[currentFrameName] ?? {};
+
+    function isPropertyOn(propertyName: string): boolean {
+      if (Object.prototype.hasOwnProperty.call(stagedForFrame, propertyName)) {
+        return Boolean(stagedForFrame[propertyName]);
+      }
+      return Boolean(baseProperties[propertyName]);
+    }
+
+    const primaryOn = isPropertyOn(propertyKey);
     const additionalOn = additionalPropertyKey
-      ? !!properties[additionalPropertyKey]
+      ? isPropertyOn(additionalPropertyKey)
       : false;
 
     if (additionalOn) {
@@ -58,22 +70,25 @@ export default function PropertyToggle({
     if (!currentFrameName) return;
 
     if (!nextValue) {
-      setFrameProperty(currentFrameName, propertyKey, false);
+      stagePropertyChange(currentFrameName, propertyKey, false);
       if (additionalPropertyKey)
-        setFrameProperty(currentFrameName, additionalPropertyKey, false);
+        stagePropertyChange(currentFrameName, additionalPropertyKey, false);
       return;
     }
 
-    const key =
+    const selectedKey =
       isAdditionalChecked && additionalPropertyKey
         ? additionalPropertyKey
         : propertyKey;
-    setFrameProperty(currentFrameName, key, true);
+
+    stagePropertyChange(currentFrameName, selectedKey, true);
 
     if (additionalPropertyKey) {
-      if (key === additionalPropertyKey)
-        setFrameProperty(currentFrameName, propertyKey, false);
-      else setFrameProperty(currentFrameName, additionalPropertyKey, false);
+      if (selectedKey === additionalPropertyKey) {
+        stagePropertyChange(currentFrameName, propertyKey, false);
+      } else {
+        stagePropertyChange(currentFrameName, additionalPropertyKey, false);
+      }
     }
   }
 
@@ -86,11 +101,11 @@ export default function PropertyToggle({
     if (!isEnabled) return;
 
     if (checked) {
-      setFrameProperty(currentFrameName, additionalPropertyKey, true);
-      setFrameProperty(currentFrameName, propertyKey, false);
+      stagePropertyChange(currentFrameName, additionalPropertyKey, true);
+      stagePropertyChange(currentFrameName, propertyKey, false);
     } else {
-      setFrameProperty(currentFrameName, propertyKey, true);
-      setFrameProperty(currentFrameName, additionalPropertyKey, false);
+      stagePropertyChange(currentFrameName, propertyKey, true);
+      stagePropertyChange(currentFrameName, additionalPropertyKey, false);
     }
   }
 

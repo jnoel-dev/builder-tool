@@ -132,6 +132,10 @@ export function FrameManager({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    const isTop =
+      typeof window !== "undefined" && window === window.top && !window.opener;
+
+    if (!isTop) return;
     if (typeof window !== "undefined") {
       try {
         if (sessionStorage.getItem("SB_STATE")) {
@@ -154,10 +158,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     (async () => {
-      const isTop =
-        typeof window !== "undefined" &&
-        window === window.top &&
-        !window.opener;
       const firstFrameName = isTop ? DEFAULT_FRAME_NAME : window.name;
       const loadedState = await loadInitialState(
         firstFrameName,

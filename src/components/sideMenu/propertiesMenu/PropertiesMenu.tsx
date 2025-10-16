@@ -10,6 +10,7 @@ import { useFrame } from "@/components/contexts/FrameManager/FrameManager";
 import { DEFAULT_FRAME_NAME } from "@/components/contexts/FrameManager/frameUtils";
 import { Button } from "@mui/material";
 import NativeFunctionsMenu from "./nativeFunctionsMenu/NativeFunctionsMenu";
+import { setFrameProperties } from "@/components/contexts/FrameManager/framePersistence";
 
 enum TabIndex {
   CSP,
@@ -38,35 +39,78 @@ function getTabProps(index: number) {
   return { id: `simple-tab-${index}` };
 }
 
+type StagedMap = Record<string, Record<string, boolean>>;
+type StageSetter = (
+  frameName: string,
+  propertyKey: string,
+  isEnabled: boolean,
+) => void;
+type StagedGetter = () => StagedMap;
+
+let stageSetterRef: StageSetter = () => {};
+let stagedGetterRef: StagedGetter = () => ({});
+
+export function stagePropertyChange(
+  frameName: string,
+  propertyKey: string,
+  isEnabled: boolean,
+): void {
+  stageSetterRef(frameName, propertyKey, isEnabled);
+}
+
+export function getStagedSnapshot(): StagedMap {
+  return stagedGetterRef();
+}
+
 export default function PropertiesMenu(expanded: boolean) {
   const [selectedTab, setSelectedTab] = useState(TabIndex.CSP);
   const { setCurrentFrameName, currentFrameName } = useFrame();
+  const [staged, setStaged] = useState<StagedMap>({});
 
   useEffect(() => {
     setCurrentFrameName(DEFAULT_FRAME_NAME);
   }, [expanded, setCurrentFrameName]);
 
+  useEffect(() => {
+    stageSetterRef = (
+      frameName: string,
+      propertyKey: string,
+      isEnabled: boolean,
+    ) => {
+      setStaged((previous) => {
+        const frameMap = previous[frameName] ?? {};
+        const nextFrameMap = { ...frameMap, [propertyKey]: isEnabled };
+        return { ...previous, [frameName]: nextFrameMap };
+      });
+    };
+    stagedGetterRef = () => staged;
+    return () => {
+      stageSetterRef = () => {};
+      stagedGetterRef = () => ({});
+    };
+  }, [staged]);
+
   function handleTabChange(_: SyntheticEvent, tabIndex: number) {
     setSelectedTab(tabIndex);
   }
 
-  function handleApplyClick() {
+  async function handleApplyClick() {
     if (!currentFrameName) return;
-
+    const wasSaved = await setFrameProperties(staged);
+    if (!wasSaved) return;
+    setStaged({});
     if (currentFrameName !== DEFAULT_FRAME_NAME) {
       window.location.reload();
       return;
     }
-
-    const url = new URL(window.location.href);
-    history.replaceState(null, "", url.toString());
+    const urlObject = new URL(window.location.href);
+    history.replaceState(null, "", urlObject.toString());
     window.location.reload();
   }
 
   return (
     <div>
       <ContainerSelector listTrueFramesOnly={true} />
-
       <Box sx={{ width: "100%" }}>
         <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
           <Tabs
@@ -83,11 +127,9 @@ export default function PropertiesMenu(expanded: boolean) {
             />
           </Tabs>
         </Box>
-
         <CustomTabPanel value={selectedTab} index={TabIndex.CSP}>
           <CSPMenu />
         </CustomTabPanel>
-
         <CustomTabPanel value={selectedTab} index={TabIndex.NativeFunctions}>
           <NativeFunctionsMenu />
         </CustomTabPanel>
