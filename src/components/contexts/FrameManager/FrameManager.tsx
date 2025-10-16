@@ -132,6 +132,17 @@ export function FrameManager({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    const segments =
+      typeof window !== "undefined"
+        ? window.location.pathname.split("/").filter(Boolean)
+        : [];
+    const firstSegment = segments[0] ?? "";
+    const idFromUrl = /^[A-Za-z0-9]{20}$/.test(firstSegment)
+      ? firstSegment
+      : "";
+    if (idFromUrl) setFirebaseID(idFromUrl);
+    setKnownOriginsForFirebaseID(idFromUrl);
+
     const isTop =
       typeof window !== "undefined" && window === window.top && !window.opener;
 
@@ -143,17 +154,6 @@ export function FrameManager({ children }: { children: ReactNode }) {
         }
       } catch {}
     }
-
-    const segments =
-      typeof window !== "undefined"
-        ? window.location.pathname.split("/").filter(Boolean)
-        : [];
-    const firstSegment = segments[0] ?? "";
-    const idFromUrl = /^[A-Za-z0-9]{20}$/.test(firstSegment)
-      ? firstSegment
-      : "";
-    if (idFromUrl) setFirebaseID(idFromUrl);
-    setKnownOriginsForFirebaseID(idFromUrl);
 
     let cancelled = false;
 
