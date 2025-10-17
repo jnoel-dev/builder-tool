@@ -13,3 +13,4 @@ public/zone.min.js
 public/forceLoadWMID.js
 .eslintcache
 tsconfig.tsbuildinfo
+.env.production
