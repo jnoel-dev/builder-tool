@@ -115,7 +115,6 @@ export default function Fragment({
             backgroundColor: theme.palette.background.default,
             overflow: "auto",
             display: "flex",
-            flexDirection: fragmentType === "horizontal" ? "row" : "column",
             justifyContent: "center",
             alignItems: "center",
             paddingTop: 5,
@@ -124,6 +123,10 @@ export default function Fragment({
           <ContainerBase
             connectedFrameName={savedName}
             disableElementControlsForChildren={true}
+            shouldDisplayInfo={false}
+            parentFlexDirection={
+              fragmentType === "horizontal" ? "row" : "column"
+            }
           />
         </Box>
       )}

@@ -16,6 +16,7 @@ import { usePathname } from "next/navigation";
 import { FrameProperties } from "@/components/contexts/FrameManager/frameUtils";
 import { FramesByName } from "@/components/contexts/FrameManager/frameMessaging";
 import FramePropertiesDisplay from "./framePropertiesDisplay/FramePropertiesDisplay";
+import { Box } from "@mui/material";
 
 type ComponentName = keyof typeof componentRegistry;
 
@@ -27,6 +28,7 @@ interface ContainerBaseProps {
   connectedFrameName: string;
   disableElementControlsForChildren?: boolean;
   shouldDisplayInfo?: boolean;
+  parentFlexDirection?: string;
 }
 
 function CollapseWrapper({ children }: { children: ReactNode }) {
@@ -43,6 +45,7 @@ export default function ContainerBase({
   connectedFrameName,
   disableElementControlsForChildren = false,
   shouldDisplayInfo = false,
+  parentFlexDirection = "column",
 }: ContainerBaseProps) {
   const {
     frameElementsByFrameName,
@@ -175,7 +178,7 @@ export default function ContainerBase({
   }, [pathname]);
 
   return (
-    <div>
+    <Box sx={{ display: "flex", flexDirection: parentFlexDirection }}>
       {shouldDisplayInfo ? (
         <FramePropertiesDisplay properties={frameProperties} />
       ) : null}
@@ -220,6 +223,6 @@ export default function ContainerBase({
           </ElementController>
         );
       })}
-    </div>
+    </Box>
   );
 }

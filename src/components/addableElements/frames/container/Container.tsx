@@ -20,8 +20,6 @@ export default function Container({
       ref={containerRefs[savedName]}
       sx={{
         border: "1px solid",
-        display: "flex",
-        flexDirection: containerType === "horizontal" ? "row" : "column",
         maxWidth: "100%",
         padding: "10px",
       }}
@@ -29,6 +27,8 @@ export default function Container({
       <ContainerBase
         connectedFrameName={savedName}
         disableElementControlsForChildren={true}
+        shouldDisplayInfo={false}
+        parentFlexDirection={containerType === "horizontal" ? "row" : "column"}
       />
       {!hasChildren && (
         <Box
