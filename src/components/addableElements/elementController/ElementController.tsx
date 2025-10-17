@@ -62,6 +62,14 @@ export default function ElementController({
     latestPositionRef.current = positionPercent;
   }, [positionPercent]);
 
+  function getTargetWindow(): Window | null {
+    try {
+      return window.top?.opener?.top ?? window.top ?? null;
+    } catch {
+      return window.top ?? null;
+    }
+  }
+
   function onDragStart(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     const containerEl = containerRef.current;
@@ -124,9 +132,7 @@ export default function ElementController({
         connectedFrameOrContainerName === "TopFrame"
           ? window.name
           : connectedFrameOrContainerName;
-      const targetWindow = window.top?.opener.top
-        ? window.top.opener.top
-        : window.top;
+      const targetWindow = getTargetWindow();
       const segments = document.location.pathname.split("/").filter(Boolean);
       const pageName =
         segments[1] === "frame"
@@ -147,7 +153,7 @@ export default function ElementController({
           msg,
         );
       }
-
+      if (!targetWindow) return;
       targetWindow.postMessage(msg, SAME_ORIGIN_TARGET);
     }
 
@@ -179,9 +185,7 @@ export default function ElementController({
           ? window.name
           : connectedFrameOrContainerName;
 
-      const targetWindow = window.top?.opener.top
-        ? window.top.opener.top
-        : window.top;
+      const targetWindow = getTargetWindow();
       const segments = document.location.pathname.split("/").filter(Boolean);
       const pageName =
         segments[1] === "frame"
@@ -201,7 +205,7 @@ export default function ElementController({
           msg,
         );
       }
-
+      if (!targetWindow) return;
       targetWindow.postMessage(msg, SAME_ORIGIN_TARGET);
     }
 
