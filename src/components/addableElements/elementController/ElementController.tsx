@@ -124,7 +124,9 @@ export default function ElementController({
         connectedFrameOrContainerName === "TopFrame"
           ? window.name
           : connectedFrameOrContainerName;
-      const targetWindow = window.top?.opener ? window.top.opener : window.top;
+      const targetWindow = window.top?.opener.top
+        ? window.top.opener.top
+        : window.top;
       const segments = document.location.pathname.split("/").filter(Boolean);
       const pageName =
         segments[1] === "frame"
@@ -177,7 +179,9 @@ export default function ElementController({
           ? window.name
           : connectedFrameOrContainerName;
 
-      const targetWindow = window.top?.opener ? window.top.opener : window.top;
+      const targetWindow = window.top?.opener.top
+        ? window.top.opener.top
+        : window.top;
       const segments = document.location.pathname.split("/").filter(Boolean);
       const pageName =
         segments[1] === "frame"

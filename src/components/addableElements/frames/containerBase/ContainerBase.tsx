@@ -76,7 +76,10 @@ export default function ContainerBase({
       return;
     }
     function onMessage(event: MessageEvent) {
-      if (event.source !== window.top && event.source !== window.top?.opener)
+      if (
+        event.source !== window.top &&
+        event.source !== window.top?.opener?.top
+      )
         return;
 
       let sourceWindow = "TopFrame";
