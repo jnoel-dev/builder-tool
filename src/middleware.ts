@@ -12,6 +12,13 @@ function getCrossOriginTarget(): string {
     ? "https://frame.jonnoel.dev"
     : "http://localhost:3001";
 }
+
+function getApiBaseOrigin(requestUrl: URL): string {
+  return process.env.NODE_ENV === "production"
+    ? "https://ssrbuildertool152d2-pfz3mfnfsq-ue.a.run.app"
+    : requestUrl.origin;
+}
+
 function buildCsp(): string {
   const sameOrigin = getSameOriginTarget();
   const crossOrigin = getCrossOriginTarget();
@@ -66,6 +73,7 @@ function extractFramePropertiesFromState(
 
 export async function middleware(request: NextRequest) {
   const requestUrl = new URL(request.url);
+  const apiBaseOrigin = getApiBaseOrigin(requestUrl);
   const path = requestUrl.pathname;
   const pathSegments = path.split("/").filter(Boolean);
   const firstSegment = pathSegments[0] ?? "";
@@ -77,7 +85,7 @@ export async function middleware(request: NextRequest) {
 
   if (isDocumentRequest && !hasValidId) {
     try {
-      const createResponse = await fetch(`${requestUrl.origin}/api/sbstate`, {
+      const createResponse = await fetch(`${apiBaseOrigin}/api/sbstate`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-mw": "1" },
         cache: "no-store",
@@ -102,7 +110,7 @@ export async function middleware(request: NextRequest) {
   if (hasValidId) {
     try {
       const apiResponse = await fetch(
-        `${requestUrl.origin}/api/sbstate/${firstSegment}`,
+        `${apiBaseOrigin}/api/sbstate/${firstSegment}`,
         {
           method: "GET",
           cache: "no-store",

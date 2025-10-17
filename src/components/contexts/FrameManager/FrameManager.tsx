@@ -140,8 +140,10 @@ export function FrameManager({ children }: { children: ReactNode }) {
     const idFromUrl = /^[A-Za-z0-9]{20}$/.test(firstSegment)
       ? firstSegment
       : "";
-    if (idFromUrl) setFirebaseID(idFromUrl);
-    setKnownOriginsForFirebaseID(idFromUrl);
+    if (idFromUrl) {
+      setFirebaseID(idFromUrl);
+      setKnownOriginsForFirebaseID(idFromUrl);
+    }
 
     const isTop =
       typeof window !== "undefined" && window === window.top && !window.opener;
