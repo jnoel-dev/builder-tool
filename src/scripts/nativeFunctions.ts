@@ -40,21 +40,18 @@ function loadScriptOnce(scriptSrc: string, scriptId: string): void {
 
 export function overrideGetComputedStyle(): void {
   if (typeof window === "undefined") return;
-  const existingGetComputedStyle = window.getComputedStyle;
-  if (typeof existingGetComputedStyle !== "function") return;
+  const existingGetComputedStyle = window.getComputedStyle.bind(window);
 
   const emptyString = "";
-
   function returnEmptyString(): string {
     return emptyString;
   }
-
-  function createEmptyIterator(): Iterator<unknown> {
-    return { next: () => ({ done: true, value: undefined }) };
+  function createEmptyIterator() {
+    return { next: () => ({ done: true, value: undefined as unknown }) };
   }
 
   const blankComputedStyleProxy = new Proxy(Object.create(null), {
-    get: (_targetObject: object, propertyName: string | symbol) => {
+    get: (_targetObject: unknown, propertyName: PropertyKey) => {
       if (propertyName === "getPropertyValue") return returnEmptyString;
       if (propertyName === "getPropertyPriority") return returnEmptyString;
       if (propertyName === "item") return returnEmptyString;
@@ -65,24 +62,52 @@ export function overrideGetComputedStyle(): void {
     has: () => false,
     ownKeys: () => [],
     getOwnPropertyDescriptor: () => ({ configurable: true, enumerable: false }),
-  });
+  }) as unknown as CSSStyleDeclaration;
 
-  function provideBlankComputedStyle(): CSSStyleDeclaration {
-    return blankComputedStyleProxy as unknown as CSSStyleDeclaration;
+  function elementHasWalkmeClass(
+    targetElement: Element | null | undefined,
+  ): boolean {
+    if (!targetElement) return false;
+    if (
+      (targetElement as Element).classList &&
+      typeof (targetElement as Element).classList.forEach === "function"
+    ) {
+      let hasWalkmeClass = false;
+      (targetElement as Element).classList.forEach((className: string) => {
+        if (typeof className === "string" && className.includes("wm-"))
+          hasWalkmeClass = true;
+      });
+      if (hasWalkmeClass) return true;
+    }
+    const rawClassAttribute =
+      typeof (targetElement as Element).getAttribute === "function"
+        ? (targetElement as Element).getAttribute("class")
+        : null;
+    return (
+      typeof rawClassAttribute === "string" && rawClassAttribute.includes("wm-")
+    );
+  }
+
+  function selectiveGetComputedStyle(
+    targetElement: Element,
+    pseudoElement?: string | null,
+  ): CSSStyleDeclaration {
+    if (elementHasWalkmeClass(targetElement)) {
+      return blankComputedStyleProxy;
+    }
+    return existingGetComputedStyle(targetElement, pseudoElement ?? null);
   }
 
   try {
     Object.defineProperty(window, "getComputedStyle", {
       configurable: true,
       writable: true,
-      value: provideBlankComputedStyle,
+      value:
+        selectiveGetComputedStyle as unknown as typeof window.getComputedStyle,
     });
   } catch {
-    (
-      window as unknown as {
-        getComputedStyle: typeof provideBlankComputedStyle;
-      }
-    ).getComputedStyle = provideBlankComputedStyle;
+    window.getComputedStyle =
+      selectiveGetComputedStyle as unknown as typeof window.getComputedStyle;
   }
 }
 
