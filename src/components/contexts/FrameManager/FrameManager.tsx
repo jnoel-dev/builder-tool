@@ -40,7 +40,7 @@ import {
   getCurrentPageFromFrameName,
 } from "./frameUtils";
 
-export const POST_MESSAGE_LOG_ENABLED = true;
+export const POST_MESSAGE_LOG_ENABLED = process.env.NODE_ENV !== "production";
 
 export interface FrameContextValue {
   currentFrameName: string;

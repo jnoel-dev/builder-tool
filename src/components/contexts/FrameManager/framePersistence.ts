@@ -175,7 +175,6 @@ export async function loadInitialState(
 
   if (/^[A-Za-z0-9]{20}$/.test(documentId)) {
     try {
-      console.warn("GET FIREBASE");
       notifySyncStart();
       const snapshot = await getDoc(
         doc(firestoreDatabase, "sbStates", documentId),
@@ -417,7 +416,6 @@ async function sendAppStateToFirebase(
 
   const stateJsonString = JSON.stringify(applicationState);
   try {
-    console.warn("SET FIREBASE");
     notifySyncStart();
     await setDoc(
       doc(firestoreDatabase, "sbStates", documentId),
