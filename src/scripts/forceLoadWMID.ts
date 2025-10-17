@@ -113,19 +113,6 @@ function createWrappedCallback(
       !Array.isArray(updatedFirstArgument)
     ) {
       window.__lastInterceptedConfig = updatedFirstArgument;
-      console.info(
-        "[Intercept]",
-        label,
-        "config updated",
-        updatedFirstArgument,
-      );
-    } else {
-      console.info(
-        "[Intercept]",
-        label,
-        "non-object first argument",
-        updatedFirstArgument,
-      );
     }
     return (
       originalCallback as (
